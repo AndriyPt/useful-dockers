@@ -9,7 +9,7 @@ RUN set -x && \
     
     echo "Installing needed libraries" && \
     apt-get update && \
-    apt-get install -y wget binutils gcc libgtk2.0-0 libgtk2.0-dev psmisc && \
+    apt-get install -y wget binutils gcc libgtk2.0-0 libgtk2.0-dev psmisc gdb && \
     
     echo "Downloading and installing Debians" && \
     cd /tmp && \
