@@ -5,6 +5,7 @@ MAINTAINER "Andriy Petlovanyy"
 LABEL Description="This image allows to run Lazarus UI in Docker container" Vendor="Andriy Petlovanyy" Version="1.0"
 
 RUN set -x && \
+    export downloads_url="http://downloads.sourceforge.net/project/lazarus/Lazarus%20Linux%20amd64%20DEB/Lazarus%201.6.2" && \
     
     echo "Installing needed libraries" && \
     apt-get update && \
@@ -12,12 +13,12 @@ RUN set -x && \
     
     echo "Downloading and installing Debians" && \
     cd /tmp && \
-    wget http://downloads.sourceforge.net/project/lazarus/Lazarus%20Linux%20amd64%20DEB/Lazarus%201.6/fpc_3.0.0-151205_amd64.deb && \
-    dpkg -i fpc_3.0.0-151205_amd64.deb && rm fpc_3.0.0-151205_amd64.deb && \
-    wget http://downloads.sourceforge.net/project/lazarus/Lazarus%20Linux%20amd64%20DEB/Lazarus%201.6/fpc-src_3.0.0-151205_amd64.deb && \
-    dpkg -i fpc-src_3.0.0-151205_amd64.deb && rm fpc-src_3.0.0-151205_amd64.deb && \
-    wget http://downloads.sourceforge.net/project/lazarus/Lazarus%20Linux%20amd64%20DEB/Lazarus%201.6/lazarus_1.6-0_amd64.deb && \
-    dpkg -i lazarus_1.6-0_amd64.deb && rm lazarus_1.6-0_amd64.deb && \
+    wget "${downloads_url}/fpc_3.0.0-151205_amd64.deb" && \
+    dpkg -i fpc_3.0.0-151205_amd64.deb && \
+    wget "${downloads_url}/fpc-src_3.0.0-151205_amd64.deb" && \
+    dpkg -i fpc-src_3.0.0-151205_amd64.deb && \
+    wget "${downloads_url}/lazarus-project_1.6.2-1_amd64.deb" && \
+    dpkg -i lazarus-project_1.6.2-1_amd64.deb && \
 
     echo "Removing cache" && \
     apt-get clean && \
