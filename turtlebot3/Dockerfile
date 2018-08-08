@@ -7,21 +7,18 @@ LABEL Description="This ROS Kinetic image containes all dependencies for TurtleB
 ENV remote_deploy_script="https://raw.githubusercontent.com/shadow-robot/sr-build-tools/$toolset_branch/ansible/deploy.sh"
 
 RUN set -x && \
-
-    echo "Backing up .bashrc" && \
-    cp /home/$MY_USERNAME/.bashrc /tmp && \
-
+    \
+    echo "Removing workspace folder" && \
+    rm -rf /home/$MY_USERNAME/workspace && \
+    \    
     echo "Running one-liner" && \
     wget -O /tmp/oneliner "$( echo "$remote_deploy_script" | sed 's/#/%23/g' )" && \
     chmod 755 /tmp/oneliner && \
     gosu $MY_USERNAME /tmp/oneliner -o ROBOTIS-GIT -r turtlebot3 -b kinetic-devel -v kinetic && \
-
-    echo "Restoring .bashrc" && \
-    cp /tmp/.bashrc /home/$MY_USERNAME && \
-
-    echo "Removing workspace folder" && \
-    rm -rf /home/$MY_USERNAME/workspace/robert && \
-
+    \
+    echo "Sourcing workspace in .bashrc" && \
+    echo 'source /home/$MY_USERNAME/workspace/turtlebot3/base/devel/setup.bash' >> /home/$MY_USERNAME/.bashrc && \
+    \
     echo "Removing cache" && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /home/$MY_USERNAME/.ansible /home/$MY_USERNAME/.gitconfig
