@@ -14,7 +14,7 @@ RUN set -x && \
     echo "Running one-liner" && \
     wget -O /tmp/oneliner "$( echo "$remote_deploy_script" | sed 's/#/%23/g' )" && \
     chmod 755 /tmp/oneliner && \
-    gosu $MY_USERNAME /tmp/oneliner -o ROBOTIS-GIT -r turtlebot3 -i turtlebot3/turtlebot3.rosinstall -b kinetic-devel -v kinetic && \
+    gosu $MY_USERNAME /tmp/oneliner -o AndriyPt -r useful-dockers -i turtlebot3/turtlebot3.rosinstall -b kinetic-devel -v kinetic && \
     \
     echo "Sourcing workspace in .bashrc" && \
     echo 'source /home/$MY_USERNAME/workspace/turtlebot3/base/devel/setup.bash' >> /home/$MY_USERNAME/.bashrc && \
