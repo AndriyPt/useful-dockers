@@ -1,9 +1,10 @@
 *backup
 *~
-*toc
-*log
-*out
-*aux
-*bbl
-*blg
-
+*.toc
+*.log
+*.out
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
