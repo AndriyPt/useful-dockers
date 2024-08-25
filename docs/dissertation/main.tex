@@ -4,6 +4,8 @@
 \usepackage[utf8]{inputenc}
 \usepackage[ukrainian]{babel}
 
+\usepackage{tempora} 
+
 \usepackage[unicode]{hyperref}
 \hypersetup{colorlinks=false}
 
@@ -143,21 +145,21 @@
 \mainmatter
 
 \clearpage
-\addcontentsline{toc}{chapter}{ПЕРЕЛІК ПОСИЛАНЬ}
-\bibliographystyle{plain}
-\bibliography{literatura}
+% \addcontentsline{toc}{chapter}{ПЕРЕЛІК ПОСИЛАНЬ}
+% \bibliographystyle{plain}
+% \bibliography{literatura}
 
 \appendix
 
-% %Fix Cyrillic letters in appendix numbering
-% \makeatletter
-% % Fix Title format
-% \gdef\thechapter{\@Asbuk\c@chapter}
-% \makeatother
-% \titleformat{\chapter}
-%   {\normalfont \centering}
-%   {ДОДАТОК~\Asbuk{chapter}~}{0pt}{}
-% \titlespacing{\chapter}{0cm}{0em}{3em}
+%Fix Cyrillic letters in appendix numbering
+\makeatletter
+% Fix Title format
+\gdef\thechapter{\@Asbuk\c@chapter}
+\makeatother
+\titleformat{\chapter}
+  {\normalfont \centering}
+  {ДОДАТОК~\Asbuk{chapter}~}{0pt}{}
+\titlespacing{\chapter}{0cm}{0em}{3em}
 
 % %\input{appendix-module-for-statistics-gather.tex}
 % %\input{appendix-acts-of-intruduction.tex}
