@@ -8,3 +8,5 @@ Based on https://github.com/agolovynskyi1/latex-ukrainian-diser
 texstudio
 textlive all packages
 scalable-cyrfonts-tex
+pandoc
+mupdf
