@@ -39,7 +39,7 @@ div(\Lambda(z) \nabla \theta (z) ) = 0, z \in \Omega
     
 $a_k=const_k > -1$; $ \lambda_k(z) $ -- якісна характеристика провідності середовища в
 $\Omega_{k} (k=\overline{1,K})$, причому $\lambda_{k}(z) \geq 0$, $\displaystyle \max_{\Omega_k} \lambda_k (z) = 1$, 
-$\lambda_{k}(z)_{z\in\partial\Omega_{k}} = 0$; $\chi_{k}\left( z \right)$ -- характеристична функція області
+$\lambda_{k}(z)_{z\in\partial\Omega_{k}} = 0$; $\chi_{k}(z)$ -- характеристична функція області
 $\Omega_{k}$.
 
 Враховуючи (\ref{eqn:teploprovidnist_3}), задача (\ref{eqn:teploprovidnist_1})(\ref{eqn:teploprovidnist_2}) набуде вигляду:
@@ -56,73 +56,70 @@ $\Omega_{k}$.
 
 де $B_k[\bullet]=\frac{\nabla\lambda_k\nabla[\bullet]}{1+a_k\lambda_k}$, $\nabla$ - оператор Гамільтона.
 
-% \hypertarget{ux43cux435ux442ux43eux434-ux43fux440ux435ux434ux438ux43aux442ux43eux440-ux43aux43eux440ux435ux43aux442ux43eux440}{%
-% \subsection[2.2. Метод
-% предиктор-коректор]{\texorpdfstring{\protect\hypertarget{anchor-30}{}{}2.2.
-% Метод
-% предиктор-коректор}{2.2. Метод предиктор-коректор}}\label{ux43cux435ux442ux43eux434-ux43fux440ux435ux434ux438ux43aux442ux43eux440-ux43aux43eux440ux435ux43aux442ux43eux440}}
+\section{Метод предиктор-коректор}
 
-% \hypertarget{ux441ux443ux442ux44c-ux43cux435ux442ux43eux434ux443}{%
-% \subsubsection[2.2.1. Суть
-% методу]{\texorpdfstring{\protect\hypertarget{anchor-31}{}{}2.2.1. Суть
-% методу}{2.2.1. Суть методу}}\label{ux441ux443ux442ux44c-ux43cux435ux442ux43eux434ux443}}
+\subsection{Суть методу}
 
-% Розглянемо послідовність плоских змішаних крайових задач для основного
-% рівняння стаціонарного поля
+Розглянемо послідовність плоских змішаних крайових задач для основного
+рівняння стаціонарного поля
 
-% \[{\mathit{\text{div}}{\left( {\Lambda_{n}\left( z \right)\mathit{\text{grad}}\phi_{n}\left( z \right)} \right) = 0},}{}\]
-% \[{z\in\Omega}{}\];(2.6)
+\begin{equation}
+\label{eqn:teploprovidnist_6}
+div \Lambda_{n}(z) \nabla \phi_{n}(z) = 0, z\in\Omega
+\end{equation}
 
-% \[{\phi_{n}{\left( z \right) = \phi_{s}}\left( z \right),}{}\]
-% \[{z\in\Gamma_{1}}{}\];(2.7)
+\begin{equation}
+\label{eqn:teploprovidnist_7}
+\phi_{n}{(z) = \phi_{s}}(z), z\in\Gamma_{1}
+\end{equation}
 
-% \[{{\frac{\partial\phi_{n}\left( z \right)}{\partial\overrightarrow{n}} = {- \psi_{s}}}\left( z \right),}{}\]
-% \[{z\in\Gamma_{2}}{}\](2.8)
+\begin{equation}
+\label{eqn:teploprovidnist_8}
+{\frac{\partial\phi_{n}(z)}{\partial\overrightarrow{n}} = {- \psi_{s}}}(z), z\in\Gamma_{2}
+\end{equation}
+    
+за умови, що характеристика середовища
+$\Lambda_{n}(z)({n = \overline{0,N}})$ (коефіцієнт
+теплопровідності, коефіцієнт дифузії тощо) для кожної з цих задач є
+неперервною функцією декартових координат
+$z = ( {x,y} )$, сталою скрізь в однозв'язній області
+$\Omega$ з простим замкнутим краєм
+$\Gamma = {\Gamma_{1} \cup \Gamma_{2}}$, за винятком скінченої
+сукупності неоднорідних включень $\Omega_{k}\subset\Omega$
+($\Omega_{k}\underset{k \neq l} \cap {\Omega_{l} = \varnothing}$,
+$\partial\Omega_{k} \cap {\Gamma =}$,
+$k,{l = \overline{1,K}}$), геометрія та конфігурація розташування
+яких фіксовані для всіх $n$ одночасно. А саме:
 
-% за умови, що характеристика середовища
-% \[{\Lambda_{n}(z)({n = \overline{0,N}})}{}\] (коефіцієнт
-% теплопровідності, коефіцієнт дифузії тощо) для кожної з цих задач є
-% неперервною функцією декартових координат
-% \[{z = \left( {x,y} \right)}{}\], сталою скрізь в однозв'язній області
-% \[\Omega{}\] з простим замкнутим краєм
-% \[{\Gamma = {\Gamma_{1} \cup \Gamma_{2}}}{}\], за винятком скінченої
-% сукупності неоднорідних включень \[{\Omega_{k}\subset\Omega}{}\]
-% (\[{\Omega_{k}\underset{k \neq l}{\mathit{intersect}}{\Omega_{l} = \varnothing}}{}\],
-% \[{\partial\Omega_{k}\mathit{intersect}{\Gamma =}}{}\],
-% \[{k,{l = \overline{1,K}}}{}\]), геометрія та конфігурація розташування
-% яких фіксовані для всіх \[n{}\]одночасно. А саме:
-
-% \[{\Lambda_{n}{\left( z \right) = {1 + {\sum\limits_{k = 1}^{K}{a_{\mathit{\text{nk}}}\lambda_{k}\left( z \right)\chi_{k}\left( z \right)}}}},}{}\]
-% \[{z\in\Omega,}{}\](2.9)
-
-% де \[{\lambda_{k}\left( z \right)}{}\] -- якісна характеристика
-% провідності середовища в області \[\Omega_{k}{}\]
-% (\[{k = \overline{1,K}}{}\]), причому
-% \[{\lambda_{k}{\left( z \right) \geq 0}}{}\],
-% \[{\underset{\Omega_{k}}{\text{max}}\lambda_{k}\left( z \right){= 1}}{}\],
-% \[{\lambda_{k}\left( z \right){_{z\in\partial\Omega_{k}} = 0}}{}\];
-% \[{\chi_{k}\left( z \right)}{}\] -- характеристична функція області
-% \[\Omega_{k}{}\]; \[\left\{ a_{\mathit{\text{nk}}} \right\}{}\] --
-% монотонна послідовність (\[{n = \overline{0,N}}{}\]) для кожного
-% конкретного \[k{}\], така, що \[{a_{0k} = 0}{}\],
-% \[{a_{\mathit{\text{nk}}} > {- 1}}{}\].
+\begin{equation}
+\label{eqn:teploprovidnist_9}
+\Lambda_{n}{(z) = {1 + {\sum\limits_{k = 1}^{K}{a_{\mathit{\text{nk}}}\lambda_{k}(z)\chi_{k}(z)}}}}, z\in\Omega
+\end{equation}
+    
+де $\lambda_{k}(z)$ -- якісна характеристика
+провідності середовища в області $\Omega_k$ ($k = \overline{1,K}$), причому
+$\lambda_{k}{(z) \geq 0}$, $\underset{\Omega_{k}}{\text{max}}\lambda_{k}(z){= 1}$,
+$\lambda_{k}(z)_{z\in\partial\Omega_{k}} = 0$; $\chi_{k}(z)$ -- характеристична функція області
+$\Omega_k$; $\{ a_{nk}\}$ -- монотонна послідовність ($n = \overline{0,N}$) для кожного
+конкретного $k$, така, що $a_{0k} = 0$,
+$a_{\mathit{\text{nk}}} > {- 1}$.
 
 % Застосуємо до оператора основного рівняння стаціонарного поля (2.6),
 % враховуючи (2.9), операції методу адитивного розщеплення операторів.
 % Внаслідок цього (2.6) набуде вигляду
 
-% \[{\nabla^{2}{\phi_{n} = P_{n}}\left\lbrack \phi_{n} \right\rbrack}{}\]
+% $\nabla^{2}{\phi_{n} = P_{n}}\left\lbrack \phi_{n} \right\rbrack$
 % в \[\Omega{}\],(2.10)
 
 % де
-% \[{{\nabla = \frac{\partial}{\partial x}}{\overrightarrow{i} + \frac{\partial}{\partial y}}\overrightarrow{j}}{}\]
+% ${\nabla = \frac{\partial}{\partial x}}{\overrightarrow{i} + \frac{\partial}{\partial y}}\overrightarrow{j}$
 % -- оператор Гамільтона;
-% \[{P_{n}{\left\lbrack {} \right\rbrack = {- \Lambda_{n}^{- 1}}}{\sum\limits_{k = 1}^{K}{a_{\mathit{\text{nk}}}\nabla\lambda_{k}\nabla\left\lbrack {} \right\rbrack}}\chi_{k}}{}\]
+% $P_{n}{\left\lbrack {} \right\rbrack = {- \Lambda_{n}^{- 1}}}{\sum\limits_{k = 1}^{K}{a_{\mathit{\text{nk}}}\nabla\lambda_{k}\nabla\left\lbrack {} \right\rbrack}}\chi_{k}$
 % -- оператор, який враховує додатковий вплив неоднорідностей.
 
 % Отже, маємо послідовність змішаних задач (2.10), (2.7), (2.8) для
-% визначення розв'язків \[{\phi_{n}\left( z \right)}{}\]
-% (\[{n = \overline{0,N}}{}\]).
+% визначення розв'язків $\phi_{n}(z)$
+% ($n = \overline{0,N}$).
 
 % \hypertarget{ux43fux43eux431ux443ux434ux43eux432ux430-ux43fux440ux43eux446ux435ux434ux443ux440ux438-ux442ux438ux43fux443-ux43fux440ux43eux433ux43dux43eux437ux43aux43eux440ux435ux43aux442ux443ux432ux430ux43dux43dux44f}{%
 % \subsubsection[2.2.2. Побудова процедури типу
@@ -134,65 +131,65 @@ $\Omega_{k}$.
 % конкретної конфігурації їхнього розташування в \[\Omega{}\] побудуємо
 % єдину процедуру, яка дає змогу розв'язувати відразу цілу низку задач
 % типу (2.10), (2.7), (2.8), що відрізняються характеристиками середовища
-% \[\Lambda_{n}{}\](\[{n = \overline{0,N}}{}\]). У цьому разі внаслідок
+% \[\Lambda_{n$($n = \overline{0,N}$). У цьому разі внаслідок
 % послідовного застосування аналогічно до прийому попереднього моделювання
 % шуканого розв'язку у правій частині (2.10) перейдемо до задач відносно
-% \[{{\phi_{n}^{} = \phi_{n}^{}}\left( z \right)}{}\].
+% ${\phi_{n}^{} = \phi_{n}^{}}(z)$.
 
 % Ітерації пропонованої процедури для визначення послідовності функцій
-% \[\phi_{i}^{}{}\]задамо такими формулами:
+% \[\phi_{i}^{$задамо такими формулами:
 
-% \[{\nabla^{2}{\phi_{i}^{{}^{m}} = P_{i}}\left\lbrack {\hat{\phi}}_{i^{m - 1}} \right\rbrack}{}\]
+% $\nabla^{2}{\phi_{i}^{{}^{m}} = P_{i}}\left\lbrack {\hat{\phi}}_{i^{m - 1}} \right\rbrack$
 % в \[\Omega{}\];(2.11)
 
-% \[{\phi_{i}^{{}^{m}} = \phi_{s}}{}\] на \[\Gamma_{1}{}\];(2.12)
+% $\phi_{i}^{{}^{m}} = \phi_{s}$ на \[\Gamma_{1$;(2.12)
 
-% \[{\frac{\partial\phi_{i}^{{}^{m}}}{\partial\overrightarrow{n}} = {- \psi_{s}}}{}\]
-% на \[\Gamma_{2}{}\];(2.13)
+% $\frac{\partial\phi_{i}^{{}^{m}}}{\partial\overrightarrow{n}} = {- \psi_{s}}$
+% на \[\Gamma_{2$;(2.13)
 
-% \[{i = \overline{0,N}}{}\]; \[{m = \overline{1,M_{i}}}{}\],
+% $i = \overline{0,N}$; $m = \overline{1,M_{i}}$,
 
-% де \[{\hat{\phi}}_{i}^{m - 1}{}\]-- апроксимація чергової ітерації
-% розв'язку \[\phi_{i}^{{}^{m - 1}}{}\]задачі при характеристиці
-% середовища \[\Lambda_{i}{}\], причому
-% \[{{\hat{\phi}}_{i + 1}^{0} = {\hat{\phi}}_{i}^{M_{i}}}{}\];
-% \[\]\[{\hat{\phi}}_{i}^{M_{i}}{}\]-- апроксимація \emph{відкоректованого
-% }\[M_{i}{}\] ітераціями розв'язку задачі при характеристиці середовища
-% \[\Lambda_{i}{}\]; \[{\hat{\phi}}_{i + 1}^{0}{}\] -- апроксимація
+% де $\hat{\phi}}_{i}^{m - 1$-- апроксимація чергової ітерації
+% розв'язку \[\phi_{i}^{{}^{m - 1}$задачі при характеристиці
+% середовища \[\Lambda_{i$, причому
+% ${\hat{\phi}}_{i + 1}^{0} = {\hat{\phi}}_{i}^{M_{i}}$;
+% \[\]$\hat{\phi}}_{i}^{M_{i}$-- апроксимація \emph{відкоректованого
+% }\[M_{i$ ітераціями розв'язку задачі при характеристиці середовища
+% \[\Lambda_{i$; $\hat{\phi}}_{i + 1}^{0$ -- апроксимація
 % початкового наближення \emph{прогнозованого }розв'язку при
-% \[\Lambda_{i + 1}{}\]; \[{\hat{\phi}}_{0}^{0}{}\] -- апроксимація
+% \[\Lambda_{i + 1$; $\hat{\phi}}_{0}^{0$ -- апроксимація
 % розв'язку наступної задачі для однорідної області
 
-% \[{\nabla^{2}{\phi_{0} = 0}}{}\] в \[\Omega{}\];
+% $\nabla^{2}{\phi_{0} = 0}$ в \[\Omega{}\];
 
-% \[{\phi_{0} = \phi_{s}}{}\] на \[\Gamma_{1}{}\];
-% \[{\frac{\partial\phi_{0}}{\partial\overrightarrow{n}} = {- \psi_{s}}}{}\]
-% на \[\Gamma_{2}{}\];
+% $\phi_{0} = \phi_{s}$ на \[\Gamma_{1$;
+% $\frac{\partial\phi_{0}}{\partial\overrightarrow{n}} = {- \psi_{s}}$
+% на \[\Gamma_{2$;
 
 % Розв'язок кожної із задач (2.11) -- (2.13) зобразимо у вигляді
 
-% \[{\phi_{i}^{{}^{m}}{\left( z \right) = \varphi_{i}^{m}}{\left( z \right) - \Phi_{i}^{m}}\left( z \right)}{}\],
+% $\phi_{i}^{{}^{m}}{(z) = \varphi_{i}^{m}}{(z) - \Phi_{i}^{m}}(z)$,
 
 % де
 
-% \[{\Phi_{i}^{m}{\left( z \right) = \frac{1}{2\pi}}{\sum\limits_{k = 1}^{K}{a_{\mathit{\text{ik}}}{\int\limits_{\Omega_{k}}{\text{ln}\left( {\left( {x - x^{}} \right)^{2} + \left( {y - y^{}} \right)^{2}} \right)}}}^{\frac{- 1}{2}}}{\Lambda_{i}^{- 1}\left( z^{} \right)}{\nabla\lambda_{k}\left( z^{} \right)}{\nabla{\hat{\phi}}_{i}^{m - 1}\left( z^{} \right)}{d\Omega_{k}\left( z^{} \right)}}{}\]--
+% $\Phi_{i}^{m}{(z) = \frac{1}{2\pi}}{\sum\limits_{k = 1}^{K}{a_{\mathit{\text{ik}}}{\int\limits_{\Omega_{k}}{\text{ln}( {( {x - x^{}} )^{2} + ( {y - y^{}} )^{2}} )}}}^{\frac{- 1}{2}}}{\Lambda_{i}^{- 1}( z^{} )}{\nabla\lambda_{k}( z^{} )}{\nabla{\hat{\phi}}_{i}^{m - 1}( z^{} )}{d\Omega_{k}( z^{} )}$--
 % частковий розв'язок рівняння (2.11);
-% \[{\varphi_{i}^{m}\left( z \right)}{}\] -- розв'язок наступної змішаної
+% $\varphi_{i}^{m}(z)$ -- розв'язок наступної змішаної
 % задачі для рівняння Лапласа
 
-% \[{\nabla^{2}{\varphi_{i}^{m} = 0}}{}\] в \[\Omega{}\];
+% $\nabla^{2}{\varphi_{i}^{m} = 0}$ в \[\Omega{}\];
 
-% \[{\varphi_{i}^{m} = {\phi_{s} + \Phi_{i}^{m}}}{}\] на \[\Gamma_{1}{}\];
-% \[{\frac{\partial\psi_{i}^{m}}{\partial\overrightarrow{s}} = {{- \psi_{s}} + \frac{\partial\Phi_{i}^{m}}{\partial\overrightarrow{n}}}}{}\]
-% на \[\Gamma_{2}{}\],
+% $\varphi_{i}^{m} = {\phi_{s} + \Phi_{i}^{m}}$ на \[\Gamma_{1$;
+% $\frac{\partial\psi_{i}^{m}}{\partial\overrightarrow{s}} = {{- \psi_{s}} + \frac{\partial\Phi_{i}^{m}}{\partial\overrightarrow{n}}}$
+% на \[\Gamma_{2$,
 
 % який легко можна знайти, використовуючи інтегральну формулу Коші для
 % функції
-% \[{\omega_{i}^{m}{\left( z \right) = \varphi_{i}^{m}}{\left( z \right) + {i \cdot \psi_{i}^{m}}}\left( z \right)}{}\]
-% комплексної змінної \[z{}\]( \[{\varphi_{i}^{m}\left( z \right)}{}\] --
-% потенціал; \[{\psi_{i}^{m}\left( z \right)}{}\] -- функція потоку;
-% \[\overrightarrow{s}{}\] -- одиничний вектор, дотичний до
-% \[\Gamma_{2}{}\] ) згідно з прямим чи непрямим формулюванням алгоритму
+% $\omega_{i}^{m}{(z) = \varphi_{i}^{m}}{(z) + {i \cdot \psi_{i}^{m}}}(z)$
+% комплексної змінної \[z{}\]( $\varphi_{i}^{m}(z)$ --
+% потенціал; $\psi_{i}^{m}(z)$ -- функція потоку;
+% \[\overrightarrow{s$ -- одиничний вектор, дотичний до
+% \[\Gamma_{2$ ) згідно з прямим чи непрямим формулюванням алгоритму
 % КМГЕ.
 
 % \hypertarget{ux447ux438ux441ux43bux43eux432ux456-ux440ux435ux437ux443ux43bux44cux442ux430ux442ux438}{%
@@ -203,7 +200,7 @@ $\Omega_{k}$.
 
 % Об'єктом числових досліджень було вибрано послідовність змішаних
 % крайових задач теплопровідності типу (2.6) -- (2.9) в області
-% \[{\Omega = {\left( {x^{-};x^{+}} \right) \times \left( {y^{-};y^{+}} \right)}}{}\]
+% $\Omega = {( {x^{-};x^{+}} ) \times ( {y^{-};y^{+}} )}$
 % з краєм
 % \includegraphics[width=0.7646in,height=0.2217in]{./ObjectReplacements/Obj217},
 % де\[\]\textbf{; }\[\]\textbf{;}
@@ -484,23 +481,23 @@ $\Omega_{k}$.
 % \includegraphics[width=0.1646in,height=0.2071in]{./ObjectReplacements/Obj317}
 % краю області\[\Omega{}\].
 
-% Блоки \[V_{j}^{i}{}\] \[\left( {{j = u},v} \right){}\], \[G_{k}{}\]
-% \[\left( {k = \overline{1,K}} \right){}\] - суми вкладів відповідно
-% дискретного аналога потенціалу і потоку на \[\]\[\Gamma_{i}{}\]
-% \[\left( {i = 1,2} \right){}\], а також в \[\Omega_{k}{}\], для уявної
-% частини \[\hat{w}{}\] на \[\Gamma_{1}{}\]. Блоки \[U_{j}^{i}{}\]
-% \[\left( {{j = u},v} \right){}\], \[T_{k}{}\]
-% \[\left( {k = \overline{1,K}} \right){}\] - суми вкладів відповідно
-% аналога потенціалу і потоку на \[\]\[\Gamma_{i}{}\]
-% \[\left( {i = 1,2} \right){}\], а також в \[\Omega_{k}{}\], для дійсної
-% частини \[\hat{w}{}\] на \[\Gamma_{2}{}\]. Блоки
-% \[{\overset{\sim}{U}}_{\mathit{\text{jl}}}^{i}{}\]
-% \[\left( {{j = u},v} \right){}\],
-% \[{\overset{\sim}{T}}_{\mathit{\text{lk}}}{}\]
-% \[\left( {k,{l = \overline{1,K}}} \right){}\] - суми вкладів відповідно
-% дискретного аналога потенціалу і потоку на \[\]\[\Gamma_{i}{}\]
-% \[\left( {i = 1,2} \right){}\], а також в \[\Omega_{k}{}\], для уявної
-% частини \[\hat{w}{}\] на \[\Omega_{k}{}\].
+% Блоки \[V_{j}^{i$ \[( {{j = u},v} ){}\], \[G_{k$
+% \[( {k = \overline{1,K}} ){}\] - суми вкладів відповідно
+% дискретного аналога потенціалу і потоку на \[\]\[\Gamma_{i$
+% \[( {i = 1,2} ){}\], а також в \[\Omega_{k$, для уявної
+% частини \[\hat{w$ на \[\Gamma_{1$. Блоки \[U_{j}^{i$
+% \[( {{j = u},v} ){}\], \[T_{k$
+% \[( {k = \overline{1,K}} ){}\] - суми вкладів відповідно
+% аналога потенціалу і потоку на \[\]\[\Gamma_{i$
+% \[( {i = 1,2} ){}\], а також в \[\Omega_{k$, для дійсної
+% частини \[\hat{w$ на \[\Gamma_{2$. Блоки
+% $\overset{\sim}{U}}_{\mathit{\text{jl}}}^{i$
+% \[( {{j = u},v} ){}\],
+% $\overset{\sim}{T}}_{\mathit{\text{lk}}$
+% \[( {k,{l = \overline{1,K}}} ){}\] - суми вкладів відповідно
+% дискретного аналога потенціалу і потоку на \[\]\[\Gamma_{i$
+% \[( {i = 1,2} ){}\], а також в \[\Omega_{k$, для уявної
+% частини \[\hat{w$ на \[\Omega_{k$.
 
 % У довільній точці
 % \includegraphics[width=0.1283in,height=0.1283in]{./ObjectReplacements/Obj349}
@@ -570,10 +567,10 @@ $\Omega_{k}$.
 
 % Рис. 2.7
 
-% Легко зауважити, що при \[{\lambda_{\text{max}}\rightarrow\infty}{}\]
+% Легко зауважити, що при $\lambda_{\text{max}}\rightarrow\infty$
 % розв'язок прямує до розв'язку задачі для однорідної області з отвором в
 % області включення, на краю якого задана стала температура; а при
-% \[{\lambda_{\text{max}}{\rightarrow + 0}}{}\] - з отвором, край якого
+% $\lambda_{\text{max}}{\rightarrow + 0}$ - з отвором, край якого
 % тепло ізольований.
 
 % \hypertarget{ux43fux456ux434ux441ux443ux43cux43eux43a}{%
