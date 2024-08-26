@@ -5,53 +5,56 @@
 
 \section{Постановка задачі}
 
-Нехай характеристика середовища $ \Lambda (z) $ стосовно певного фізичного процесу,
+Нехай характеристика середовища $\Lambda (z)$ стосовно певного фізичного процесу,
 модельованого потенціалом безвихрового векторного поля,
 (теплопровідності, дифузії, електромагнітостатики, пружного руху
 твердого тіла, течією ґрунтових вод тощо) є неперервною функцією
-декартових координат $ z = (x, y) $,
+декартових координат $z = (x, y)$,
 сталою скрізь у плоскій однозв'язній області $ \Omega $ з простим
 замкнутим краєм $ \Gamma = {\Gamma_{1} \cup \Gamma_{2}} $, за
 винятком скінченої сукупності локальних неоднорідних включень
-$ \Omega_{k}\subset\Omega $ ( $ \Omega_k \underset {k \neq l} \cap \Omega_l = \varnothing $, 
+$\Omega_{k}\subset\Omega$ ($\Omega_k \underset {k \neq l} \cap \Omega_l = \varnothing$, 
 $\partial \Omega_k \cap \Gamma = \varnothing $, $ k,l = \overline{1,K} $).
 
 Розглянемо змішану крайову задачу для основного рівняння стаціонарного
 поля в локально-неоднорідному середовищі
 
-% \[\] \[\](2.1)
+\begin{equation}
+\label{eqn:teploprovidnist_1}
+div(\Lambda(z) \nabla \theta (z) ) = 0, z \in \Omega
+\end{equation}
 
-% \[\] \[{z\in\Gamma_{1},}{}\]\[\] \[{z\in\Gamma_{2},}{}\](2.2)
+\begin{equation}
+\label{eqn:teploprovidnist_2}
+\theta(z) = p(z), z\in\Gamma_{1},
+\Lambda(z) \frac{\partial \theta (z)}{\partial n}  = -q(z), z\in\Gamma_{2}
+\end{equation}
 
-% де
+де
 
-% \[\] \[\],(2.3)
+\begin{equation}
+\label{eqn:teploprovidnist_3}
+\Lambda(z)=1+\sum_{k=1}^{K}a_k\lambda_k(z)\chi_k(z), z \in \Omega
+\end{equation}
+    
+$a_k=const_k > -1$; $ \lambda_k(z) $ -- якісна характеристика провідності середовища в
+$\Omega_{k} (k=\overline{1,K})$, причому $\lambda_{k}(z) \geq 0$, $\displaystyle \max_{\Omega_k} \lambda_k (z) = 1$, 
+$\lambda_{k}(z)_{z\in\partial\Omega_{k}} = 0$; $\chi_{k}\left( z \right)$ -- характеристична функція області
+$\Omega_{k}$.
 
-% \includegraphics[width=0.9571in,height=0.2071in]{./ObjectReplacements/Obj118};\includegraphics[width=0.3783in,height=0.2354in]{./ObjectReplacements/Obj119}
-% -- якісна характеристика провідності середовища в
-% \[\Omega_{k}{}\]\includegraphics[width=0.5854in,height=0.2929in]{./ObjectReplacements/Obj121},
-% причому \[{\lambda_{k}{\left( z \right) \geq 0}}{}\],
-% \[{\underset{\Omega_{k}}{\text{max}}\lambda_{k}\left( z \right){= 1}}{}\],
-% \[{\lambda_{k}\left( z \right){_{z\in\partial\Omega_{k}} = 0}}{}\];
-% \[{\chi_{k}\left( z \right)}{}\] -- характеристична функція області
-% \[\Omega_{k}{}\].
+Враховуючи (\ref{eqn:teploprovidnist_3}), задача (\ref{eqn:teploprovidnist_1})(\ref{eqn:teploprovidnist_2}) набуде вигляду:
 
-% Враховуючи (2.3), задача (2.1)(2.2) набуде вигляду:
+\begin{equation}
+\label{eqn:teploprovidnist_4}
+\nabla^{2} \theta = -\sum_{k=1}^{K}a_k B_k[\theta]\chi_k \text{ в } \Omega
+\end{equation}
 
-% \includegraphics[width=1.25in,height=0.4in]{./ObjectReplacements/Obj127}
-% в
-% \includegraphics[width=0.1646in,height=0.15in]{./ObjectReplacements/Obj128},(2.4)
+\begin{equation}
+\label{eqn:teploprovidnist_5}
+\theta = p \text{ на } \Gamma_1; \frac{\partial\theta}{\partial \overrightarrow{n}} = -q \text{ на } \Gamma_2,
+\end{equation}
 
-% \includegraphics[width=0.3646in,height=0.1929in]{./ObjectReplacements/Obj129}
-% на
-% \includegraphics[width=0.1646in,height=0.2071in]{./ObjectReplacements/Obj130};\includegraphics[width=0.5283in,height=0.3854in]{./ObjectReplacements/Obj131}
-% на
-% \includegraphics[width=0.1783in,height=0.2071in]{./ObjectReplacements/Obj132},(2.5)
-
-% де
-% \includegraphics[width=1.0146in,height=0.4283in]{./ObjectReplacements/Obj133},
-% \includegraphics[width=0.15in,height=0.1646in]{./ObjectReplacements/Obj134}
-% - оператор Гамільтона.
+де $B_k[\bullet]=\frac{\nabla\lambda_k\nabla[\bullet]}{1+a_k\lambda_k}$, $\nabla$ - оператор Гамільтона.
 
 % \hypertarget{ux43cux435ux442ux43eux434-ux43fux440ux435ux434ux438ux43aux442ux43eux440-ux43aux43eux440ux435ux43aux442ux43eux440}{%
 % \subsection[2.2. Метод
