@@ -1,0 +1,600 @@
+\chapter{ЗАДАЧА ТЕПЛОПРОВІДНОСТІ ДЛЯ ПЛОСКОГО ТІЛА ІЗ ЛОКАЛЬНО-НЕОДНОРІДНИМ ВКЛЮЧЕННЯМ}
+
+%Hidden cite for correct bibliography ordering
+\nocite{bahvalov-et-al,benerdge-et-al} 
+
+\section{Постановка задачі}
+
+Нехай характеристика середовища $ \Lambda (z) $ стосовно певного фізичного процесу,
+модельованого потенціалом безвихрового векторного поля,
+(теплопровідності, дифузії, електромагнітостатики, пружного руху
+твердого тіла, течією ґрунтових вод тощо) є неперервною функцією
+декартових координат $ z = (x, y) $,
+сталою скрізь у плоскій однозв'язній області $ \Omega $ з простим
+замкнутим краєм $ \Gamma = {\Gamma_{1} \cup \Gamma_{2}} $, за
+винятком скінченої сукупності локальних неоднорідних включень
+$ \Omega_{k}\subset\Omega $ ( $ \Omega_k \underset {k \neq l} \cap \Omega_l = \varnothing $, 
+$\partial \Omega_k \cap \Gamma = \varnothing $, $ k,l = \overline{1,K} $).
+
+Розглянемо змішану крайову задачу для основного рівняння стаціонарного
+поля в локально-неоднорідному середовищі
+
+% \[\] \[\](2.1)
+
+% \[\] \[{z\in\Gamma_{1},}{}\]\[\] \[{z\in\Gamma_{2},}{}\](2.2)
+
+% де
+
+% \[\] \[\],(2.3)
+
+% \includegraphics[width=0.9571in,height=0.2071in]{./ObjectReplacements/Obj118};\includegraphics[width=0.3783in,height=0.2354in]{./ObjectReplacements/Obj119}
+% -- якісна характеристика провідності середовища в
+% \[\Omega_{k}{}\]\includegraphics[width=0.5854in,height=0.2929in]{./ObjectReplacements/Obj121},
+% причому \[{\lambda_{k}{\left( z \right) \geq 0}}{}\],
+% \[{\underset{\Omega_{k}}{\text{max}}\lambda_{k}\left( z \right){= 1}}{}\],
+% \[{\lambda_{k}\left( z \right){_{z\in\partial\Omega_{k}} = 0}}{}\];
+% \[{\chi_{k}\left( z \right)}{}\] -- характеристична функція області
+% \[\Omega_{k}{}\].
+
+% Враховуючи (2.3), задача (2.1)(2.2) набуде вигляду:
+
+% \includegraphics[width=1.25in,height=0.4in]{./ObjectReplacements/Obj127}
+% в
+% \includegraphics[width=0.1646in,height=0.15in]{./ObjectReplacements/Obj128},(2.4)
+
+% \includegraphics[width=0.3646in,height=0.1929in]{./ObjectReplacements/Obj129}
+% на
+% \includegraphics[width=0.1646in,height=0.2071in]{./ObjectReplacements/Obj130};\includegraphics[width=0.5283in,height=0.3854in]{./ObjectReplacements/Obj131}
+% на
+% \includegraphics[width=0.1783in,height=0.2071in]{./ObjectReplacements/Obj132},(2.5)
+
+% де
+% \includegraphics[width=1.0146in,height=0.4283in]{./ObjectReplacements/Obj133},
+% \includegraphics[width=0.15in,height=0.1646in]{./ObjectReplacements/Obj134}
+% - оператор Гамільтона.
+
+% \hypertarget{ux43cux435ux442ux43eux434-ux43fux440ux435ux434ux438ux43aux442ux43eux440-ux43aux43eux440ux435ux43aux442ux43eux440}{%
+% \subsection[2.2. Метод
+% предиктор-коректор]{\texorpdfstring{\protect\hypertarget{anchor-30}{}{}2.2.
+% Метод
+% предиктор-коректор}{2.2. Метод предиктор-коректор}}\label{ux43cux435ux442ux43eux434-ux43fux440ux435ux434ux438ux43aux442ux43eux440-ux43aux43eux440ux435ux43aux442ux43eux440}}
+
+% \hypertarget{ux441ux443ux442ux44c-ux43cux435ux442ux43eux434ux443}{%
+% \subsubsection[2.2.1. Суть
+% методу]{\texorpdfstring{\protect\hypertarget{anchor-31}{}{}2.2.1. Суть
+% методу}{2.2.1. Суть методу}}\label{ux441ux443ux442ux44c-ux43cux435ux442ux43eux434ux443}}
+
+% Розглянемо послідовність плоских змішаних крайових задач для основного
+% рівняння стаціонарного поля
+
+% \[{\mathit{\text{div}}{\left( {\Lambda_{n}\left( z \right)\mathit{\text{grad}}\phi_{n}\left( z \right)} \right) = 0},}{}\]
+% \[{z\in\Omega}{}\];(2.6)
+
+% \[{\phi_{n}{\left( z \right) = \phi_{s}}\left( z \right),}{}\]
+% \[{z\in\Gamma_{1}}{}\];(2.7)
+
+% \[{{\frac{\partial\phi_{n}\left( z \right)}{\partial\overrightarrow{n}} = {- \psi_{s}}}\left( z \right),}{}\]
+% \[{z\in\Gamma_{2}}{}\](2.8)
+
+% за умови, що характеристика середовища
+% \[{\Lambda_{n}(z)({n = \overline{0,N}})}{}\] (коефіцієнт
+% теплопровідності, коефіцієнт дифузії тощо) для кожної з цих задач є
+% неперервною функцією декартових координат
+% \[{z = \left( {x,y} \right)}{}\], сталою скрізь в однозв'язній області
+% \[\Omega{}\] з простим замкнутим краєм
+% \[{\Gamma = {\Gamma_{1} \cup \Gamma_{2}}}{}\], за винятком скінченої
+% сукупності неоднорідних включень \[{\Omega_{k}\subset\Omega}{}\]
+% (\[{\Omega_{k}\underset{k \neq l}{\mathit{intersect}}{\Omega_{l} = \varnothing}}{}\],
+% \[{\partial\Omega_{k}\mathit{intersect}{\Gamma =}}{}\],
+% \[{k,{l = \overline{1,K}}}{}\]), геометрія та конфігурація розташування
+% яких фіксовані для всіх \[n{}\]одночасно. А саме:
+
+% \[{\Lambda_{n}{\left( z \right) = {1 + {\sum\limits_{k = 1}^{K}{a_{\mathit{\text{nk}}}\lambda_{k}\left( z \right)\chi_{k}\left( z \right)}}}},}{}\]
+% \[{z\in\Omega,}{}\](2.9)
+
+% де \[{\lambda_{k}\left( z \right)}{}\] -- якісна характеристика
+% провідності середовища в області \[\Omega_{k}{}\]
+% (\[{k = \overline{1,K}}{}\]), причому
+% \[{\lambda_{k}{\left( z \right) \geq 0}}{}\],
+% \[{\underset{\Omega_{k}}{\text{max}}\lambda_{k}\left( z \right){= 1}}{}\],
+% \[{\lambda_{k}\left( z \right){_{z\in\partial\Omega_{k}} = 0}}{}\];
+% \[{\chi_{k}\left( z \right)}{}\] -- характеристична функція області
+% \[\Omega_{k}{}\]; \[\left\{ a_{\mathit{\text{nk}}} \right\}{}\] --
+% монотонна послідовність (\[{n = \overline{0,N}}{}\]) для кожного
+% конкретного \[k{}\], така, що \[{a_{0k} = 0}{}\],
+% \[{a_{\mathit{\text{nk}}} > {- 1}}{}\].
+
+% Застосуємо до оператора основного рівняння стаціонарного поля (2.6),
+% враховуючи (2.9), операції методу адитивного розщеплення операторів.
+% Внаслідок цього (2.6) набуде вигляду
+
+% \[{\nabla^{2}{\phi_{n} = P_{n}}\left\lbrack \phi_{n} \right\rbrack}{}\]
+% в \[\Omega{}\],(2.10)
+
+% де
+% \[{{\nabla = \frac{\partial}{\partial x}}{\overrightarrow{i} + \frac{\partial}{\partial y}}\overrightarrow{j}}{}\]
+% -- оператор Гамільтона;
+% \[{P_{n}{\left\lbrack {} \right\rbrack = {- \Lambda_{n}^{- 1}}}{\sum\limits_{k = 1}^{K}{a_{\mathit{\text{nk}}}\nabla\lambda_{k}\nabla\left\lbrack {} \right\rbrack}}\chi_{k}}{}\]
+% -- оператор, який враховує додатковий вплив неоднорідностей.
+
+% Отже, маємо послідовність змішаних задач (2.10), (2.7), (2.8) для
+% визначення розв'язків \[{\phi_{n}\left( z \right)}{}\]
+% (\[{n = \overline{0,N}}{}\]).
+
+% \hypertarget{ux43fux43eux431ux443ux434ux43eux432ux430-ux43fux440ux43eux446ux435ux434ux443ux440ux438-ux442ux438ux43fux443-ux43fux440ux43eux433ux43dux43eux437ux43aux43eux440ux435ux43aux442ux443ux432ux430ux43dux43dux44f}{%
+% \subsubsection[2.2.2. Побудова процедури типу
+% прогноз--коректування]{\texorpdfstring{\protect\hypertarget{anchor-32}{}{}\protect\hypertarget{anchor-33}{}{}2.2.2.
+% Побудова процедури типу
+% прогноз--коректування}{2.2.2. Побудова процедури типу прогноз--коректування}}\label{ux43fux43eux431ux443ux434ux43eux432ux430-ux43fux440ux43eux446ux435ux434ux443ux440ux438-ux442ux438ux43fux443-ux43fux440ux43eux433ux43dux43eux437ux43aux43eux440ux435ux43aux442ux443ux432ux430ux43dux43dux44f}}
+
+% Для вибраної конкретної\textbf{ }геометрії неоднорідних включень та
+% конкретної конфігурації їхнього розташування в \[\Omega{}\] побудуємо
+% єдину процедуру, яка дає змогу розв'язувати відразу цілу низку задач
+% типу (2.10), (2.7), (2.8), що відрізняються характеристиками середовища
+% \[\Lambda_{n}{}\](\[{n = \overline{0,N}}{}\]). У цьому разі внаслідок
+% послідовного застосування аналогічно до прийому попереднього моделювання
+% шуканого розв'язку у правій частині (2.10) перейдемо до задач відносно
+% \[{{\phi_{n}^{} = \phi_{n}^{}}\left( z \right)}{}\].
+
+% Ітерації пропонованої процедури для визначення послідовності функцій
+% \[\phi_{i}^{}{}\]задамо такими формулами:
+
+% \[{\nabla^{2}{\phi_{i}^{{}^{m}} = P_{i}}\left\lbrack {\hat{\phi}}_{i^{m - 1}} \right\rbrack}{}\]
+% в \[\Omega{}\];(2.11)
+
+% \[{\phi_{i}^{{}^{m}} = \phi_{s}}{}\] на \[\Gamma_{1}{}\];(2.12)
+
+% \[{\frac{\partial\phi_{i}^{{}^{m}}}{\partial\overrightarrow{n}} = {- \psi_{s}}}{}\]
+% на \[\Gamma_{2}{}\];(2.13)
+
+% \[{i = \overline{0,N}}{}\]; \[{m = \overline{1,M_{i}}}{}\],
+
+% де \[{\hat{\phi}}_{i}^{m - 1}{}\]-- апроксимація чергової ітерації
+% розв'язку \[\phi_{i}^{{}^{m - 1}}{}\]задачі при характеристиці
+% середовища \[\Lambda_{i}{}\], причому
+% \[{{\hat{\phi}}_{i + 1}^{0} = {\hat{\phi}}_{i}^{M_{i}}}{}\];
+% \[\]\[{\hat{\phi}}_{i}^{M_{i}}{}\]-- апроксимація \emph{відкоректованого
+% }\[M_{i}{}\] ітераціями розв'язку задачі при характеристиці середовища
+% \[\Lambda_{i}{}\]; \[{\hat{\phi}}_{i + 1}^{0}{}\] -- апроксимація
+% початкового наближення \emph{прогнозованого }розв'язку при
+% \[\Lambda_{i + 1}{}\]; \[{\hat{\phi}}_{0}^{0}{}\] -- апроксимація
+% розв'язку наступної задачі для однорідної області
+
+% \[{\nabla^{2}{\phi_{0} = 0}}{}\] в \[\Omega{}\];
+
+% \[{\phi_{0} = \phi_{s}}{}\] на \[\Gamma_{1}{}\];
+% \[{\frac{\partial\phi_{0}}{\partial\overrightarrow{n}} = {- \psi_{s}}}{}\]
+% на \[\Gamma_{2}{}\];
+
+% Розв'язок кожної із задач (2.11) -- (2.13) зобразимо у вигляді
+
+% \[{\phi_{i}^{{}^{m}}{\left( z \right) = \varphi_{i}^{m}}{\left( z \right) - \Phi_{i}^{m}}\left( z \right)}{}\],
+
+% де
+
+% \[{\Phi_{i}^{m}{\left( z \right) = \frac{1}{2\pi}}{\sum\limits_{k = 1}^{K}{a_{\mathit{\text{ik}}}{\int\limits_{\Omega_{k}}{\text{ln}\left( {\left( {x - x^{}} \right)^{2} + \left( {y - y^{}} \right)^{2}} \right)}}}^{\frac{- 1}{2}}}{\Lambda_{i}^{- 1}\left( z^{} \right)}{\nabla\lambda_{k}\left( z^{} \right)}{\nabla{\hat{\phi}}_{i}^{m - 1}\left( z^{} \right)}{d\Omega_{k}\left( z^{} \right)}}{}\]--
+% частковий розв'язок рівняння (2.11);
+% \[{\varphi_{i}^{m}\left( z \right)}{}\] -- розв'язок наступної змішаної
+% задачі для рівняння Лапласа
+
+% \[{\nabla^{2}{\varphi_{i}^{m} = 0}}{}\] в \[\Omega{}\];
+
+% \[{\varphi_{i}^{m} = {\phi_{s} + \Phi_{i}^{m}}}{}\] на \[\Gamma_{1}{}\];
+% \[{\frac{\partial\psi_{i}^{m}}{\partial\overrightarrow{s}} = {{- \psi_{s}} + \frac{\partial\Phi_{i}^{m}}{\partial\overrightarrow{n}}}}{}\]
+% на \[\Gamma_{2}{}\],
+
+% який легко можна знайти, використовуючи інтегральну формулу Коші для
+% функції
+% \[{\omega_{i}^{m}{\left( z \right) = \varphi_{i}^{m}}{\left( z \right) + {i \cdot \psi_{i}^{m}}}\left( z \right)}{}\]
+% комплексної змінної \[z{}\]( \[{\varphi_{i}^{m}\left( z \right)}{}\] --
+% потенціал; \[{\psi_{i}^{m}\left( z \right)}{}\] -- функція потоку;
+% \[\overrightarrow{s}{}\] -- одиничний вектор, дотичний до
+% \[\Gamma_{2}{}\] ) згідно з прямим чи непрямим формулюванням алгоритму
+% КМГЕ.
+
+% \hypertarget{ux447ux438ux441ux43bux43eux432ux456-ux440ux435ux437ux443ux43bux44cux442ux430ux442ux438}{%
+% \subsubsection[2.2.3. Числові
+% результати]{\texorpdfstring{\protect\hypertarget{anchor-34}{}{}2.2.3.
+% Числові
+% результати}{2.2.3. Числові результати}}\label{ux447ux438ux441ux43bux43eux432ux456-ux440ux435ux437ux443ux43bux44cux442ux430ux442ux438}}
+
+% Об'єктом числових досліджень було вибрано послідовність змішаних
+% крайових задач теплопровідності типу (2.6) -- (2.9) в області
+% \[{\Omega = {\left( {x^{-};x^{+}} \right) \times \left( {y^{-};y^{+}} \right)}}{}\]
+% з краєм
+% \includegraphics[width=0.7646in,height=0.2217in]{./ObjectReplacements/Obj217},
+% де\[\]\textbf{; }\[\]\textbf{;}
+
+% \[\]\textbf{; }\[\]\textbf{ , }яка містить область локальної
+% неоднорідності \[\].
+
+% Граничні умови, схарактеризовані так: \[\]\textbf{; }\[\]\textbf{.}
+
+% Якісну характеристику теплопровідності середовища було задано у вигляді
+
+% \[\]\textbf{;
+% }\includegraphics[width=0.5429in,height=0.2217in]{./ObjectReplacements/Obj226}\textbf{.}
+
+% Усі графіки, показані на рис. 2.1--2.3, стосуються таких конкретних
+% значень параметрів: \[\]; \[\]; \[\]; \[\]; \[\]
+
+% \includegraphics[width=5.111in,height=3.528in]{Pictures/100000000000020200000163358C6F063C52CE42.png}\includegraphics[width=5.111in,height=3.25in]{Pictures/10000000000001EB0000013832389E2C121C29E6.png}
+
+% Рис. 2.1
+
+% На рис. 2.1 наочно простежується залежність температурного поля (рис.
+% 2.1,а) від властивостей середовища (рис. 2.1,б). Видно, що зі
+% збільшенням відстані до області локальної неоднорідності
+% (\includegraphics[width=0.5283in,height=0.2217in]{./ObjectReplacements/Obj232})
+% зменшується її вплив на температурне поле, тобто розв'язок задачі щораз
+% менше відрізняється від розв'язку аналогічної задачі для випадку
+% однорідного середовища.
+
+% \includegraphics[width=5.111in,height=2.889in]{Pictures/100000000000031C000001C112ECC8EDD043C886.png}
+
+% Рис. 2.2
+
+% \includegraphics[width=5.111in,height=2.889in]{Pictures/100000000000031C000001C1A825D2F7BF570EC8.png}
+
+% Рис. 2.3
+
+% Зображені на рис. 2.2, рис. 2.3 графіки демонструють зміну розв'язків
+% крайових задач (2.6)--(2.9) уздовж осі
+% \includegraphics[width=0.4in,height=0.2217in]{./ObjectReplacements/Obj233},
+% що проходить через центр області локальної неоднорідності, де
+% найяскравіше виявляються закономірності впливу теплофізичних
+% властивостей середовища на розв'язок.
+
+% Крива 1 на рис. 2.2 -- розв'язок задачі без неоднорідності; криві 2--5
+% -- розв'язки задач за наявної неоднорідності радіуса
+% \includegraphics[width=0.5283in,height=0.2217in]{./ObjectReplacements/Obj234}
+% і максимальних відхиленнях у ній значень коефіцієнта теплопровідності
+% від значення у решті області, відповідно, у 3, 5, 7, 9 разів. Криві 1--5
+% добре демонструють збіжність послідовності розв'язків крайових задач
+% (2.6)--(2.9)
+% (\includegraphics[width=0.4854in,height=0.2354in]{./ObjectReplacements/Obj235}),
+% а також щоразу яскравіший прояв із зростанням провідності ефекту
+% ``плато''.
+
+% Графіки на рис. 2.3 одержані при
+% \includegraphics[width=0.3646in,height=0.1783in]{./ObjectReplacements/Obj236}
+% і значеннях
+% \includegraphics[width=1.0429in,height=0.2217in]{./ObjectReplacements/Obj237}
+% (відповідно, криві 2--4). Крива 1 відповідає розв'язку задачі для
+% однорідного середовища. Можемо спостерігати розширення сфери впливу
+% неоднорідності на розв'язок із збільшенням розмірів неоднорідності.
+
+% \hypertarget{ux43cux435ux442ux43eux434-ux43fux43eux454ux434ux43dux430ux43dux43dux44f-ux433ux440ux430ux43dux438ux447ux43dux438ux445-ux435ux43bux435ux43cux435ux43dux442ux456ux432-ux456ux437-ux441ux43aux456ux43dux447ux435ux43dux438ux43cux438-ux435ux43bux435ux43cux435ux43dux442ux430ux43cux438}{%
+% \subsection[2.3. Метод поєднання граничних елементів із скінченими
+% елементами]{\texorpdfstring{\protect\hypertarget{anchor-35}{}{}2.3.
+% Метод поєднання граничних елементів із скінченими
+% елементами}{2.3. Метод поєднання граничних елементів із скінченими елементами}}\label{ux43cux435ux442ux43eux434-ux43fux43eux454ux434ux43dux430ux43dux43dux44f-ux433ux440ux430ux43dux438ux447ux43dux438ux445-ux435ux43bux435ux43cux435ux43dux442ux456ux432-ux456ux437-ux441ux43aux456ux43dux447ux435ux43dux438ux43cux438-ux435ux43bux435ux43cux435ux43dux442ux430ux43cux438}}
+
+% \hypertarget{ux441ux443ux442ux44c-ux43cux435ux442ux43eux434ux443-1}{%
+% \subsubsection[2.3.1. Суть
+% методу]{\texorpdfstring{\protect\hypertarget{anchor-36}{}{}2.3.1. Суть
+% методу}{2.3.1. Суть методу}}\label{ux441ux443ux442ux44c-ux43cux435ux442ux43eux434ux443-1}}
+
+% Припустимо, що нам відома апроксимація
+% \includegraphics[width=0.1283in,height=0.2071in]{./ObjectReplacements/Obj238}
+% функції розв'язку
+% \includegraphics[width=0.1283in,height=0.1646in]{./ObjectReplacements/Obj239}
+% задачі (2.4),(2.5) в області кожної з локальних неоднорідностей
+% \includegraphics[width=0.2071in,height=0.2071in]{./ObjectReplacements/Obj240}.
+% Використаємо
+% \includegraphics[width=0.1283in,height=0.2071in]{./ObjectReplacements/Obj241}
+% у правій частині (2.4). Потрактуємо розв'язок
+% \includegraphics[width=0.1354in,height=0.1646in]{./ObjectReplacements/Obj242}
+% одержаної крайової задачі
+
+% \includegraphics[width=1.2929in,height=0.4in]{./ObjectReplacements/Obj243}
+% в
+% \includegraphics[width=0.1646in,height=0.15in]{./ObjectReplacements/Obj244};(2.14)
+
+% \includegraphics[width=0.3783in,height=0.1929in]{./ObjectReplacements/Obj245}
+% на
+% \includegraphics[width=0.1646in,height=0.2071in]{./ObjectReplacements/Obj246};
+% \includegraphics[width=0.5429in,height=0.3854in]{./ObjectReplacements/Obj247}
+% на
+% \includegraphics[width=0.1783in,height=0.2071in]{./ObjectReplacements/Obj248},(2.15)
+
+% як аналог розв'язку вихідної задачі.
+
+% Далі розв'язок задачі (2.14),(2.15) зобразимо у вигляді
+
+% \includegraphics[width=1.5in,height=0.4in]{./ObjectReplacements/Obj249},(2.16)
+
+% де
+
+% \includegraphics[width=2.1783in,height=0.4429in]{./ObjectReplacements/Obj250},(2.17)
+
+% а
+% \includegraphics[width=0.3217in,height=0.2354in]{./ObjectReplacements/Obj251}
+% - розв'язок задачі для рівняння Лапласа з видозміненими крайовими
+% умовами
+
+% \includegraphics[width=0.4854in,height=0.1929in]{./ObjectReplacements/Obj252}
+% в
+% \includegraphics[width=0.1646in,height=0.15in]{./ObjectReplacements/Obj253};(2.18)
+
+% \includegraphics[width=1.1146in,height=0.35in]{./ObjectReplacements/Obj254}
+% на
+% \includegraphics[width=0.1646in,height=0.2071in]{./ObjectReplacements/Obj255};
+% \includegraphics[width=1.2929in,height=0.4in]{./ObjectReplacements/Obj256}
+% на
+% \includegraphics[width=0.1783in,height=0.2071in]{./ObjectReplacements/Obj257},(2.19)
+
+% де
+% \includegraphics[width=1.4146in,height=0.4283in]{./ObjectReplacements/Obj258}.
+
+% Шуканий розв'язок задачі (2.18), (2.19) проінтерпретуємо наступним чином
+% \includegraphics[width=0.5429in,height=0.1646in]{./ObjectReplacements/Obj259},
+% де
+% \includegraphics[width=1.4in,height=0.2354in]{./ObjectReplacements/Obj260}
+% - аналітична в
+% \includegraphics[width=0.3783in,height=0.1929in]{./ObjectReplacements/Obj261}
+% функція комплексної змінної
+% \includegraphics[width=0.5717in,height=0.1929in]{./ObjectReplacements/Obj262},
+% причому потенціал
+% \includegraphics[width=0.1283in,height=0.1354in]{./ObjectReplacements/Obj263}
+% та функція потоку
+% \includegraphics[width=0.1146in,height=0.1354in]{./ObjectReplacements/Obj264}
+% є гармонійними в
+% \includegraphics[width=0.3783in,height=0.1929in]{./ObjectReplacements/Obj265}.
+
+% Беручи до уваги, що
+% \includegraphics[width=0.5146in,height=0.3854in]{./ObjectReplacements/Obj266},
+% де
+% \includegraphics[width=0.1283in,height=0.1783in]{./ObjectReplacements/Obj267}
+% - одиничний додатньоорієнтований (проти руху стрілок годинника) вектор,
+% дотичний до
+% \includegraphics[width=0.1354in,height=0.15in]{./ObjectReplacements/Obj268},
+% перейдемо до розв'язування такої крайової задачі:
+
+% \includegraphics[width=0.6783in,height=0.2354in]{./ObjectReplacements/Obj269}
+% в
+% \includegraphics[width=0.1646in,height=0.15in]{./ObjectReplacements/Obj270},(2.20)
+
+% \includegraphics[width=1.5in,height=0.35in]{./ObjectReplacements/Obj271}
+% на
+% \includegraphics[width=0.1646in,height=0.2071in]{./ObjectReplacements/Obj272};(2.21)
+
+% \includegraphics[width=1.6646in,height=0.4429in]{./ObjectReplacements/Obj273}
+% на
+% \includegraphics[width=0.1783in,height=0.2071in]{./ObjectReplacements/Obj274}.(2.22)
+
+% Для довільної точки
+% \includegraphics[width=0.1283in,height=0.1283in]{./ObjectReplacements/Obj275}
+% заданої однозв'язної області
+% \includegraphics[width=0.1646in,height=0.15in]{./ObjectReplacements/Obj276}
+% з простим замкнутим додатньоорієнтованим краєм
+% \includegraphics[width=0.1354in,height=0.15in]{./ObjectReplacements/Obj277}
+% справедлива інтегральна формула Коші
+
+% \includegraphics[width=1.3783in,height=0.4283in]{./ObjectReplacements/Obj278},(2.23)
+
+% яка слугуватиме основою наступних викладок.
+
+% \hypertarget{ux434ux438ux441ux43aux440ux435ux442ux438ux437ux430ux446ux456ux44f-ux433ux435ux43eux43cux435ux442ux440ux456ux457-ux442ux430-ux432ux438ux437ux43dux430ux447ux435ux43dux43dux44f-ux430ux43fux440ux43eux43aux441ux438ux43cux430ux446ux456ux439}{%
+% \subsubsection[2.3.2. Дискретизація геометрії та визначення
+% апроксимацій]{\texorpdfstring{\protect\hypertarget{anchor-37}{}{}\protect\hypertarget{anchor-38}{}{}2.3.2.
+% Дискретизація геометрії та визначення
+% апроксимацій}{2.3.2. Дискретизація геометрії та визначення апроксимацій}}\label{ux434ux438ux441ux43aux440ux435ux442ux438ux437ux430ux446ux456ux44f-ux433ux435ux43eux43cux435ux442ux440ux456ux457-ux442ux430-ux432ux438ux437ux43dux430ux447ux435ux43dux43dux44f-ux430ux43fux440ux43eux43aux441ux438ux43cux430ux446ux456ux439}}
+
+% Дискретизуємо
+% \includegraphics[width=0.1354in,height=0.15in]{./ObjectReplacements/Obj279}послідовністю
+% \includegraphics[width=0.1646in,height=0.1646in]{./ObjectReplacements/Obj280}
+% граничних елементів
+% \includegraphics[width=0.1783in,height=0.2071in]{./ObjectReplacements/Obj281}
+% (таких, що
+% \includegraphics[width=0.35in,height=0.4in]{./ObjectReplacements/Obj282}
+% апроксимує
+% \includegraphics[width=0.1646in,height=0.2071in]{./ObjectReplacements/Obj283},
+% а
+% \includegraphics[width=0.4283in,height=0.4in]{./ObjectReplacements/Obj284}
+% -
+% \includegraphics[width=0.1783in,height=0.2071in]{./ObjectReplacements/Obj285}),
+% моделюючи геометрію кожного з елементів за допомогою вектора
+% \includegraphics[width=0.1354in,height=0.2071in]{./ObjectReplacements/Obj286}
+% базових інтерполюючих функцій, пов'язаних із локальною нормалізованою
+% координатою
+% \includegraphics[width=0.1283in,height=0.1646in]{./ObjectReplacements/Obj287}.
+% Вздовж кожного з елементів апроксимуємо
+% \includegraphics[width=0.15in,height=0.1354in]{./ObjectReplacements/Obj288}
+% інтерполяційним поліномом
+
+% \includegraphics[width=1.0571in,height=0.2354in]{./ObjectReplacements/Obj289},(2.24)
+
+% де
+% \includegraphics[width=0.1783in,height=0.2071in]{./ObjectReplacements/Obj290}
+% - вектор невідомих вузлових значень
+% функції\includegraphics[width=0.15in,height=0.1354in]{./ObjectReplacements/Obj291}.
+
+% Кожну з областей
+% \includegraphics[width=0.2071in,height=0.2071in]{./ObjectReplacements/Obj292}
+% дискретизуємо системою ермітових чотирикутних елементів
+% \includegraphics[width=0.2646in,height=0.2071in]{./ObjectReplacements/Obj293}\includegraphics[width=0.6929in,height=0.2929in]{./ObjectReplacements/Obj294}
+% і представимо
+% \includegraphics[width=0.1283in,height=0.2071in]{./ObjectReplacements/Obj295}
+% пробною функцією {[}\protect\hyperlink{anchor-39}{24}{]}
+
+% \includegraphics[width=1.4854in,height=0.25in]{./ObjectReplacements/Obj296},(2.25)
+
+% де
+% \includegraphics[width=0.2217in,height=0.2354in]{./ObjectReplacements/Obj297}
+% - вектор невідомих вузлових значень функції
+% \includegraphics[width=0.1283in,height=0.2071in]{./ObjectReplacements/Obj298},
+% значень її перших та змішаних похідних на елементі
+% \includegraphics[width=0.2646in,height=0.2071in]{./ObjectReplacements/Obj299},
+% \includegraphics[width=0.15in,height=0.2071in]{./ObjectReplacements/Obj300}
+% - вектор базових функцій у локальній системі координат
+% \includegraphics[width=0.65in,height=0.2354in]{./ObjectReplacements/Obj301}.
+
+% Враховуючи (2.24), дискретний аналог (2.23) набуде вигляду
+
+% \includegraphics[width=1.7354in,height=0.4571in]{./ObjectReplacements/Obj302}.(2.26)
+
+% Зважаючи на (2.25),
+% \includegraphics[width=0.1646in,height=0.2071in]{./ObjectReplacements/Obj303}
+% (подібно й
+% \includegraphics[width=0.1929in,height=0.2071in]{./ObjectReplacements/Obj304})
+% зобразимо
+
+% \includegraphics[width=1.7783in,height=0.2929in]{./ObjectReplacements/Obj305},
+
+% де
+
+% \includegraphics[width=3.5283in,height=0.4717in]{./ObjectReplacements/Obj306}.
+
+% \hypertarget{ux43fux43eux431ux443ux434ux43eux432ux430-ux441ux438ux441ux442ux435ux43cux438-ux440ux456ux432ux43dux44fux43dux44c-ux434ux43bux44f-ux437ux43dux430ux445ux43eux434ux436ux435ux43dux43dux44f-ux432ux443ux437ux43bux43eux432ux438ux445-ux437ux43dux430ux447ux435ux43dux44c}{%
+% \subsubsection[2.3.3. Побудова системи рівнянь для знаходження вузлових
+% значень]{\texorpdfstring{\protect\hypertarget{anchor-40}{}{}\protect\hypertarget{anchor-41}{}{}2.3.3.
+% Побудова системи рівнянь для знаходження вузлових
+% значень}{2.3.3. Побудова системи рівнянь для знаходження вузлових значень}}\label{ux43fux43eux431ux443ux434ux43eux432ux430-ux441ux438ux441ux442ux435ux43cux438-ux440ux456ux432ux43dux44fux43dux44c-ux434ux43bux44f-ux437ux43dux430ux445ux43eux434ux436ux435ux43dux43dux44f-ux432ux443ux437ux43bux43eux432ux438ux445-ux437ux43dux430ux447ux435ux43dux44c}}
+
+% У підрозділі 2.2 запропонована процедура типу прогноз-коректування до
+% розв'язування зразу цілої серії задач класу (2.1), (2.2) для конкретно
+% вибраної кількості, геометрії та конфігурації розташування неоднорідних
+% включень, але різних функцій, що описують провідність середовища. Зараз
+% же представимо принципово інший підхід, а саме: систему рівнянь для
+% визначення вузлових значень побудуємо за методом зважених нев'язок,
+% уведених як для крайових умов, так і для областей локальних включень. У
+% матричній формі система матиме, зокрема, якщо скористатися непрямим
+% формулюванням методу граничних елементів, такий загальний вигляд:
+
+% \includegraphics[width=2.3217in,height=1.1in]{./ObjectReplacements/Obj307}\includegraphics[width=0.3354in,height=1.5429in]{./ObjectReplacements/Obj308}=\includegraphics[width=0.2646in,height=1.0717in]{./ObjectReplacements/Obj309},(2.27)
+
+% де
+% \includegraphics[width=0.1283in,height=0.1783in]{./ObjectReplacements/Obj310},
+% \includegraphics[width=0.15in,height=0.2354in]{./ObjectReplacements/Obj311},
+% ...,
+% \includegraphics[width=0.1783in,height=0.2354in]{./ObjectReplacements/Obj312},
+% \includegraphics[width=0.1146in,height=0.1783in]{./ObjectReplacements/Obj313}
+% - вектори невідомих вузлових значень відповідно потенціалу на
+% дискретному аналозі
+% \includegraphics[width=0.1783in,height=0.2071in]{./ObjectReplacements/Obj314},
+% дискретних аналогах областей
+% \includegraphics[width=0.1929in,height=0.2071in]{./ObjectReplacements/Obj315},
+% ...,
+% \includegraphics[width=0.2354in,height=0.2071in]{./ObjectReplacements/Obj316},
+% а також невідомі вузлові значення функції потоку на дискретному аналозі
+% \includegraphics[width=0.1646in,height=0.2071in]{./ObjectReplacements/Obj317}
+% краю області\[\Omega{}\].
+
+% Блоки \[V_{j}^{i}{}\] \[\left( {{j = u},v} \right){}\], \[G_{k}{}\]
+% \[\left( {k = \overline{1,K}} \right){}\] - суми вкладів відповідно
+% дискретного аналога потенціалу і потоку на \[\]\[\Gamma_{i}{}\]
+% \[\left( {i = 1,2} \right){}\], а також в \[\Omega_{k}{}\], для уявної
+% частини \[\hat{w}{}\] на \[\Gamma_{1}{}\]. Блоки \[U_{j}^{i}{}\]
+% \[\left( {{j = u},v} \right){}\], \[T_{k}{}\]
+% \[\left( {k = \overline{1,K}} \right){}\] - суми вкладів відповідно
+% аналога потенціалу і потоку на \[\]\[\Gamma_{i}{}\]
+% \[\left( {i = 1,2} \right){}\], а також в \[\Omega_{k}{}\], для дійсної
+% частини \[\hat{w}{}\] на \[\Gamma_{2}{}\]. Блоки
+% \[{\overset{\sim}{U}}_{\mathit{\text{jl}}}^{i}{}\]
+% \[\left( {{j = u},v} \right){}\],
+% \[{\overset{\sim}{T}}_{\mathit{\text{lk}}}{}\]
+% \[\left( {k,{l = \overline{1,K}}} \right){}\] - суми вкладів відповідно
+% дискретного аналога потенціалу і потоку на \[\]\[\Gamma_{i}{}\]
+% \[\left( {i = 1,2} \right){}\], а також в \[\Omega_{k}{}\], для уявної
+% частини \[\hat{w}{}\] на \[\Omega_{k}{}\].
+
+% У довільній точці
+% \includegraphics[width=0.1283in,height=0.1283in]{./ObjectReplacements/Obj349}
+% дискретного аналога області
+% \includegraphics[width=0.1646in,height=0.15in]{./ObjectReplacements/Obj350}
+% значення потенціалу та функції потоку знаходимо за допомогою (2.26),
+% використовуючи розв'язок (2.27).
+
+% \hypertarget{ux447ux438ux441ux43bux43eux432ux456-ux440ux435ux437ux443ux43bux44cux442ux430ux442ux438-1}{%
+% \subsubsection[2.3.4. Числові
+% результати]{\texorpdfstring{\protect\hypertarget{anchor-42}{}{}2.3.4.
+% Числові
+% результати}{2.3.4. Числові результати}}\label{ux447ux438ux441ux43bux43eux432ux456-ux440ux435ux437ux443ux43bux44cux442ux430ux442ux438-1}}
+
+% Числові дослідження викладеного підходу проводились для ряду змішаних
+% крайових задач теорії потенціалу типу (2.1)-(2.3). Наведемо результати,
+% одержані, зокрема, для задачі теплопровідності в області
+% \includegraphics[width=0.1646in,height=0.15in]{./ObjectReplacements/Obj351}
+% з краєм
+% \includegraphics[width=0.6929in,height=0.2071in]{./ObjectReplacements/Obj352},
+% де\textbf{:
+% }\includegraphics[width=4.0283in,height=0.2646in]{./ObjectReplacements/Obj353}\textbf{;
+% }\[\]\textbf{; }\[\]\textbf{, }\[\].
+
+% Граничні умови схарактеризуємо так \[\]\textbf{; }\[\]\textbf{. }
+
+% Усі графіки, наведені на рис. 2.4-2.7, стосуються таких конкретних
+% значень параметрів: \[\]; \[\]; \[\]; \[\].
+
+% \includegraphics[width=5.111in,height=3.278in]{Pictures/100000000000026F0000018FE2545062E6ED6A43.png}
+
+% Рис. 2.4
+
+% \includegraphics[width=3.6457in,height=2.3646in]{Pictures/100000000000032200000209705079E12375BE8C.jpg}Рисунок
+% 2.4 наочно демонструє збурення температурного поля наявністю системи з
+% п'яти локальних включень, максимум коефіцієнта теплопровідності
+% матеріалу яких на порядок перевищує значення в однорідній частині.
+
+% Наведені на рис. 2.5 криві 1-3, побудовані для значень
+% \[\]\includegraphics[width=0.8854in,height=0.2071in]{./ObjectReplacements/Obj364}
+% відповідно, якщо в області -- єдине локальне включення з геометричними
+% характеристиками
+% \includegraphics[width=0.4146in,height=0.2217in]{./ObjectReplacements/Obj365};
+% Рис. 2.5
+
+% \includegraphics[width=0.5283in,height=0.2217in]{./ObjectReplacements/Obj366};
+% \includegraphics[width=0.4571in,height=0.2217in]{./ObjectReplacements/Obj367};
+% \includegraphics[width=0.5283in,height=0.2217in]{./ObjectReplacements/Obj368}.
+% Графіки демонструють зміну температурного поля вздовж осі
+% \includegraphics[width=0.3646in,height=0.2071in]{./ObjectReplacements/Obj369},
+% що проходить через центр області неоднорідності, де найяскравіше
+% проявляються закономірності впливу теплофізичних властивостей середовища
+% на розв'язок. Існує точка в зоні включення, розв'язок у якій не залежить
+% від коефіцієнта провідності в цій області
+
+% \includegraphics[width=5.111in,height=3.3055in]{Pictures/10000000000004000000029795911D6C1FD05AFF.jpg}
+
+% Рис. 2.6
+
+% Ізотерми 1-9, зображені на рис. 2.6, 2.7, відповідають значенням
+% температури 0,1; ...; 0,9. На рисунках вказано область неоднорідного
+% включення. Результати одержані при дискретизації кожного ребра
+% шестикутника за допомогою п'яти елементів, а області неоднорідного
+% включення -- шістнадцяти.
+
+% \includegraphics[width=5.139in,height=3.3335in]{Pictures/100000000000040000000297BBC8A69C9C99964F.jpg}
+
+% Рис. 2.7
+
+% Легко зауважити, що при \[{\lambda_{\text{max}}\rightarrow\infty}{}\]
+% розв'язок прямує до розв'язку задачі для однорідної області з отвором в
+% області включення, на краю якого задана стала температура; а при
+% \[{\lambda_{\text{max}}{\rightarrow + 0}}{}\] - з отвором, край якого
+% тепло ізольований.
+
+% \hypertarget{ux43fux456ux434ux441ux443ux43cux43eux43a}{%
+% \subsection[2.4.
+% Підсумок]{\texorpdfstring{\protect\hypertarget{anchor-43}{}{}2.4.
+% Підсумок}{2.4. Підсумок}}\label{ux43fux456ux434ux441ux443ux43cux43eux43a}}
+
+% До розв'язування послідовності задач для основного рівняння
+% стаціонарного поля в локально-неоднорідній області застосовано
+% комбіновану методику поєднання процедури типу прогноз--коректування з
+% комплексним методом граничних елементів. Виконані числові дослідження
+% температурного поля для широкого діапазону зміни значень коефіцієнта
+% теплопровідності в області з локальними неоднорідними включеннями різних
+% розмірів. З'ясовано, що використання методики ефективне як при
+% невеликих, так і при значних відхиленнях значень коефіцієнта в області
+% неоднорідності від значень у решті тіла.
+
+% Поширено область застосування КМГЕ на змішані плоскі задачі теорії
+% потенціалу для однозв'язних областей із сукупністю локальних
+% неоднорідних включень. Система рівнянь побудована за методом зважених
+% залишків, уведених як для крайових умов, так і для областей локальних
+% включень. Проведено широкий спектр числових досліджень стосовно
+% співвідношень значень коефіцієнта теплопровідності в областях
+% неоднорідних включень і поза ними. Запропоновано прийом моделювання з
+% використанням КМГЕ розв'язків задачі для багатозв'язної однорідної\emph{
+% }області з теплоізольованими та ізотермічними отворами за допомогою
+% розв'язків для локально-неоднорідної\emph{ }області.
