@@ -11,3 +11,5 @@
 *.synctex.gz
 
 docs/dissertation/main.pdf
+
+jax/solvers/thermostatic/data
