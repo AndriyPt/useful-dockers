@@ -79,3 +79,5 @@ https://www.firedrakeproject.org/demos/helmholtz.py.html
 https://github.com/NGSolve/ngsolve
 
 https://github.com/deepmodeling/jax-fem
+
+NGSolve BEM extension https://weggler.github.io/ngbem/intro.html 
