@@ -6,7 +6,7 @@ Based on https://github.com/agolovynskyi1/latex-ukrainian-diser
 ## Install packages
 
 texstudio
-textlive all packages
+texlive all packages
 scalable-cyrfonts-tex
 pandoc
 mupdf
