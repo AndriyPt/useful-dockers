@@ -76,21 +76,43 @@ $\Gamma=\Gamma_1\cap\Gamma_2$.
 Задача формулюється так:
 
 \begin{equation}
-    \label{eqn:thermo_2d_1}
+    \label{eqn:thermo_2d_eqn}
     \nabla \cdot (k \nabla u) + \omega \rho_b C_b (T_c - u) + q_m  = 0
 \end{equation}
 
 На частині границі $\Gamma_2$ задані умови Діріхле, а на $\Gamma_1$ - Неймана.
 
 \begin{equation}
-    \label{eqn:thermo_2d_2}
+    \label{eqn:thermo_2d_cond_1}
     u(z) = 36, z \in \Gamma_2
 \end{equation}
 
 \begin{equation}
-    \label{eqn:thermo_2d_3}
+    \label{eqn:thermo_2d_cond_2}
     \dfrac{\partial{u(z)}}{\partial{n}} = 0, z \in \Gamma_1
 \end{equation}
+
+\noindentУ рівнянні \ref{eqn:thermo_2d_eqn} використовуються наступні позначення:
+
+\begin{center}
+    \begin{tabular}{|c|c|} 
+        \hline
+            k & коефіцієнт тепловідності \\
+        \hline
+            \(\omega\) & перфузія крові черех орган \\
+        \hline
+            \(\rho_b\) & густина крові \\
+        \hline
+            \(C_b\) & питома теплоємність крові \\
+        \hline
+            \(T_c\) & внутрішня температура тіла \\
+        \hline
+            \(q_m\) & внутрішня температура тіла \\
+        \hline
+    \end{tabular}
+\end{center}
+
+Головним джерелом даних для фізичних параметрів органів тіла була онлайн бапза даних %(джерело: https://itis.swiss/virtual-population/tissue-properties/database/density/)
 
 \textbf{Коефіцієнт тепропровідності} Коефіцієнт тепропровідності візьмемо на основі статті
 
@@ -113,7 +135,7 @@ Donghyuk Kim and Hyunjung Kim
 У прилеглих тканинах 0.445 Вт/мК і у здорових тканинах 0.19 Вт/мК.
 Радіус злоякісної пухлини співрадає із областю $$\Omega_3$$.
 
-\textbf{blood perfusion} $$\omega$$ blood perfusion rate ω was found to be between 1.2 and 1.8 mL
+\textbf{швидкість руху крові у тканинах} \textbf{blood perfusion} $$\omega$$ blood perfusion rate $$\omega$$ was found to be between 1.2 and 1.8 mL
 blood/min/100 g tissue (from: HEAT TRANSFER APPLICATIONS IN BIOLOGICAL SYSTEMS)
 
 In humans, there are several tissue regions, such as kidney, heart, and choriocapillaris in the eye, pos-
@@ -134,18 +156,27 @@ be as much as 8000 mL/min/100 g tissue (from: HEAT TRANSFER APPLICATIONS IN BIOL
 
 Відповідно якщо задати 
 
-\textbf{Густина} \rho_b - густина крові 1000 кг/$$m^3$$ (джерело: Tarwidi, D. Godunov method for multiprobe cryosurgery 
-simulation with complex-shaped tumors. AIP Conf. Proc. 2016)
+\textbf{Густина} $$\rho_b$$ - густина крові 1050 кг/$$m^3$$ %(джерело: https://itis.swiss/virtual-population/tissue-properties/database/density/)
 
-\textbf{Питома теплоємність крові?} $$C_b$$ = 3.64 KK/Kg/C (джерело: Tarwidi, D. Godunov method for multiprobe cryosurgery 
-simulation with complex-shaped tumors. AIP Conf. Proc. 2016)
+\textbf{Питома теплоємність крові?} $$C_b$$ = 3617 Дж/Kg/C %(джерело: https://itis.swiss/virtual-population/tissue-properties/database/heat-capacity/)
 
 $$T_c$$ - базова температура тіла 37 Цельсія
 
-$$q_m$$ 4.2 KK/Kg/◦ C та сама стаття
+$$q_m$$ 4.2 KK/Kg/◦ C та сама стаття  1.21
 
 qm is the metabolic heat generation in the tissue
 
+\begin{center}
+    \begin{tabular}{|c|c|c|c|} 
+     \hline
+     Густина крові & \(\rho_b\) & \(\text{кг}/\text{м}^3\) \\ 
+     \hline
+     Питома теплоємність крові & 3617 & Дж/кг/С \\ 
+     \hline
+    \end{tabular}
+\end{center}
+
+сіффісфіівів
 
 \section{Дискретизація рівнянь}
 

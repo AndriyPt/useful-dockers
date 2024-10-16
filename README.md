@@ -5,11 +5,11 @@ Based on https://github.com/agolovynskyi1/latex-ukrainian-diser
 
 ## Install packages
 
-texstudio
-texlive all packages
-scalable-cyrfonts-tex
-pandoc
-mupdf
+* texstudio
+* texlive all packages (use *)
+* scalable-cyrfonts-tex
+* pandoc
+* not mupdf but evince
 
 ## Software
 
