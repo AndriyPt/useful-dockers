@@ -92,7 +92,7 @@ $\Gamma=\Gamma_1\cap\Gamma_2$.
     \dfrac{\partial{u(z)}}{\partial{n}} = 0, z \in \Gamma_1
 \end{equation}
 
-Коефіцієнт тепропровідності візьмемо на основі статті
+\textbf{Коефіцієнт тепропровідності} Коефіцієнт тепропровідності візьмемо на основі статті
 
 Tumor Lung Visualization and Localization through Virtual
 Reality and Thermal Feedback Interface
@@ -102,7 +102,6 @@ Mostefa Masmoudi 1 , Ahmed Bentaleb 3 and Alex Liew
 and
 
 Tarwidi, D. Godunov method for multiprobe cryosurgery simulation with complex-shaped tumors. AIP Conf. Proc. 2016,
-
 
 Модель злоякісного утворення взята із статті
 
@@ -114,19 +113,38 @@ Donghyuk Kim and Hyunjung Kim
 У прилеглих тканинах 0.445 Вт/мК і у здорових тканинах 0.19 Вт/мК.
 Радіус злоякісної пухлини співрадає із областю $$\Omega_3$$.
 
+\textbf{blood perfusion} $$\omega$$ blood perfusion rate ω was found to be between 1.2 and 1.8 mL
+blood/min/100 g tissue (from: HEAT TRANSFER APPLICATIONS IN BIOLOGICAL SYSTEMS)
 
+In humans, there are several tissue regions, such as kidney, heart, and choriocapillaris in the eye, pos-
+sessing a high blood perfusion rate. The measured blood perfusion rate in the kidney is approxi-
+mately 500 mL/min/100 g tissue (Holmes, 1997). In the heart, the blood perfusion rate is around
+300 mL/min/100 g which serves for the energy need of pumping the heart. The choriocapillaris in
+the eyes is a meshed structure within two thin sheets. Its blood perfusion rate is very high and can
+be as much as 8000 mL/min/100 g tissue (from: HEAT TRANSFER APPLICATIONS IN BIOLOGICAL SYSTEMS)
 
 Звідси випливає, що коефіцієнт тепропровідності залежить від координат і може бути наближений кусково ламаною функцією 
 або функціями вищого порядку, наприклад квадратичною. Для даного прикладу пропонується використати:
 
-\begin{equation}
-    \label{eqn:thermo_2d_thermal_conductivity}
-
-    \dfrac{\partial{u(z)}}{\partial{n}} = 0, z \in \Gamma_1
-\end{equation}
+% \begin{equation}
+%     \label{eqn:thermo_2d_thermal_conductivity}
+%     (np.cos(0.5 * np.pi / radius * (np.power(x - 1.0, 2) + np.power(y - 1.0, 2))) + 1.0
+% \end{equation}
 
 
 Відповідно якщо задати 
+
+\textbf{Густина} \rho_b - густина крові 1000 кг/$$m^3$$ (джерело: Tarwidi, D. Godunov method for multiprobe cryosurgery 
+simulation with complex-shaped tumors. AIP Conf. Proc. 2016)
+
+\textbf{Питома теплоємність крові?} $$C_b$$ = 3.64 KK/Kg/C (джерело: Tarwidi, D. Godunov method for multiprobe cryosurgery 
+simulation with complex-shaped tumors. AIP Conf. Proc. 2016)
+
+$$T_c$$ - базова температура тіла 37 Цельсія
+
+$$q_m$$ 4.2 KK/Kg/◦ C та сама стаття
+
+qm is the metabolic heat generation in the tissue
 
 
 \section{Дискретизація рівнянь}

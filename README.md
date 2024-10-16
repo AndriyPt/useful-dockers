@@ -81,3 +81,16 @@ https://github.com/NGSolve/ngsolve
 https://github.com/deepmodeling/jax-fem
 
 NGSolve BEM extension https://weggler.github.io/ngbem/intro.html 
+
+## Working articles
+
+Thermophysical and mechanical properties of biological tissues as a function of temperature: a systematic literature review 
+
+https://www.tandfonline.com/doi/full/10.1080/02656736.2022.2028908#d1e2189
+
+q_m => Specific metabolic rates of major organs and tissues across adulthood: evaluation by mechanistic model of resting energy expenditure1
+
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2980962/
+
+Tissue physical properties ETH https://itis.swiss/virtual-population/tissue-properties/database/heat-generation-rate/
+

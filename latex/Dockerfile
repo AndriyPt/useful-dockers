@@ -13,7 +13,7 @@ RUN set -x && \
     \
     echo "Installing Latex" && \
     apt-get update -y && \
-    apt-get install -y texstudio texlive* scalable-cyrfonts-tex pandoc mupdf && \
+    apt-get install -y texstudio texlive* scalable-cyrfonts-tex pandoc evince && \
     \
     echo "Installing NGSolve" && \
     apt-get install -y software-properties-common && \
