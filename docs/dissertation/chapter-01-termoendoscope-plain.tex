@@ -22,7 +22,7 @@ Riccardo Muradore a, Claudia Daffara a,
 
 Симуляції уражених (ракових) клітин під час малоінвазиdної хіругії.
 
-Рак легенів (\cite{lung-cancer}).
+Рак легенів (\cite{lung-tumor-thermal-conductivity}).
 
 Традиційно за модель біотеплового обміну у тілі людини беруть рівняння Пеннеса.
 
@@ -32,7 +32,9 @@ pennes-1998-analysis-of-tissue-and-arterial-blood-temperatures-in-the-resting-hu
 
 % Для валідації моделі сформулюєм
 
-\section{Формулюваня плоскої задачі}
+\section{Плоска задача}
+
+\subsection{Формулюваня задачі}
 
 Спочатку розв'яжемо плоский випадок із стаціонарним розподілом температури.
 Візьмемо перетин області проведеннея малоінвазивного втручання
@@ -73,14 +75,16 @@ $\Gamma=\Gamma_1\cap\Gamma_2$.
     \label{fig:thermo_2d_domain}
 \end{figure}
 
-Задача формулюється так:
+\noindent Параметр a рівний 8 см, b - 16 см, а с дорівнює 40 см. Радіус кола $\Omega_3$ r дорівнює 5 мм.
+
+\noindent Задача формулюється так:
 
 \begin{equation}
     \label{eqn:thermo_2d_eqn}
     \nabla \cdot (k \nabla u) + \omega \rho_b C_b (T_c - u) + q_m  = 0
 \end{equation}
 
-На частині границі $\Gamma_2$ задані умови Діріхле, а на $\Gamma_1$ - Неймана.
+\noindent На частині границі $\Gamma_2$ задані умови Діріхле, а на $\Gamma_1$ - Неймана.
 
 \begin{equation}
     \label{eqn:thermo_2d_cond_1}
@@ -112,72 +116,73 @@ $\Gamma=\Gamma_1\cap\Gamma_2$.
     \end{tabular}
 \end{center}
 
-Головним джерелом даних для фізичних параметрів органів тіла була онлайн база даних \cite{database-tissue-properties}.
-
 \textbf{Коефіцієнт тепропровідності} Коефіцієнт тепропровідності у ракових утвореннях взято із статті 
 \cite{lung-tumor-thermal-conductivity}. Модель злоякісного утворення взята із статті \cite{tumor-thermal-model}.
-Коефіцієнт тепловідності у пухлині рівний 0.495 Вт/мК, у прилеглих тканинах 0.445 Вт/мК і у здорових тканинах 
-0.19 Вт/мК. Злоякісна пухлини предаставлена областю $\Omega_3$. Відповідно коефіцієнт теплопровідності k буде залежати
+Коефіцієнт тепловідності у пухлині рівний 0.495 Вт/м/К, у прилеглих тканинах 0.445 Вт/м/К і у здорових тканинах 
+0.19 Вт/м/К. Злоякісна пухлини предаставлена областю $\Omega_3$. Відповідно коефіцієнт теплопровідності k буде залежати
 від координат і його можна представити у вигляді наступої функції:
 
 \begin{equation}
     \label{eqn:thermo_2d_thermal_conductivity}
-    k(x, y) = cos(\frac{\pi}{2}((x - x_3)^2 + (y - y_3)^2)) + 1.0
+    k(x, y) = (0.495 - 0.19)cos(\frac{\pi}{2r^2}((x - x_3)^2 + (y - y_3)^2))\chi_3 + 0.19
 \end{equation}
 
 \noindent де $\chi_3$ - характеристична функція області $\Omega_3$, a ($x_3$, $y_3$) - центр області.
 
-\textbf{швидкість руху крові у тканинах} \textbf{blood perfusion} $$\omega$$ blood perfusion rate $$\omega$$ was found to be between 1.2 and 1.8 mL
-blood/min/100 g tissue (from: HEAT TRANSFER APPLICATIONS IN BIOLOGICAL SYSTEMS)
+\noindent На (рис. \ref{fig:thermo_2d_thermal_conductivity}) зображено графік коефіцієнта теплопровідності. 
+Припускається, що центр області $\Omega_3$ знаходиться у точці (0, 0) і $y_3$ зафіксована на 0, міняється тільки 
+координата x. Для наочності функцію помножили на 5. 
 
-In humans, there are several tissue regions, such as kidney, heart, and choriocapillaris in the eye, pos-
-sessing a high blood perfusion rate. The measured blood perfusion rate in the kidney is approxi-
-mately 500 mL/min/100 g tissue (Holmes, 1997). In the heart, the blood perfusion rate is around
-300 mL/min/100 g which serves for the energy need of pumping the heart. The choriocapillaris in
-the eyes is a meshed structure within two thin sheets. Its blood perfusion rate is very high and can
-be as much as 8000 mL/min/100 g tissue (from: HEAT TRANSFER APPLICATIONS IN BIOLOGICAL SYSTEMS)
+\begin{figure}[ht!]
+    \centering
+    \begin{tikzpicture}[domain=-5:5]
+        \draw[->] (-7,0) -- (7,0) node[right] {$x$};
+        \draw[->] (0,-1) -- (0,5) node[above] {$5k(x, y_3)$};
+    
+        \draw[color=blue] plot (\x, {5 * (0.305 * cos(1.57 / 25 * (\x * \x r)) + 0.19)});
+        \draw[color=blue] (-6,0.95) -- (-5,0.95);
+        \draw[color=blue] (5,0.95) -- (6,0.95);
+    \end{tikzpicture}
+    \caption{Коефіцієнт тепловідності}
+    \label{fig:thermo_2d_thermal_conductivity}
+\end{figure}
 
-Звідси випливає, що коефіцієнт тепропровідності залежить від координат і може бути наближений кусково ламаною функцією 
-або функціями вищого порядку, наприклад квадратичною. Для даного прикладу пропонується використати:
+\textbf{інші параметри} \cite[Pennes then modeled the arm as a long cylinder and calculated the
+steady-state radial temperature profile. In this theoretical prediction, since the blood perfusion rate $\omega$
+could not be directly measured, Pennes adjusted this parameter in his model to fit the solution to his
+experimental data for a fixed, representative ambient temperature and metabolic heating rate. The fitted
+value of blood perfusion rate $\omega$ was found to be between 1.2 and 1.8 mL blood/min/100 g tissue, which
+is a typical range of values for resting human skeletal muscle]{kutz-zhu-heat-transfer-biological-systems}
 
-% \begin{equation}
-%     \label{eqn:thermo_2d_thermal_conductivity}
-%     (np.cos(0.5 * np.pi / radius * (np.power(x - 1.0, 2) + np.power(y - 1.0, 2))) + 1.0
-% \end{equation}
-
-
-Відповідно якщо задати 
-
-\textbf{Густина} $$\rho_b$$ - густина крові 1050 кг/$$m^3$$ %(джерело: https://itis.swiss/virtual-population/tissue-properties/database/density/)
-
-\textbf{Питома теплоємність крові?} $$C_b$$ = 3617 Дж/Kg/C %(джерело: https://itis.swiss/virtual-population/tissue-properties/database/heat-capacity/)
-
-$$T_c$$ - базова температура тіла 37 Цельсія
-
-$$q_m$$ 4.2 KK/Kg/◦ C та сама стаття  1.21
-
-qm is the metabolic heat generation in the tissue
+\noindent Головним джерелом даних для фізичних параметрів органів тіла була онлайн база даних 
+\cite{database-tissue-properties}. Значення параметрів:
 
 \begin{center}
-    \begin{tabular}{|c|c|c|c|} 
-     \hline
-     Густина крові & \(\rho_b\) & \(\text{кг}/\text{м}^3\) \\ 
-     \hline
-     Питома теплоємність крові & 3617 & Дж/кг/С \\ 
-     \hline
+    \begin{tabular}{|c|c|c|} 
+        \hline
+            \(\omega\) & 1.5 & mL blood/min/100 g \\
+        \hline
+            \(\rho_b\) & 1050 & \(\text{кг}/\text{м}^3\) \\
+        \hline
+            \(C_b\) & 3617 & Дж/кг/С  \\
+        \hline
+            \(T_c\) & 37 &  \textcelsius \\
+        \hline
+            \(q_m\) & 4.2 & KK/Kg/\textcelsius \\
+        \hline
     \end{tabular}
 \end{center}
 
-сіффісфіівів
+\subsection{Дискретизація рівнянь}
 
-\section{Дискретизація рівнянь}
+\subsection{Розв'язок}
 
-\section{Розв'язок}
+\section{Просторова задача}
 
-\section{Формулюваня просторової задачі}
+\subsection{Формулюваня задачі}
 
-\section{Дискретизація рівнянь}
+\subsection{Дискретизація рівнянь}
 
-\section{Розв'язок}
+\subsection{Розв'язок}
 
 \section{Висновок}
