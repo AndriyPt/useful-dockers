@@ -24,14 +24,17 @@
 
 \subsection{Формулюваня задачі}
 
-Розглянемо область у якій є дві частини. Одна відповідає м'яким тканинам, а друга - це порожнина наповнена газом.
+Розглянемо область у якій є дві частини (рис. \ref{fig:elasticity_2d_domain}). $\Omega_1$ відповідає м'яким тканинам, а
+$\Omega_3$ - це злоякісне утворення. Область $\Omega_2$ - це хіргучний інструмент, який контактує із м'якими тканинами
+по межі $\Gamma_2$, тобто $\Gamma_2=\partial\Omega_2 \cap \partial\Omega_1$, $\Gamma_1 = \partial \Omega_1 - \Gamma_2$.
 
 \begin{figure}[ht!]
     \centering
     \begin{tikzpicture}
-        \draw (1,3) rectangle (11,7);
+        \draw (5.5,3) rectangle (6.5,7);
         \draw (1,1) rectangle (11,3);
         \draw (6,2.5) circle (0.5);
+        \draw[thick, ->] (5,6) -- (5,4);
 
         \draw[thick,->] (0,0) -- (12,0) node[anchor=north west] {x};
         \draw[thick,->] (0,0) -- (0,9) node[anchor=south east] {y};        
@@ -44,13 +47,14 @@
             \draw (1pt,\y * 2.5 cm) -- (-1pt,\y * 2.5 cm) node[anchor=east] {\label};
         
         \node at (11.5,2) {a};
-        \node at (11.5,5) {b};
+        \node at (6,0.5) {b};
         \node at (6,7.5) {c};
+        \node at (6,3.5) {$\Gamma_2$};
 
         \node at (8,2) {$\Omega_1$};
-        \node at (8,5) {$\Omega_2$};
+        \node at (6,5) {$\Omega_2$};
         \node at (6,2.5) {$\Omega_3$};
-        \node at (6,0.5) {$\Gamma_1$};
+        \node at (4,0.5) {$\Gamma_1$};
 
     \end{tikzpicture}
     
