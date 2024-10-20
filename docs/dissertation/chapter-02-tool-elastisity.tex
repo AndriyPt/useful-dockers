@@ -18,18 +18,57 @@
 для виявлення пухлин чи інших злоякісних утворень.
 
 У цьому розділі розглянуто дві задачі. Перша плоска, а друга - просторова стаціонарна задача контакту кінця хірургічного 
-інстременту із неоднорідним включенням у м'яких тканинах. 
+інстременту із неоднорідним включенням у м'яких тканинах. Подається візуалізація відповідних сил.
 
-\section{Формулюваня плоскої задачі}
+\section{Плоска стаціонарна задача}
 
-\section{Дискретизація рівнянь}
+\subsection{Формулюваня задачі}
 
-\section{Розв'язок}
+Розглянемо область у якій є дві частини. Одна відповідає м'яким тканинам, а друга - це порожнина наповнена газом.
 
-\section{Формулюваня просторової задачі}
+\begin{figure}[ht!]
+    \centering
+    \begin{tikzpicture}
+        \draw (1,3) rectangle (11,7);
+        \draw (1,1) rectangle (11,3);
+        \draw (6,2.5) circle (0.5);
 
-\section{Дискретизація рівнянь}
+        \draw[thick,->] (0,0) -- (12,0) node[anchor=north west] {x};
+        \draw[thick,->] (0,0) -- (0,9) node[anchor=south east] {y};        
+    
+        \foreach \x in {0,...,4}
+            \pgfmathtruncatemacro{\label}{\x * 10}
+            \draw ( \x * 2.5 cm,1pt) -- ( \x * 2.5 cm,-1pt) node[anchor=north] {\label};
+        \foreach \y in {0,...,3}
+            \pgfmathtruncatemacro{\label}{\y * 10}
+            \draw (1pt,\y * 2.5 cm) -- (-1pt,\y * 2.5 cm) node[anchor=east] {\label};
+        
+        \node at (11.5,2) {a};
+        \node at (11.5,5) {b};
+        \node at (6,7.5) {c};
 
-\section{Розв'язок}
+        \node at (8,2) {$\Omega_1$};
+        \node at (8,5) {$\Omega_2$};
+        \node at (6,2.5) {$\Omega_3$};
+        \node at (6,0.5) {$\Gamma_1$};
+
+    \end{tikzpicture}
+    
+    \caption{Переріз тканин і інструмента}
+    \label{fig:elasticity_2d_domain}
+\end{figure}
+
+
+\subsection{Дискретизація рівнянь}
+
+\subsection{Розв'язок}
+
+\section{Просторова стаціонарна задача}
+
+\subsection{Формулюваня задачі}
+
+\subsection{Дискретизація рівнянь}
+
+\subsection{Розв'язок}
 
 \section{Висновок}
