@@ -26,7 +26,8 @@
 
 Розглянемо область у якій є дві частини (рис. \ref{fig:elasticity_2d_domain}). $\Omega_1$ відповідає м'яким тканинам, а
 $\Omega_3$ - це злоякісне утворення. Область $\Omega_2$ - це хіргучний інструмент, який контактує із м'якими тканинами
-по межі $\Gamma_2$, тобто $\Gamma_2=\partial\Omega_2 \cap \partial\Omega_1$, $\Gamma_1 = \partial \Omega_1 - \Gamma_2$.
+по межі $\Gamma_2$, тобто $\Gamma_2=\partial\Omega_2 \cap \partial\Omega_1$, 
+$\Gamma_1 = \partial \Omega_1 \backslash \Gamma_2$.
 
 \begin{figure}[ht!]
     \centering
@@ -62,6 +63,49 @@ $\Omega_3$ - це злоякісне утворення. Область $\Omega_
     \label{fig:elasticity_2d_domain}
 \end{figure}
 
+Скориставшись у рівняннях рівноваги законом Гука 
+$\sigma_{ij}(z) = \lambda(z)\delta_{ij}\varepsilon_{kk}(z) + 2\mu(z)\varepsilon_{ij}(z)$ та співвідношеннями Коші, 
+одержимо систему диференційних рівнянь у переміщеннях:
+
+\begin{equation}
+    \label{eqn:elasticity_2d_eqn}
+    \mu(z)u_{i,jj}(z) + (\lambda(z) + \mu(z))u_{j,ji} = 0, z \in \Omega_1
+\end{equation}
+
+\noindent де $\sigma_{ij}$ і $\varepsilon_{ij}$ --- компоненти відповідно тензора напружень та тензора деформацій; $u_i$
+--- компоненти вектора переміщень; $\delta_{ij}$ --- символ Кронекера.
+
+\noindent На всій межі $\Gamma_1$ немає переміщень
+\begin{equation}
+    \label{eqn:elasticity_2d_cond_1}
+    u_i(z) = 0, z \in \Gamma_1
+\end{equation}
+
+\noindent На всій межі $\Gamma_2$ діє хірургічний інструмент вздовж нормалі із компонентами $n_j$ і зусиллям
+\begin{equation}
+    \label{eqn:elasticity_2d_cond_2}
+    t_i(z) = t_{pi}, z \in \Gamma_2
+\end{equation}
+
+\noindent де $t_i = \sigma_{ij}n_j$.
+
+Коефіцієнти Ляме будуть відрізнятися в області злоякісного включення. Тому їх можна зобразити так:
+
+\begin{equation}
+    \label{eqn:elasticity_2d_lyame_lambda}
+    \lambda(x, y) = (0.495 - 0.19)cos(\frac{\pi}{2r^2}((x - x_3)^2 + (y - y_3)^2))\chi_3 + 0.19
+\end{equation}
+
+\begin{equation}
+    \label{eqn:elasticity_2d_lyame_mu}
+    \mu(x, y) = (0.495 - 0.19)cos(\frac{\pi}{2r^2}((x - x_3)^2 + (y - y_3)^2))\chi_3 + 0.19
+\end{equation}
+
+\noindent де $\chi_3$ --- характеристична функція області $\Omega_3$, a ($x_3$, $y_3$) - центр області.
+
+Отже, для визначення переміщень маємо змішану крайову задачу \ref{eqn:elasticity_2d_eqn}, \ref{eqn:elasticity_2d_cond_1} 
+і \ref{eqn:elasticity_2d_cond_2} із коефіцієнтами Ляме у вигляді \ref{eqn:elasticity_2d_lyame_lambda} і 
+\ref{eqn:elasticity_2d_lyame_mu}.
 
 \subsection{Дискретизація рівнянь}
 
