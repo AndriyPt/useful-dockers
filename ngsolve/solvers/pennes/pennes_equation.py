@@ -23,8 +23,8 @@ m = geo.GenerateMesh(maxh=0.3)
 mesh = Mesh(m)
 mesh.Curve(3)
 cf = mesh.RegionCF(VOL, dict(mat1=0, mat2=4, mat3=7))
-Draw(cf, mesh)
 
+Draw(cf, mesh, "cf")
 
 ####################################
 
