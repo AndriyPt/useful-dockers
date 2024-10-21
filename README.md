@@ -10,6 +10,17 @@ Based on https://github.com/agolovynskyi1/latex-ukrainian-diser
 * scalable-cyrfonts-tex
 * pandoc
 * not mupdf but evince
+* latex2html
+* libreoffice
+
+## Convert to different formats
+
+ODT document
+
+```bash
+latex2html main.tex -split 0 -no_navigation -info "" -address "" -html_version 4.0,unicode
+libreoffice --headless --convert-to odt:"OpenDocument Text Flat XML" main/index.html
+```
 
 ## Software
 
