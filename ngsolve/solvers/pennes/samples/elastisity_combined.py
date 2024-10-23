@@ -52,4 +52,4 @@ def penaltyprime(x):
     return IfPos(x, 2*x, 0)
 contactforce = penaltyprime((gfu1-gfu2)*n)
 contactforce = CoefficientFunction( [contactforce if bc=="contact" else None for bc in mesh.GetBoundaries()] )
-Draw (contactforce, mesh, "contactforce")
+Draw (contactforce, mesh, "contactforce", draw_surf=False)
