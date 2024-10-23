@@ -73,17 +73,30 @@ thermal_conductivity = mesh.MaterialCF({
     }, 
     default = 0) 
 
-heat_source = mesh.MaterialCF({ DOMAIN_TISSUE : 0.01 - (x - PARAM_C / 2) * (x - PARAM_C / 2) + (y - PARAM_A / 2) * (y - PARAM_A / 2) }, 
-                              default = 0)
+Draw(thermal_conductivity, mesh, "Thermal Conductivity")
 
-Draw(heat_source, mesh, "Source Function")
+heat_source = mesh.MaterialCF({ 
+    DOMAIN_TISSUE: PERFUSION_OMEGA * BLOOD_DENSITY * BLOOD_HEAT_CAPACITY * BODY_TEMP + TISSUE_HEAT_GENERATION,
+    DOMAIN_TUMOR: PERFUSION_OMEGA * BLOOD_DENSITY * BLOOD_HEAT_CAPACITY * BODY_TEMP + TISSUE_HEAT_GENERATION  # Could be OK for small Tumor
+    },
+    default = 0)
+
+Draw(heat_source, mesh, "Heat Source")
+
+u_coeficient = mesh.MaterialCF({ 
+    DOMAIN_TISSUE: -1.0 * PERFUSION_OMEGA * BLOOD_DENSITY * BLOOD_HEAT_CAPACITY,
+    DOMAIN_TUMOR: -1.0 * PERFUSION_OMEGA * BLOOD_DENSITY * BLOOD_HEAT_CAPACITY  # Could be OK for small Tumor
+    },
+    default = 0)
+
+Draw(u_coeficient, mesh, "u Coefficient")
 
 f = LinearForm(fes)
-f += SymbolicLFI (heat_source * v)
+f += SymbolicLFI(heat_source * v)
 f.Assemble()
 
 a = BilinearForm(fes)
-a += SymbolicBFI(grad(u) * grad(v))
+a += SymbolicBFI(thermal_conductivity * grad(u) * grad(v) + u_coeficient * u * v)
 a.Assemble()
 
 gfu.vec.data = a.mat.Inverse(fes.FreeDofs()) * f.vec
