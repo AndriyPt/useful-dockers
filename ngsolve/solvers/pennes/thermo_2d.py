@@ -57,18 +57,23 @@ mesh = Mesh(geo.GenerateMesh(maxh=LARGE_MAXH)).Curve(3)
 print("Boundaries: ", mesh.GetBoundaries())
 print("Materials: ", mesh.GetMaterials())
 
-Draw (mesh)
+Draw(mesh)
 
 fes = H1(mesh, order=3, dirichlet=BORDER_GAMMA2)
 u = fes.TrialFunction()
 v = fes.TestFunction()
 
+# Dirichlet conditions
+dirichlet_conditions = mesh.BoundaryCF({BORDER_GAMMA2: 37}, default = 0)
 gfu = GridFunction(fes)
+gfu.Set(dirichlet_conditions, BND)
+
+Draw(gfu, mesh, "Dirichlet substitution")
 
 thermal_conductivity = mesh.MaterialCF({
     DOMAIN_TISSUE: K_TISSUE,
-    DOMAIN_TUMOR: (K_MAX_TUMOR - K_TISSUE) * cos(0.5 * pi / OMEGA3_RADIUS ** 2 * (x - OMEGA3_CENTER_X) ** 2 + 
-                                                 (y - OMEGA3_CENTER_Y) ** 2) + K_TISSUE,
+    DOMAIN_TUMOR: (K_MAX_TUMOR - K_TISSUE) * cos(0.5 * pi / OMEGA3_RADIUS ** 2 * ((x - OMEGA3_CENTER_X) ** 2 + 
+                                                 (y - OMEGA3_CENTER_Y) ** 2)) + K_TISSUE,
     DOMAIN_CO2: K_CO2
     }, 
     default = 0) 
@@ -99,6 +104,13 @@ a = BilinearForm(fes)
 a += SymbolicBFI(thermal_conductivity * grad(u) * grad(v) + u_coeficient * u * v)
 a.Assemble()
 
-gfu.vec.data = a.mat.Inverse(fes.FreeDofs()) * f.vec
+
+# Approach for nonhomogeneous Dirichlet boundary condition
+# https://docu.ngsolve.org/release/i-tutorials/unit-1.3-dirichlet/dirichlet.html
+r = f.vec.CreateVector()
+r.data = f.vec - a.mat * gfu.vec
+
+# the solution field 
+gfu.vec.data += a.mat.Inverse(freedofs=fes.FreeDofs()) * r
 
 Draw(gfu, mesh, "Heat")
