@@ -20,14 +20,14 @@ BORDER_GAMMA = "gamma"
 DOMAIN_TISSUE = "tissue"
 DOMAIN_TUMOR = "tumor"
 
-PARAM_C = 0.04 # width
-PARAM_A = 0.04 # height
+PARAM_C = 0.4 # width (m)
+PARAM_A = 0.04 # height (m)
 
-OMEGA3_RADIUS = 0.005 # m
+OMEGA3_RADIUS = 0.0025 # m
 OMEGA3_CENTER_X = PARAM_C / 2.0
 OMEGA3_CENTER_Y = PARAM_A - OMEGA3_RADIUS
 
-LARGE_MAXH=0.0025
+LARGE_MAXH=0.005
 
 # generate a triangular mesh
 whole_tissue = Rectangle(PARAM_C, PARAM_A).Face()
