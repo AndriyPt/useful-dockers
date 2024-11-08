@@ -81,6 +81,12 @@ Now you can install NGSolve like any other Ubuntu package with
 sudo apt-get install ngsolve
 ```
 
+> Use absolute path in netgen command e.g.
+
+```bash
+netgen /home/user/workspace/project/ngsolve/solvers/pennes/thermo/thermo_2d_simple_pennes.py
+```
+
 ## Useful links
 
 FEM Solvers
