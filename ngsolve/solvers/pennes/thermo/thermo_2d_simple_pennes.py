@@ -105,8 +105,8 @@ gfu = GridFunction(fes)
 gfu.vec.data = a.mat.Inverse(fes.FreeDofs(), inverse="sparsecholesky") * f.vec
 
 # plot the solution (netgen-gui only)
-Draw (gfu)
-Draw (-grad(gfu), mesh, "Flux")
+Draw(gfu)
+Draw(-grad(gfu), mesh, "Flux")
 
 sys.exit(0)
 
