@@ -89,4 +89,8 @@ with TaskManager():
 
 Draw(gfu, mesh, "Deformations")
 
-Draw(Norm(gfstress), mesh, "Stress Norm")
+normal = CoefficientFunction((0.0, 1.0))
+
+traction = gfstress * normal 
+
+Draw(traction, mesh, "Traction")
