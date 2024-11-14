@@ -1,9 +1,10 @@
 from ngsolve import *
 from netgen.occ import *
+from ngsolve import VTKOutput
 
 
 ROBIN_H = 4.184 # W/m^2/^C
-ROBIN_T_e = 12 # ^C
+ROBIN_T_e = 21 # ^C m, Typical OR temperature
 
 K_TISSUE = 0.19 # W/m/^C
 K_MAX_TUMOR = 0.495 # W/m/^C
@@ -67,7 +68,7 @@ Draw(thermal_conductivity, mesh, "Thermal Conductivity")
 
 heat_source = mesh.MaterialCF({ 
     DOMAIN_TISSUE: THERMAL_W * THERMAL_T_a + THERMAL_Q_m,
-    DOMAIN_TUMOR: THERMAL_W * THERMAL_T_a + THERMAL_Q_m, # Should be OK for small Tumor
+    DOMAIN_TUMOR: THERMAL_W * THERMAL_T_a + THERMAL_Q_m * 10, # According to external article assumption
     },
     default = 0)
 
@@ -106,4 +107,14 @@ gfu.vec.data = a.mat.Inverse(fes.FreeDofs(), inverse="sparsecholesky") * f.vec
 
 # plot the solution (netgen-gui only)
 Draw(gfu)
-Draw(-grad(gfu), mesh, "Flux")
+
+flux = -grad(gfu)
+Draw(flux, mesh, "Flux")
+
+# VTKOutput object
+vtk = VTKOutput(ma=mesh,
+                coefs=[gfu, flux],
+                names = ["temperature", "flux"],
+                filename="/tmp/thermo_result",
+                subdivision=3)
+vtk.Do()
