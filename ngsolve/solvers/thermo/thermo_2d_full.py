@@ -22,7 +22,9 @@ THERMAL_omega_TUMOR = 0.0061 # m^3 / s / m^3
 THERMAL_W_TISSUE = DENSITY_B * THERMAL_C_b * THERMAL_omega_TISSUE
 THERMAL_W_TUMOR = DENSITY_B * THERMAL_C_b * THERMAL_omega_TUMOR
 
-BORDER_GAMMA = "gamma"
+BORDER_GAMMA1 = "gamma1"
+BORDER_GAMMA2 = "gamma2"
+
 DOMAIN_TISSUE = "tissue"
 DOMAIN_TUMOR = "tumor"
 DOMAIN_CO2 = "co2"
@@ -39,7 +41,8 @@ LARGE_MAXH=0.005
 
 # generate a triangular mesh
 whole_area = Rectangle(PARAM_C, PARAM_A + PARAM_B).Face()
-whole_area.edges.name = BORDER_GAMMA
+whole_area.edges.name = BORDER_GAMMA2
+whole_area.edges.Min(Y).name = BORDER_GAMMA1
 
 bottom_area = Rectangle(PARAM_C, PARAM_A).Face()
 co2_cross_section = whole_area - bottom_area 
@@ -86,9 +89,14 @@ u_coeficient = mesh.MaterialCF({
 
 Draw(u_coeficient, mesh, "u Coefficient")
 
-
 # H1-conforming finite element space
-fes = H1(mesh, order=3)
+fes = H1(mesh, order=3, dirichlet=BORDER_GAMMA1)
+
+# Dirichlet conditions
+dirichlet_conditions = mesh.BoundaryCF({BORDER_GAMMA1: THERMAL_T_a}, default = 0)
+dirichlet_gfu = GridFunction(fes)
+dirichlet_gfu.Set(dirichlet_conditions, BND)
+Draw(dirichlet_gfu, mesh, "Partial Solution")
 
 # define trial- and test-functions
 u = fes.TrialFunction()
@@ -96,18 +104,24 @@ v = fes.TestFunction()
 
 # the right hand side
 f = LinearForm(fes)
-f += heat_source * v * dx + ROBIN_H * ROBIN_T_e * v * ds(BORDER_GAMMA)
+f += heat_source * v * dx + ROBIN_H * ROBIN_T_e * v * ds(BORDER_GAMMA1)
 
 # the bilinear-form 
 a = BilinearForm(fes, symmetric=True)
-a += (thermal_conductivity * grad(u) * grad(v) + u_coeficient * u * v) * dx + ROBIN_H * u * v * ds(BORDER_GAMMA) 
+a += (thermal_conductivity * grad(u) * grad(v) + u_coeficient * u * v) * dx + ROBIN_H * u * v * ds(BORDER_GAMMA1) 
 
 a.Assemble()
 f.Assemble()
 
 # the solution field 
 gfu = GridFunction(fes)
-gfu.vec.data = a.mat.Inverse(fes.FreeDofs(), inverse="sparsecholesky") * f.vec
+
+# Approach for nonhomogeneous Dirichlet boundary condition
+r = f.vec.CreateVector()
+r.data = f.vec - a.mat * dirichlet_gfu.vec
+
+# the solution field 
+gfu.vec.data = dirichlet_gfu.vec.data + a.mat.Inverse(fes.FreeDofs(), inverse="sparsecholesky") * r
 
 # plot the solution (netgen-gui only)
 Draw(gfu)
