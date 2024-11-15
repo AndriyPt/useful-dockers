@@ -11,15 +11,16 @@ K_TISSUE = 0.19 # W/m/^C
 K_MAX_TUMOR = 0.495 # W/m/^C
 K_CO2 = 0.0176 # W/m/^C
 
-THERMAL_TISSUE_Q_m = 1.21 * 1086 # W/m^3
-THERMAL_TUMOR_Q_m = THERMAL_TISSUE_Q_m * 10 # W/m^3
+THERMAL_Q_m_TISSUE = 1.2 * 1086 # W/m^3, based on data Urinary Bladder Wall 1.21 W/kg, density 1086 kg/m**3
+THERMAL_Q_m_TUMOR = THERMAL_Q_m_TISSUE * 10 # W/m^3
 THERMAL_T_a = 36.8 # ^C  
 DENSITY_B = 1000 # kg/m^3
 THERMAL_C_b = 4181 # J/kg/^C
-THERMAL_TUMOR_omega = 0.0063 # m^3 / s / m^3
-THERMAL_TISSUE_omega = 0.0031 # m^3 / s / m^3 
+THERMAL_omega_TISSUE = 0.0031 # m^3 / s / m^3
+THERMAL_omega_TUMOR = 0.0061 # m^3 / s / m^3
 
-THERMAL_W = DENSITY_B * THERMAL_C_b * THERMAL_omega
+THERMAL_W_TISSUE = DENSITY_B * THERMAL_C_b * THERMAL_omega_TISSUE
+THERMAL_W_TUMOR = DENSITY_B * THERMAL_C_b * THERMAL_omega_TUMOR
 
 BORDER_GAMMA = "gamma"
 DOMAIN_TISSUE = "tissue"
@@ -70,16 +71,16 @@ thermal_conductivity = mesh.MaterialCF({
 Draw(thermal_conductivity, mesh, "Thermal Conductivity")
 
 heat_source = mesh.MaterialCF({ 
-    DOMAIN_TISSUE: THERMAL_W * THERMAL_T_a + THERMAL_Q_m,
-    DOMAIN_TUMOR: THERMAL_W * THERMAL_T_a + THERMAL_Q_m * 10, # According to external article assumption
+    DOMAIN_TISSUE: THERMAL_W_TISSUE * THERMAL_T_a + THERMAL_Q_m_TISSUE,
+    DOMAIN_TUMOR: THERMAL_W_TUMOR * THERMAL_T_a + THERMAL_Q_m_TUMOR,
     },
     default = 0)
 
 Draw(heat_source, mesh, "Heat Source")
 
 u_coeficient = mesh.MaterialCF({ 
-    DOMAIN_TISSUE: THERMAL_W,
-    DOMAIN_TUMOR: THERMAL_W, # Should be OK for small Tumor
+    DOMAIN_TISSUE: THERMAL_W_TISSUE,
+    DOMAIN_TUMOR: THERMAL_W_TUMOR,
     },
     default = 0)
 
