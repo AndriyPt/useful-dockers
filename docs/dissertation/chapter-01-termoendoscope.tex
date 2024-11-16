@@ -204,12 +204,25 @@ $\Omega_1$ - моделює черевнину порожнину у яку за
 \begin{figure}[ht!]
     \centering
     \begin{tikzpicture}
-        \begin{axis}
-        \addplot table [x=x, y=y_d_0_005_c_0, col sep=comma] {data/thermo_2d_border_data.csv};
+        \begin{axis}[xmin=0.1, xmax=0.3]
+        \addplot table [x=x, y=y_d_0025_c_0, col sep=comma, mark=none] {data/thermo_2d_border_data.csv};
+        \addplot table [x=x, y=y_d_005_c_0, col sep=comma, mark=none] {data/thermo_2d_border_data.csv};
         \end{axis}
     \end{tikzpicture}
-    \caption{Температура на поверхні м'якої тканини}
-    \label{fig:thermo_2d_solution_border_temp}
+    \caption{Температура на поверхні м'якої тканини залежно від розмірів включення}
+    \label{fig:thermo_2d_solution_border_temp_size}
+\end{figure}
+
+\begin{figure}[ht!]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[xmin=0.1, xmax=0.3]
+        \addplot table [x=x, y=y_d_0025_c_0, col sep=comma, mark=none] {data/thermo_2d_border_data.csv};
+        \addplot table [x=x, y=y_d_0025_c_001, col sep=comma, mark=none] {data/thermo_2d_border_data.csv};
+        \end{axis}
+    \end{tikzpicture}
+    \caption{Температура на поверхні м'якої тканини залежно від відстані до поверхні}
+    \label{fig:thermo_2d_solution_border_temp_depth}
 \end{figure}
 
 \section{Просторова стаціонарна задача}
