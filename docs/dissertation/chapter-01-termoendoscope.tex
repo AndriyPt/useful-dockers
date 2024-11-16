@@ -199,6 +199,19 @@ $\Omega_1$ - моделює черевнину порожнину у яку за
 
 \subsection{Розв'язок}
 
+Для різних діаметрів злоякісних включень маємо настпні результати
+
+\begin{figure}[ht!]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}
+        \addplot table [x=x, y=y_d_0_005_c_0, col sep=comma] {data/thermo_2d_border_data.csv};
+        \end{axis}
+    \end{tikzpicture}
+    \caption{Температура на поверхні м'якої тканини}
+    \label{fig:thermo_2d_solution_border_temp}
+\end{figure}
+
 \section{Просторова стаціонарна задача}
 
 \subsection{Формулюваня задачі}
