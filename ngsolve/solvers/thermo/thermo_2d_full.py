@@ -1,6 +1,7 @@
 from ngsolve import *
 from netgen.occ import *
 from ngsolve import VTKOutput
+from typing import List
 
 # Bladder with tumor
 
@@ -33,106 +34,176 @@ PARAM_A = 0.04 # height (m)
 PARAM_B = 0.16 # CO2 area height (m)
 PARAM_C = 0.4 # width (m)
 
-OMEGA3_RADIUS = 0.0025 # m
-OMEGA3_CENTER_X = PARAM_C / 2.0
-OMEGA3_CENTER_Y = PARAM_A - OMEGA3_RADIUS
-
 LARGE_MAXH=0.005
 
-# generate a triangular mesh
-whole_area = Rectangle(PARAM_C, PARAM_A + PARAM_B).Face()
-whole_area.edges.name = BORDER_GAMMA2
-whole_area.edges.Min(Y).name = BORDER_GAMMA1
+class TumorParams:
+    def __init__(self, x:float = 0.0, y:float = 0.0, radius:float = 0.0, column_name:str = "y"):
+        self.col_name = column_name
+        self.radius = radius
+        self.center_x = x
+        self.center_y = y
 
-bottom_area = Rectangle(PARAM_C, PARAM_A).Face()
-co2_cross_section = whole_area - bottom_area 
-co2_cross_section.faces.name = DOMAIN_CO2
 
-tumor_cross_section = Circle((OMEGA3_CENTER_X, OMEGA3_CENTER_Y), OMEGA3_RADIUS).Face()
-tumor_cross_section.faces.name = DOMAIN_TUMOR
+def calculate(params: TumorParams, x_values:List[float], y_value:float, visualize:bool = False):
 
-tissue_cross_section = whole_area - co2_cross_section - tumor_cross_section 
-tissue_cross_section.faces.name = DOMAIN_TISSUE
+    # generate a triangular mesh
+    whole_area = Rectangle(PARAM_C, PARAM_A + PARAM_B).Face()
+    whole_area.edges.name = BORDER_GAMMA2
+    whole_area.edges.Min(Y).name = BORDER_GAMMA1
 
-shape = Glue([tissue_cross_section, tumor_cross_section, co2_cross_section])
+    bottom_area = Rectangle(PARAM_C, PARAM_A).Face()
+    co2_cross_section = whole_area - bottom_area 
+    co2_cross_section.faces.name = DOMAIN_CO2
 
-geo = OCCGeometry(shape, dim = 2)
-mesh = Mesh(geo.GenerateMesh(maxh=LARGE_MAXH)).Curve(3)
+    tumor_cross_section = Circle((params.center_x, params.center_y), params.radius).Face()
+    tumor_cross_section.faces.name = DOMAIN_TUMOR
 
-print("Boundaries: ", mesh.GetBoundaries())
-print("Materials: ", mesh.GetMaterials())
+    tissue_cross_section = whole_area - co2_cross_section - tumor_cross_section 
+    tissue_cross_section.faces.name = DOMAIN_TISSUE
 
-Draw(mesh)
+    shape = Glue([tissue_cross_section, tumor_cross_section, co2_cross_section])
 
-thermal_conductivity = mesh.MaterialCF({
-    DOMAIN_TISSUE: K_TISSUE,
-    DOMAIN_TUMOR: K_MAX_TUMOR,
-    DOMAIN_CO2: K_CO2,
-    }, 
-    default = 0)
+    geo = OCCGeometry(shape, dim = 2)
+    mesh = Mesh(geo.GenerateMesh(maxh=LARGE_MAXH)).Curve(3)
 
-Draw(thermal_conductivity, mesh, "Thermal Conductivity")
+    if visualize:
+        print("Boundaries: ", mesh.GetBoundaries())
+        print("Materials: ", mesh.GetMaterials())
 
-heat_source = mesh.MaterialCF({ 
-    DOMAIN_TISSUE: THERMAL_W_TISSUE * THERMAL_T_a + THERMAL_Q_m_TISSUE,
-    DOMAIN_TUMOR: THERMAL_W_TUMOR * THERMAL_T_a + THERMAL_Q_m_TUMOR,
-    },
-    default = 0)
+        Draw(mesh)
 
-Draw(heat_source, mesh, "Heat Source")
+    thermal_conductivity = mesh.MaterialCF({
+        DOMAIN_TISSUE: K_TISSUE,
+        DOMAIN_TUMOR: K_MAX_TUMOR,
+        DOMAIN_CO2: K_CO2,
+        }, 
+        default = 0)
 
-u_coeficient = mesh.MaterialCF({ 
-    DOMAIN_TISSUE: THERMAL_W_TISSUE,
-    DOMAIN_TUMOR: THERMAL_W_TUMOR,
-    },
-    default = 0)
+    if visualize:
+        Draw(thermal_conductivity, mesh, "Thermal Conductivity")
 
-Draw(u_coeficient, mesh, "u Coefficient")
+    heat_source = mesh.MaterialCF({ 
+        DOMAIN_TISSUE: THERMAL_W_TISSUE * THERMAL_T_a + THERMAL_Q_m_TISSUE,
+        DOMAIN_TUMOR: THERMAL_W_TUMOR * THERMAL_T_a + THERMAL_Q_m_TUMOR,
+        },
+        default = 0)
 
-# H1-conforming finite element space
-fes = H1(mesh, order=3, dirichlet=BORDER_GAMMA1)
+    if visualize:
+        Draw(heat_source, mesh, "Heat Source")
 
-# Dirichlet conditions
-dirichlet_conditions = mesh.BoundaryCF({BORDER_GAMMA1: THERMAL_T_a}, default = 0)
-dirichlet_gfu = GridFunction(fes)
-dirichlet_gfu.Set(dirichlet_conditions, BND)
-Draw(dirichlet_gfu, mesh, "Partial Solution")
+    u_coeficient = mesh.MaterialCF({ 
+        DOMAIN_TISSUE: THERMAL_W_TISSUE,
+        DOMAIN_TUMOR: THERMAL_W_TUMOR,
+        },
+        default = 0)
 
-# define trial- and test-functions
-u = fes.TrialFunction()
-v = fes.TestFunction()
+    if visualize:
+        Draw(u_coeficient, mesh, "u Coefficient")
 
-# the right hand side
-f = LinearForm(fes)
-f += heat_source * v * dx + ROBIN_H * ROBIN_T_e * v * ds(BORDER_GAMMA1)
+    # H1-conforming finite element space
+    fes = H1(mesh, order=3, dirichlet=BORDER_GAMMA1)
 
-# the bilinear-form 
-a = BilinearForm(fes, symmetric=True)
-a += (thermal_conductivity * grad(u) * grad(v) + u_coeficient * u * v) * dx + ROBIN_H * u * v * ds(BORDER_GAMMA1) 
+    # Dirichlet conditions
+    dirichlet_conditions = mesh.BoundaryCF({BORDER_GAMMA1: THERMAL_T_a}, default = 0)
+    dirichlet_gfu = GridFunction(fes)
+    dirichlet_gfu.Set(dirichlet_conditions, BND)
 
-a.Assemble()
-f.Assemble()
+    if visualize:
+        Draw(dirichlet_gfu, mesh, "Partial Solution")
 
-# the solution field 
-gfu = GridFunction(fes)
+    # define trial- and test-functions
+    u = fes.TrialFunction()
+    v = fes.TestFunction()
 
-# Approach for nonhomogeneous Dirichlet boundary condition
-r = f.vec.CreateVector()
-r.data = f.vec - a.mat * dirichlet_gfu.vec
+    # the right hand side
+    f = LinearForm(fes)
+    f += heat_source * v * dx + ROBIN_H * ROBIN_T_e * v * ds(BORDER_GAMMA2)
 
-# the solution field 
-gfu.vec.data = dirichlet_gfu.vec.data + a.mat.Inverse(fes.FreeDofs(), inverse="sparsecholesky") * r
+    # the bilinear-form 
+    a = BilinearForm(fes, symmetric=True)
+    a += (thermal_conductivity * grad(u) * grad(v) + u_coeficient * u * v) * dx + ROBIN_H * u * v * ds(BORDER_GAMMA2) 
 
-# plot the solution (netgen-gui only)
-Draw(gfu)
+    a.Assemble()
+    f.Assemble()
 
-flux = -grad(gfu)
-Draw(flux, mesh, "Flux")
+    # the solution field 
+    gfu = GridFunction(fes)
 
-# VTKOutput object
-vtk = VTKOutput(ma=mesh,
-                coefs=[gfu, flux],
-                names = ["temperature", "flux"],
-                filename="/tmp/thermo_result",
-                subdivision=3)
-vtk.Do()
+    # Approach for nonhomogeneous Dirichlet boundary condition
+    r = f.vec.CreateVector()
+    r.data = f.vec - a.mat * dirichlet_gfu.vec    
+
+    # the solution field 
+    gfu.vec.data = dirichlet_gfu.vec.data + a.mat.Inverse(fes.FreeDofs(), inverse="sparsecholesky") * r
+
+    if visualize:
+        Draw(gfu)
+
+    flux = -grad(gfu)
+    if visualize:
+        Draw(flux, mesh, "Flux")
+
+    if visualize:
+        vtk = VTKOutput(ma=mesh,
+                        coefs=[gfu, flux],
+                        names = ["temperature", "flux"],
+                        filename="/tmp/thermo_result",
+                        subdivision=3)
+        vtk.Do()
+    
+    result = []
+
+    for x_point in x_values:
+        point = mesh(x_point, y_value) 
+        value_gfu = gfu(point)
+        result.append(value_gfu)
+
+    return result
+
+
+def generate_data(tumor_params: List[TumorParams], debug_index:int = -1, visualize:bool = False, 
+                  write_to_csv:bool = True):
+
+    count = 100
+    x_values = [x * PARAM_C / count for x in range(count + 1)]
+    y_value = PARAM_A
+
+    data = []
+
+    if (debug_index < 0):
+        for param in tumor_params:
+            result = calculate(param, x_values, y_value, visualize)
+            data.append(result)
+    else:
+        calculate(tumor_params[debug_index], x_values, y_value, visualize)
+
+    if write_to_csv and debug_index >= 0:
+        with open("/home/user/workspace/project/docs/dissertation/data/thermo_2d_border_data.csv", "w") as data_csv:
+            header = "x"
+            for param in tumor_params:
+                header += ",{}".format(param.col_name)
+            data_csv.write("{}\n".format(header))
+
+            for i in range(x_values):
+                line = "{}".format(x_values[i])
+                for j in range(len(tumor_params)):
+                    line += ",{}".format(data[i][j])
+                data_csv.write("{}\n".format(line))        
+
+def main():
+    tumor_radius = 0.0025 # m
+    larger_tumor_radius = 0.005 # m
+    extra_depth = 0.001 # m
+
+    tumor_params = [
+        TumorParams(PARAM_C / 2.0, PARAM_A - tumor_radius, tumor_radius, "y_d_0025_c_0"),
+        TumorParams(PARAM_C / 2.0, PARAM_A - tumor_radius - extra_depth, tumor_radius, "y_d_0025_c_001"),
+        TumorParams(PARAM_C / 2.0, PARAM_A - larger_tumor_radius, larger_tumor_radius, "y_d_005_c_0"),
+        TumorParams(PARAM_C / 2.0, PARAM_A - larger_tumor_radius - extra_depth, larger_tumor_radius, "y_d_005_c_001"),
+        ]
+    
+    generate_data(tumor_params, debug_index=0, visualize=True, write_to_csv=False)
+
+    print("Done!")
+
+main()
