@@ -177,17 +177,17 @@ def generate_data(tumor_params: List[TumorParams], debug_index:int = -1, visuali
     else:
         calculate(tumor_params[debug_index], x_values, y_value, visualize)
 
-    if write_to_csv and debug_index >= 0:
+    if write_to_csv and debug_index < 0:
         with open("/home/user/workspace/project/docs/dissertation/data/thermo_2d_border_data.csv", "w") as data_csv:
             header = "x"
             for param in tumor_params:
                 header += ",{}".format(param.col_name)
             data_csv.write("{}\n".format(header))
 
-            for i in range(x_values):
+            for i in range(len(x_values)):
                 line = "{}".format(x_values[i])
                 for j in range(len(tumor_params)):
-                    line += ",{}".format(data[i][j])
+                    line += ",{}".format(data[j][i])
                 data_csv.write("{}\n".format(line))        
 
 def main():
@@ -202,7 +202,7 @@ def main():
         TumorParams(PARAM_C / 2.0, PARAM_A - larger_tumor_radius - extra_depth, larger_tumor_radius, "y_d_005_c_001"),
         ]
     
-    generate_data(tumor_params, debug_index=0, visualize=True, write_to_csv=False)
+    generate_data(tumor_params, debug_index=-1, visualize=False, write_to_csv=True)
 
     print("Done!")
 
