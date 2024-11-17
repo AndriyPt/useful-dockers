@@ -5,7 +5,7 @@ from typing import List
 
 # Bladder with tumor
 
-ROBIN_H = 4.184 # W/m^2/^C
+ROBIN_H = 8.368 # W/m^2/^K
 ROBIN_T_e = 21 # ^C m, Typical OR temperature
 
 K_TISSUE = 0.19 # W/m/^C
@@ -15,10 +15,10 @@ K_CO2 = 0.0176 # W/m/^C
 THERMAL_Q_m_TISSUE = 1.2 * 1086 # W/m^3, based on data Urinary Bladder Wall 1.21 W/kg, density 1086 kg/m**3
 THERMAL_Q_m_TUMOR = THERMAL_Q_m_TISSUE * 10 # W/m^3
 THERMAL_T_a = 36.8 # ^C  
-DENSITY_B = 1000 # kg/m^3
-THERMAL_C_b = 4181 # J/kg/^C
-THERMAL_omega_TISSUE = 0.0031 # m^3 / s / m^3
-THERMAL_omega_TUMOR = 0.0061 # m^3 / s / m^3
+DENSITY_B = 1050 # kg/m^3
+THERMAL_C_b = 3617 # J/kg/^C
+THERMAL_omega_TISSUE = 0.0002715 # m^3 / s / m^3
+THERMAL_omega_TUMOR = 4 * THERMAL_omega_TISSUE # m^3 / s / m^3
 
 THERMAL_W_TISSUE = DENSITY_B * THERMAL_C_b * THERMAL_omega_TISSUE
 THERMAL_W_TUMOR = DENSITY_B * THERMAL_C_b * THERMAL_omega_TUMOR
@@ -203,6 +203,7 @@ def main():
         ]
     
     generate_data(tumor_params, debug_index=-1, visualize=False, write_to_csv=True)
+    # generate_data(tumor_params, debug_index=0, visualize=True, write_to_csv=False)
 
     print("Done!")
 
