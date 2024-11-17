@@ -83,8 +83,8 @@ $\Gamma=\Gamma_1\cap\Gamma_2$.
         \node at (11.5,5) {b};
         \node at (6,7.5) {c};
 
-        \node at (8,2) {$\Omega_1$};
-        \node at (8,5) {$\Omega_2$};
+        \node at (8,2) {$\Omega_2$};
+        \node at (8,5) {$\Omega_1$};
         \node at (6,2.5) {$\Omega_3$};
         \node at (6,0.5) {$\Gamma_1$};
 
@@ -111,16 +111,16 @@ $\Omega_1$ - моделює черевну порожнину у яку зака
     \nabla \cdot (k_2(z) \nabla u(z)) + \omega \rho_b C_b (T_c - u(z)) + q_m  = 0, z \in \Omega_2
 \end{equation}
 
-\noindent На частині границі $\Gamma_2$ задані умови Діріхле, а на $\Gamma_1$ - Неймана.
+\noindent На частині границі $\Gamma_2$ задані умови Робіна, а на $\Gamma_1$ - Діріхле.
 
 \begin{equation}
     \label{eqn:thermo_2d_cond_1}
-    u(z) = 36, z \in \Gamma_2
+    u(z) = T_c, z \in \Gamma_1
 \end{equation}
 
 \begin{equation}
     \label{eqn:thermo_2d_cond_2}
-    \dfrac{\partial{u(z)}}{\partial{n}} = 0, z \in \Gamma_1
+    -k\dfrac{\partial{u(z)}}{\partial{n}} = h(u(z) - T_e), z \in \Gamma_2
 \end{equation}
 
 \noindentУ рівняннях \ref{eqn:thermo_2d_eqn_co2} і \ref{eqn:thermo_2d_eqn_tissue} використовуються наступні позначення:
@@ -177,6 +177,12 @@ $\Omega_1$ - моделює черевну порожнину у яку зака
 \textbf{Метаболічне тепло} У цій статті \cite{metabolic-heat-exchange-value-tumor} робиться висновок, що метаболічне 
 тепло на порядок вище у злоякісному включенні. Це пояснює вищу температуру при більшому коефіцієнті теплопровідності і
 перфузії крові. Тому візьмемо метаболічне тепло у неоднорідності рівним ... , а у м'якій тканині ... .
+
+\textbf{Heat transfer coefficient}. \cite[Pennes used a heat transfer
+coefficient of 0.0001 cal · s21 · cm22 · °C21. Data from
+McAdams (6) for h 5 hc 1 hr for horizontal cylinders in
+still air suggest that a value of 0.0002 cal·s21 ·cm22 ·°C21
+is probably more reasonable;]{thermal-process-tissue-pennes-explained} 
 
 \textbf{Інші параметри} \cite[Пеннес змоделював руку як довгий цилінд і обчислив стаціонарний розроділ температури. 
 У його моделі не можна було просто виміряти перфузію крові через м'які тканини $\omega$, тому Пеннес узгодив цей 
