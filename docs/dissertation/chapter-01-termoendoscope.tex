@@ -205,6 +205,44 @@ $$
 
 \subsection{Дискретизація рівнянь}
 
+Границі областей $\Omega_1$, $\Omega_2$ і $\Omega_3$ розіб'ємо на граничні елементи. Додатково область $\Omega_3$ 
+розіб'ємо на трикутні елементи. Частина із яких буде мати спільну сторону із граничними елементами, таким чином, що для 
+будь якого граничного елемента знайдеться трикутник всередині $\Omega_3$, який містить цей елемент, як свою сторону.
+
+На основі прямого методу граничних елементів, як показано у \cite{brebbia-bem}, опишемо розв'язок рівняння Лапласа 
+(\ref{eqn:thermo_2d_eqn_co2}) для $\xi \in \Omega_1$, де $\Gamma_L = \partial\Omega_1$:
+
+\begin{equation}
+    \label{eqn:thermo_2d_bem_direct_laplace}
+    c^L(\xi)u^L(\xi) + \int_{\Gamma_L}u^L(x)\hat{q}^L(x,\xi)d\Gamma_L(x) = 
+        \int_{\Gamma_L}q^L(x)\hat{u}^L(x,\xi)d\Gamma_L(x)
+\end{equation}
+
+\noindent$\hat{u}^L$ і $\hat{q}^L$ фундаментальний розв'язок плоского рівняння Лапласа і його похідна по нормалі 
+відповідно.
+
+Рівняння Пеннеса (\ref{eqn:thermo_2d_eqn_tissue}) перепишемо у такому вигляді: 
+\begin{equation}
+    k_2\nabla^2{u} + \nabla{k}\nabla{u} + \omega \rho_b C_b (T_c - u(z)) + q_m  = 0, z \in \Omega_2
+\end{equation}
+
+\noindent У свою чергу його можна звести до рівняння із сталим коефіцієнтом теплопровідності і доданком, який містить 
+неоднорідну частину коефіцієнта теплопровідності:
+
+\begin{equation}
+    k_2\nabla^2{u} + \omega \rho_b C_b (T_c - u(z)) + q_m + \nabla{k}\nabla{u} = 0, z \in \Omega_2
+\end{equation}
+
+Також варто зробити заміну змінних, щоб забрати джерело тепла:
+
+
+Для рівняння Пеннеса (\ref{eqn:thermo_2d_eqn_tissue}) використаємо фундаментальний роз'язок наведений у статті 
+\cite{pennes-equation-bem-fundamental-solutions} і позначимо його $\hat{u}^P$, а його похідну по нормалі $\hat{q}^P$.
+
+$c^P(\xi)u^P(\xi) + \int_{\Gamma_P}u^L(x)\hat{q}^P(x,\xi)d\Gamma_P(x) = 
+\int_{\Gamma_P}q^P(x)\hat{u}^P(x,\xi)d\Gamma_P(x)$, де $\xi \in \Omega_2$ і $\Gamma_P = \partial\Omega_2$.
+
+
 \subsection{Розв'язок}
 
 Для різних діаметрів злоякісних включень маємо наступні результати
@@ -233,13 +271,13 @@ $$
     \label{fig:thermo_2d_solution_border_temp_depth}
 \end{figure}
 
-\section{Просторова стаціонарна задача}
+% \section{Просторова стаціонарна задача}
 
-\subsection{Формулювання задачі}
+% \subsection{Формулювання задачі}
 
-\subsection{Дискретизація рівнянь}
+% \subsection{Дискретизація рівнянь}
 
-\subsection{Розв'язок}
+% \subsection{Розв'язок}
 
 \section{Висновок}
 
