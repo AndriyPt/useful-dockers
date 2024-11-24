@@ -21,6 +21,7 @@ RUN set -x && \
     /usr/local/bin/gosu $MY_USERNAME code --install-extension stkb.rewrap && \
     /usr/local/bin/gosu $MY_USERNAME code --install-extension mathematic.vscode-pdf && \
     /usr/local/bin/gosu $MY_USERNAME code --install-extension streetsidesoftware.code-spell-checker && \
+    /usr/local/bin/gosu $MY_USERNAME code --install-extension streetsidesoftware.code-spell-checker-ukrainian && \
     \
     echo "Installing NGSolve" && \
     apt-get install -y software-properties-common && \
