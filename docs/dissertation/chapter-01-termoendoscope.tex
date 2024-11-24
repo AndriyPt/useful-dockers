@@ -221,23 +221,49 @@ $$
 \noindent$\hat{u}^L$ і $\hat{q}^L$ фундаментальний розв'язок плоского рівняння Лапласа і його похідна по нормалі 
 відповідно.
 
-Рівняння Пеннеса (\ref{eqn:thermo_2d_eqn_tissue}) перепишемо у такому вигляді: 
+У рівнянні Пеннеса (\ref{eqn:thermo_2d_eqn_tissue}) зробимо заміну змінних щоб уникнути інтегрування по цілій області 
+$\Omega_2$ у МГЕ. Для цього введемо $v = u - \frac{q_m}{\omega \rho_b C_b}$. Відповідно отримаємо рівняння:
+
+\begin{equation*}
+    \nabla \cdot (k_2\nabla{v}) + \omega \rho_b C_b (T_c - v) = 0
+\end{equation*}
+
+Застосуємо підхід описаний у статті \cite{personal-bem-thermo}, який полягає у поєднанні МГЕ і МСЕ. Для цього рівняння
+перепишемо таким чином, щоб коефіцієнт теплопровідності був сталим майже всюди крім доданка визначеного в 
+області неоднорідності $\Omega_3$:  
+
+\begin{equation*}
+    k_2\nabla^2{v} + \omega \rho_b C_b (T_c - v) + \nabla{k_2}\nabla{v} = 0
+\end{equation*}
+
+Для отриманого рівняння використаємо фундаментальний розв'язок представимо на основі прямого формулювання МГЕ із 
+джерелом тепла, як показано у \cite{brebbia-bem}. Проте замість джерела тепла використаємо частину із неоднорідним 
+коефіцієнтом теплопровідності. Фундаментальні розв'язок рівняння Пеннеса візьмемо із статті 
+\cite{pennes-equation-bem-fundamental-solutions} і позначимо його $\hat{u}^P$, а його похідну по нормалі $\hat{q}^P$. 
+Також у рівнянні $\Gamma_P = \partial \Omega_2$.
+
+\begin{equation*}
+    \begin{split}
+    c^P(\xi)v^P(\xi) + \int_{\Gamma_P}v^P(x)\hat{q}^P(x,\xi)d\Gamma_P(x) + \\ 
+        + \int_{\Omega_3} \nabla{k_2}\nabla{v^P} \hat{u}^P d \Omega_3(x) = 
+        \int_{\Gamma_P}q^P(x)\hat{u}^P(x,\xi)d\Gamma_P(x)
+    \end{split}
+\end{equation*}
+
+За допомогою теореми Гріна рівняння можна звести до наступного вигляду:
+
 \begin{equation}
-    k_2\nabla^2{u} + \nabla{k}\nabla{u} + \omega \rho_b C_b (T_c - u(z)) + q_m  = 0, z \in \Omega_2
+    \label{eqn:thermo_2d_bem_direct_pennes}
+    \begin{split}
+    c^P(\xi)v^P(\xi) + \int_{\Gamma_P}v^P(x)\hat{q}^P(x,\xi)d\Gamma_P(x) + \\ 
+        + \int_{\Omega_3} \nabla{k_2}\nabla{v^P} \hat{u}^P d \Omega_3(x) + 
+        \int_{\Gamma_I} v^P \frac{\partial{k_2}}{\partial{n}} \hat{u}^P d \Gamma_I(x)  = 
+        \int_{\Gamma_P}q^P(x)\hat{u}^P(x,\xi)d\Gamma_P(x)
+    \end{split}
 \end{equation}
 
-\noindent У свою чергу його можна звести до рівняння із сталим коефіцієнтом теплопровідності і доданком, який містить 
-неоднорідну частину коефіцієнта теплопровідності:
+\noindent, де $\Gamma_I = \partial \Omega_3$. 
 
-\begin{equation}
-    k_2\nabla^2{u} + \omega \rho_b C_b (T_c - u(z)) + q_m + \nabla{k}\nabla{u} = 0, z \in \Omega_2
-\end{equation}
-
-Також варто зробити заміну змінних, щоб забрати джерело тепла:
-
-
-Для рівняння Пеннеса (\ref{eqn:thermo_2d_eqn_tissue}) використаємо фундаментальний розв'язок наведений у статті 
-\cite{pennes-equation-bem-fundamental-solutions} і позначимо його $\hat{u}^P$, а його похідну по нормалі $\hat{q}^P$.
 
 $c^P(\xi)u^P(\xi) + \int_{\Gamma_P}u^L(x)\hat{q}^P(x,\xi)d\Gamma_P(x) = 
 \int_{\Gamma_P}q^P(x)\hat{u}^P(x,\xi)d\Gamma_P(x)$, де $\xi \in \Omega_2$ і $\Gamma_P = \partial\Omega_2$.
