@@ -245,7 +245,7 @@ $\Omega_2$ у МГЕ. Для цього введемо $v = u - \frac{q_m}{\omeg
 \begin{equation*}
     \begin{split}
     c^P(\xi)v^P(\xi) + \int_{\Gamma_P}v^P(x)\hat{q}^P(x,\xi)d\Gamma_P(x) + \\ 
-        + \int_{\Omega_3} \nabla{k_2}\nabla{v^P} \hat{u}^P d \Omega_3(x) = 
+        + \int_{\Omega_3} \nabla{k_2(x)}\nabla{v^P(x)} \hat{u}^P(x,\xi) d \Omega_3(x) = 
         \int_{\Gamma_P}q^P(x)\hat{u}^P(x,\xi)d\Gamma_P(x)
     \end{split}
 \end{equation*}
@@ -255,19 +255,35 @@ $\Omega_2$ у МГЕ. Для цього введемо $v = u - \frac{q_m}{\omeg
 \begin{equation}
     \label{eqn:thermo_2d_bem_direct_pennes}
     \begin{split}
-    c^P(\xi)v^P(\xi) + \int_{\Gamma_P}v^P(x)\hat{q}^P(x,\xi)d\Gamma_P(x) + \\ 
-        + \int_{\Omega_3} \nabla{k_2}\nabla{v^P} \hat{u}^P d \Omega_3(x) + 
-        \int_{\Gamma_I} v^P \frac{\partial{k_2}}{\partial{n}} \hat{u}^P d \Gamma_I(x)  = 
-        \int_{\Gamma_P}q^P(x)\hat{u}^P(x,\xi)d\Gamma_P(x)
+    c^P(\xi)v^P(\xi) + \int_{\Gamma_P}v^P(x)\hat{q}^P(x,\xi)d\Gamma_P(x) 
+        +  \int_{\Gamma_I} v^P(x) \frac{\partial{k_2(x)}}{\partial{n}} \hat{u}^P(x,\xi) d \Gamma_I(x) - \\
+        - \int_{\Omega_3}v^P(x) \nabla^2 k_2(x) \hat{u}^P(x,\xi) d\Omega_3(x) 
+        - \int_{\Omega_3}v^P(x) \nabla k_2(x) \nabla \hat{u}^P(x,\xi) d\Omega_3(x) = \\
+        = \int_{\Gamma_P}q^P(x)\hat{u}^P(x,\xi)d\Gamma_P(x)
     \end{split}
 \end{equation}
 
-\noindent, де $\Gamma_I = \partial \Omega_3$. 
+\noindent, де $\Gamma_I = \partial \Omega_3$.
 
+Згідно із \cite{brebbia-bem} дискретну форму рівняння (\ref{eqn:thermo_2d_bem_direct_laplace}) можна записати у вигляді
+$H^LU^L=G^LQ^L$. $\hat{H}_{ij}^L=\int_{\Gamma_j} \hat{q}^L d \Gamma = \frac{l_j}{2} \sum_{k=1}^{K} (\hat{q}^L)_k w_k $,
+де $l_j$ -- довжина $j$-го граничного елемента, $w_k$ -- ваговий коефіцієнт, для числового інтегрування квадратурними 
+формулами Гауса, який відповідає точці $k$. 
 
-$c^P(\xi)u^P(\xi) + \int_{\Gamma_P}u^L(x)\hat{q}^P(x,\xi)d\Gamma_P(x) = 
-\int_{\Gamma_P}q^P(x)\hat{u}^P(x,\xi)d\Gamma_P(x)$, де $\xi \in \Omega_2$ і $\Gamma_P = \partial\Omega_2$.
+$$H_{ij}^L=\begin{cases}
+\hat{H}_{ij}^L, i \neq j \\
+\hat{H}_{ij}^L + 1/2, i = j
+\end{cases}
+$$
 
+\noindent Відповідно $\hat{G}_{ij}^L=\int_{\Gamma_j} \hat{u}^L d \Gamma = \frac{l_j}{2} 
+\sum_{k=1}^{K} (\hat{u}^L)_k w_k$.
+
+Аналогічним чином можна отримати дискретне представлення для рівняння Пеннеса (\ref{eqn:thermo_2d_bem_direct_pennes})
+
+\begin{equation*}
+    H^PV^P + T^P V_I^P = G^P Q^P
+\end{equation*}
 
 \subsection{Розв'язок}
 
