@@ -9,5 +9,7 @@
         "приурочена",
         "роботохірургів"
     ],
-    "cSpell.language": "en,uk"
+    "cSpell.language": "en,uk",
+    "editor.wordWrapColumn": 120,
+    "rewrap.wrappingColumn": 120
 }
