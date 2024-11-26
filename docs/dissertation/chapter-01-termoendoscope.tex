@@ -282,27 +282,45 @@ $$
 \sum_{k=1}^{K} (\hat{u}^L)_k w_k$.
 
 Аналогічним чином можна отримати дискретне представлення для рівняння Пеннеса (\ref{eqn:thermo_2d_bem_direct_pennes}) у 
-вигляді $H^PV^P = G^P Q^P$.
+вигляді $H^P V^P = G^P Q^P$.
 
-\textbf{Умови контакту середовищ} На $\Gamma_I, \Gamma_I = \partial \Omega_1 \cap \partial \Omega_2$ спільній границі 
-між $\Omega_1$ і $\Omega_2$ маємо такі умови згідно \cite{brebbia-bem} $U^L = U^P$ і $Q^L = -Q^P$.
+Невідомі, які ми шукаємо у системі лінійних алгебраїчних рівнянь $U_R^L$, $U_R^P$ -- температура при умові Робіна, 
+$Q_D^P$ -- потік тепла при умові Діріхле, $U_c$, $Q_c$ --температура і потік на границі контакту середовищ 
+$\Gamma_c$ ($\Gamma_c = \partial \Omega_1 \cap \partial \Omega_2$), $U_I^P$ -- температура на границі і в області 
+неоднорідності $\Omega_3$.
+
+На $\Gamma_c$ спільній границі між $\Omega_1$ і $\Omega_2$ згідно \cite{brebbia-bem} маємо такі умови 
+$U^L = U^P$ і $Q^L = -Q^P$. Для умови типу Робіна виразимо потік через температуру $Q = D - EU$. На границі із умовою 
+типу Діріхле замінимо температуру на значення. 
 
 \begin{equation*}
     \begin{bmatrix}
-        0 & 1 & 2 \\ 
-        3 & 4 & 5 
+        H_R^L & H_c^L & 0 & 0 & 0 \\ 
+        0 & H_c^P & H_R^P & H_D^P & H_I^P
     \end{bmatrix}
     \begin{bmatrix}
-        0 \\ 
-        3  
+        U_R^L \\ 
+        U_c \\
+        U_R^P \\ 
+        U_D^P \\ 
+        U_I^P  
     \end{bmatrix} 
     = 
     \begin{bmatrix}
-        0 \\ 
-        3  
+        G_R^LD-G_R^LE & G_c^L & 0 & 0 & 0\\ 
+        0 & -G_c^P & G_D^P & 0 & 0
     \end{bmatrix}
+    \begin{bmatrix}
+        U_R^L \\
+        Q_c \\
+        Q_D^P \\
+        1 \\
+        1  
+    \end{bmatrix} 
 \end{equation*}
 
+Розв'язавши це рівняння отримаємо значення температури на межі контакту двох середовищ $\Omega_1$ і $\Omega_2$. Їх 
+можна із дискретного представлення рівняння (\ref{eqn:thermo_2d_bem_direct_pennes}). 
 
 \subsection{Розв'язок}
 
