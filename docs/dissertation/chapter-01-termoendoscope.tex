@@ -319,8 +319,9 @@ $U^L = U^P$ і $Q^L = -Q^P$. Для умови типу Робіна вираз�
     \end{bmatrix} 
 \end{equation*}
 
-Розв'язавши це рівняння отримаємо значення температури на межі контакту двох середовищ $\Omega_1$ і $\Omega_2$. Їх 
-можна із дискретного представлення рівняння (\ref{eqn:thermo_2d_bem_direct_pennes}). 
+Розв'язавши це рівняння отримаємо значення температури в областях $\Omega_1$ і $\Omega_2$. Нас буде цікавити аналіз 
+температури на межі двох середовищ, отриманий із дискретного представлення рівняння 
+(\ref{eqn:thermo_2d_bem_direct_pennes}). 
 
 \subsection{Розв'язок}
 
@@ -350,6 +351,10 @@ $U^L = U^P$ і $Q^L = -Q^P$. Для умови типу Робіна вираз�
     \label{fig:thermo_2d_solution_border_temp_depth}
 \end{figure}
 
+Як бачимо на графіках \ref{fig:thermo_2d_solution_border_temp_size} і \ref{fig:thermo_2d_solution_border_temp_depth}
+температура на межі двох середовищ збільшується якщо збільшується розмір злоякісного включення $\Omega_3$ або 
+зменшується його відстань до межі контакту.
+
 % \section{Просторова стаціонарна задача}
 
 % \subsection{Формулювання задачі}
@@ -361,15 +366,5 @@ $U^L = U^P$ і $Q^L = -Q^P$. Для умови типу Робіна вираз�
 \section{Висновок}
 
 Результати узгоджуються із практичними висновками зроблені під час експериментів із вимірювань температури злоякісних 
-включень у пацієнтів \cite{temperature-difference-in-tumor-and-tissue}.
-
-
-According to references [62–64] the metabolic heat generation rate and blood perfusion
-rates differ between tumor and normal tissue. However, in the study conducted by Maenosono
-and Saita [65], they considered the same values for metabolic heat generation and blood perfu-
-sion rates for both tumor and normal tissue. On the other hand, Andrä et al. [66] predicted the
-PLOS ONE | https://doi.org/10.1371/journal.pone.0298256 May 16, 2024
-5 / 19PLOS ONE
-Mathematical modeling of heat transfer in tissues
-temperature distribution in breast tissue without accounting for the effects of blood perfusion
-and metabolism !!!
+включень у пацієнтів \cite{temperature-difference-in-tumor-and-tissue}. Відповідно можна використовувати запропоновану 
+математичну модель для моделювання температури від злоякісного включення у симуляторах малоінвазивної хірургії.
