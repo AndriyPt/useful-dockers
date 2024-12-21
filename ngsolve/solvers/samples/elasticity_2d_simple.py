@@ -24,6 +24,13 @@ mesh = Mesh(geo.GenerateMesh(maxh=LARGE_MAXH)).Curve(3)
 print("Boundaries: ", mesh.GetBoundaries())
 print("Materials: ", mesh.GetMaterials())
 
+print("Vertex count: ", mesh.nv)
+print("Edge count: ", mesh.nedge)
+print("Triangles (Facets) count: ", mesh.nfacet)
+print("Faces count: ", mesh.nface)
+
+print("Dimensions: ", mesh.dim)
+
 Draw(mesh)
 
 E, nu = 210, 0.2
@@ -31,9 +38,9 @@ mu = E / 2 / (1 + nu)
 lam = E * nu / ((1 + nu) * (1 - 2 * nu))
 
 def Stress(strain):
-    return 2 * mu * strain + lam * Trace(strain) * Id(DIMENSIONS)
+    return 2 * mu * strain + lam * Trace(strain) * Id(mesh.dim)
 
-fes = VectorH1(mesh, dim = DIMENSIONS, order = 3, dirichlet = "fix")
+fes = VectorH1(mesh, order = 3, dirichlet = "fix")
 u, v = fes.TnT()
 gfu = GridFunction(fes)
 
