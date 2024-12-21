@@ -60,7 +60,7 @@ Draw(mesh)
 def Stress(strain):
     return 2 * mu * strain + lam * Trace(strain) * Id(DIMENSIONS)   
 
-fes = VectorH1(mesh, order=3, dim = DIMENSIONS, dirichlet=BORDER_BOTTOM + "|" + BORDER_SIDE + "|" + BORDER_PRESS)
+fes = VectorH1(mesh, order=3, dirichlet=BORDER_BOTTOM + "|" + BORDER_SIDE + "|" + BORDER_PRESS)
 
 # Dirichlet conditions
 dirichlet_conditions = mesh.BoundaryCF({BORDER_PRESS: (0, TOOL_DISPLACEMENT)}, default = (0,0))
