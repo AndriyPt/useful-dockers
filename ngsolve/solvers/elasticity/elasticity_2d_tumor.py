@@ -8,7 +8,7 @@ NU_TISSUE = 0.2
 MU_TISSUE  = E_TISSUE / 2 / (1 + NU_TISSUE)
 LAMBDA_TISSUE = E_TISSUE * NU_TISSUE / ((1 + NU_TISSUE)*(1 - 2 * NU_TISSUE))
 
-E_TUMOR = 210 # tissue
+E_TUMOR = 310 # tumor
 # E_TUMOR = 21000 # nikel
 NU_TUMOR = 0.2
 
@@ -43,25 +43,32 @@ left_rect = Rectangle(PARAM_C / 2.0 - TOOL_RADIUS, PARAM_A).Face()
 left_rect.edges.Min(X).name = BORDER_SIDE
 left_rect.edges.Max(Y).name = BORDER_TOP
 left_rect.edges.Min(Y).name = BORDER_BOTTOM
+left_rect.faces.name = DOMAIN_TISSUE
 
 middle_rect = MoveTo(PARAM_C / 2.0 - TOOL_RADIUS, 0).Rectangle(2.0 * TOOL_RADIUS, PARAM_A).Face()
 middle_rect.edges.Max(Y).name = BORDER_PRESS
 middle_rect.edges.Min(Y).name = BORDER_BOTTOM
+middle_rect.faces.name = DOMAIN_TISSUE
 
 right_rect = MoveTo(PARAM_C / 2.0 + TOOL_RADIUS, 0).Rectangle(PARAM_C / 2.0 - TOOL_RADIUS, PARAM_A).Face()
 right_rect.edges.Max(X).name = BORDER_SIDE
 right_rect.edges.Max(Y).name = BORDER_TOP
 right_rect.edges.Min(Y).name = BORDER_BOTTOM
+right_rect.faces.name = DOMAIN_TISSUE
+
+whole_body = Glue([left_rect, middle_rect, right_rect])
+whole_body.faces.name = DOMAIN_TISSUE
 
 tumor_cross_section = Circle((OMEGA3_CENTER_X, OMEGA3_CENTER_Y), OMEGA3_RADIUS).Face()
 tumor_cross_section.faces.name = DOMAIN_TUMOR
 
-tissue_shape = left_rect + middle_rect + right_rect - tumor_cross_section
+tissue_shape = whole_body - tumor_cross_section 
 tissue_shape.faces.name = DOMAIN_TISSUE
 
 shape = Glue([tissue_shape, tumor_cross_section])
 
 geo = OCCGeometry(shape, dim = DIMENSIONS)
+
 mesh = Mesh(geo.GenerateMesh(maxh=LARGE_MAXH)).Curve(3)
 
 print("Boundaries: ", mesh.GetBoundaries())
