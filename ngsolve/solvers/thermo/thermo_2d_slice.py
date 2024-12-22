@@ -64,7 +64,8 @@ Draw(mesh)
 
 thermal_conductivity = mesh.MaterialCF({
     DOMAIN_TISSUE: K_TISSUE,
-    DOMAIN_TUMOR: K_MAX_TUMOR,
+    DOMAIN_TUMOR: (K_MAX_TUMOR - K_TISSUE) * cos(0.5 * pi / TUMOR_RADIUS ** 2 * ((x - TUMOR_CENTER_X) ** 2 + 
+                                                 (y - TUMOR_CENTER_Y) ** 2)) + K_TISSUE,
     DOMAIN_CO2: K_CO2,
     }, 
     default = 0)

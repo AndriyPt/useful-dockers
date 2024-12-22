@@ -74,7 +74,8 @@ def calculate(params: TumorParams, x_values:List[float], y_value:float, visualiz
 
     thermal_conductivity = mesh.MaterialCF({
         DOMAIN_TISSUE: K_TISSUE,
-        DOMAIN_TUMOR: K_MAX_TUMOR,
+        DOMAIN_TUMOR: (K_MAX_TUMOR - K_TISSUE) * cos(0.5 * pi / params.radius ** 2 * (
+            (x - params.center_x) ** 2 + (y - params.center_y) ** 2)) + K_TISSUE,
         DOMAIN_CO2: K_CO2,
         }, 
         default = 0)
