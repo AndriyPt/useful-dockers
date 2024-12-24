@@ -1,19 +1,17 @@
 from netgen.occ import *
 from ngsolve import *
 
-E_TISSUE = 210 # tissue
-# E_TISSUE = 21000 # nikel
-NU_TISSUE = 0.2
+E_TISSUE = 1060 # tissue
+NU_TISSUE = 0.31
 
 MU_TISSUE  = E_TISSUE / 2 / (1 + NU_TISSUE)
-LAMBDA_TISSUE = E_TISSUE * NU_TISSUE / ((1 + NU_TISSUE)*(1 - 2 * NU_TISSUE))
+LAMBDA_TISSUE = E_TISSUE * NU_TISSUE / ((1 + NU_TISSUE) * (1 - 2 * NU_TISSUE))
 
-E_TUMOR = 310 # tumor
-# E_TUMOR = 21000 # nikel
-NU_TUMOR = 0.2
+E_TUMOR = 5460 + 3180 # tumor
+NU_TUMOR = 0.26
 
 MU_TUMOR  = E_TUMOR / 2 / (1 + NU_TUMOR)
-LAMBDA_TUMOR = E_TISSUE * NU_TUMOR / ((1 + NU_TUMOR)*(1 - 2 * NU_TUMOR))
+LAMBDA_TUMOR = E_TUMOR * NU_TUMOR / ((1 + NU_TUMOR) * (1 - 2 * NU_TUMOR))
 
 DIMENSIONS = 2
 
