@@ -66,7 +66,7 @@ def calculate(params: TumorParams, x_values:List[float], y_value:float, visualiz
 
     tumor_cross_section = Circle((params.center_x, params.center_y), params.radius).Face()
     tumor_cross_section.faces.name = DOMAIN_TUMOR
-   
+
     tissue_shape = whole_body - tumor_cross_section 
     tissue_shape.faces.name = DOMAIN_TISSUE
 
