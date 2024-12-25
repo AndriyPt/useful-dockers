@@ -1,11 +1,11 @@
 from netgen.occ import *
 from ngsolve import *
 
-E = 1060 # tissue
-nu = 0.31
+E_TISSUE = 1060 # tissue
+NU_TISSUE = 0.31
 
-mu  = E / 2 / (1 + nu)
-lam = E * nu / ((1 + nu)*(1 - 2 * nu))
+MU_TISSUE  = E_TISSUE / 2 / (1 + NU_TISSUE)
+LAMBDA_TISSUE = E_TISSUE * NU_TISSUE / ((1 + NU_TISSUE) * (1 - 2 * NU_TISSUE))
 
 DIMENSIONS = 2
 
@@ -15,7 +15,6 @@ BORDER_SIDE = "gamma_side"
 BORDER_BOTTOM = "gamma_bottom"
 
 DOMAIN_TISSUE = "tissue"
-DOMAIN_TUMOR = "tumor"
 
 PARAM_A = 0.04 # height (m)
 PARAM_B = 0.16 # CO2 area height (m)
@@ -35,19 +34,26 @@ left_rect = Rectangle(PARAM_C / 2.0 - TOOL_RADIUS, PARAM_A).Face()
 left_rect.edges.Min(X).name = BORDER_SIDE
 left_rect.edges.Max(Y).name = BORDER_TOP
 left_rect.edges.Min(Y).name = BORDER_BOTTOM
+left_rect.faces.name = DOMAIN_TISSUE
 
 middle_rect = MoveTo(PARAM_C / 2.0 - TOOL_RADIUS, 0).Rectangle(2.0 * TOOL_RADIUS, PARAM_A).Face()
 middle_rect.edges.Max(Y).name = BORDER_PRESS
 middle_rect.edges.Min(Y).name = BORDER_BOTTOM
+middle_rect.faces.name = DOMAIN_TISSUE
 
 right_rect = MoveTo(PARAM_C / 2.0 + TOOL_RADIUS, 0).Rectangle(PARAM_C / 2.0 - TOOL_RADIUS, PARAM_A).Face()
 right_rect.edges.Max(X).name = BORDER_SIDE
 right_rect.edges.Max(Y).name = BORDER_TOP
 right_rect.edges.Min(Y).name = BORDER_BOTTOM
+right_rect.faces.name = DOMAIN_TISSUE
 
-shape = Glue([left_rect, middle_rect, right_rect])
+whole_body = Glue([left_rect, middle_rect, right_rect])
+whole_body.faces.name = DOMAIN_TISSUE
+
+shape = Glue([whole_body])
 
 geo = OCCGeometry(shape, dim = DIMENSIONS)
+
 mesh = Mesh(geo.GenerateMesh(maxh=LARGE_MAXH)).Curve(3)
 
 print("Boundaries: ", mesh.GetBoundaries())
@@ -55,8 +61,19 @@ print("Materials: ", mesh.GetMaterials())
 
 Draw(mesh)
 
+lambda_coef = mesh.MaterialCF({
+    DOMAIN_TISSUE: LAMBDA_TISSUE,
+    }, 
+    default = 0)
+
+mu_coef = mesh.MaterialCF({
+    DOMAIN_TISSUE: LAMBDA_TISSUE,
+    }, 
+    default = 0)
+
+
 def Stress(strain):
-    return 2 * mu * strain + lam * Trace(strain) * Id(DIMENSIONS)   
+    return 2 * mu_coef * strain + lambda_coef * Trace(strain) * Id(DIMENSIONS)   
 
 fes = VectorH1(mesh, order=3, dirichlet=BORDER_BOTTOM + "|" + BORDER_SIDE + "|" + BORDER_PRESS)
 
