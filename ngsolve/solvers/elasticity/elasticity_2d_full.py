@@ -32,7 +32,7 @@ PARAM_C = 0.4 # width (m)
 TOOL_RADIUS = 0.0025 # m
 TOOL_DISPLACEMENT = -0.001 # m
 
-LARGE_MAXH=0.005
+LARGE_MAXH=0.0025
 
 class TumorParams:
     def __init__(self, x:float = 0.0, y:float = 0.0, radius:float = 0.0, column_name:str = "y"):
@@ -66,7 +66,7 @@ def calculate(params: TumorParams, x_values:List[float], y_value:float, visualiz
 
     tumor_cross_section = Circle((params.center_x, params.center_y), params.radius).Face()
     tumor_cross_section.faces.name = DOMAIN_TUMOR
-
+   
     tissue_shape = whole_body - tumor_cross_section 
     tissue_shape.faces.name = DOMAIN_TISSUE
 
@@ -153,7 +153,7 @@ def calculate(params: TumorParams, x_values:List[float], y_value:float, visualiz
 
     for x_point in x_values:
         point = mesh(x_point, y_value) 
-        value_traction = traction(point)
+        value_traction = traction(point)[1] # Get only the second component of the value
         result.append(value_traction)
 
     return result
@@ -163,7 +163,8 @@ def generate_data(tumor_params: List[TumorParams], debug_index:int = -1, visuali
                   write_to_csv:bool = True):
 
     count = 100
-    x_values = [x * PARAM_C / count for x in range(count + 1)]
+    step = 4.0 * 2.0 * TOOL_RADIUS / count
+    x_values = [PARAM_C / 2.0 - 4.0 * TOOL_RADIUS + x * step for x in range(count + 1)]
     y_value = PARAM_A
 
     data = []
@@ -200,9 +201,8 @@ def main():
         TumorParams(PARAM_C / 2.0, PARAM_A - larger_tumor_radius - extra_depth, larger_tumor_radius, "y_d_005_c_001"),
         ]
     
-    # generate_data(tumor_params, debug_index=-1, visualize=False, write_to_csv=True)
+    generate_data(tumor_params, debug_index=-1, visualize=False, write_to_csv=True)
     # generate_data(tumor_params, debug_index=0, visualize=True, write_to_csv=False)
-    generate_data(tumor_params, debug_index=0, visualize=True, write_to_csv=True)
 
     print("Done!")
 

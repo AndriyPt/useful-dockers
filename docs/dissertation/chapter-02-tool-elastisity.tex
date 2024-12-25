@@ -123,6 +123,37 @@ implications for cancer development . E = Normal tissue 1060 Pa, Cancer - 5460 +
 
 \subsection{Розв'язок}
 
+Для різних діаметрів злоякісних включень маємо наступні результати
+
+\begin{figure}[ht!]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[xmin=0.19, xmax=0.21]
+        \addplot table [x=x, y=y_d_0025_c_0, col sep=comma, mark=none] {data/elasticity_2d_border_data.csv};
+        \addplot table [x=x, y=y_d_005_c_0, col sep=comma, mark=none] {data/elasticity_2d_border_data.csv};
+        \end{axis}
+    \end{tikzpicture}
+    \caption{Тиск на поверхні м'якої тканини залежно від розмірів включення}
+    \label{fig:elasticity_2d_solution_border_pressure_size}
+\end{figure}
+
+\begin{figure}[ht!]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[xmin=0.19, xmax=0.21]
+        \addplot table [x=x, y=y_d_0025_c_0, col sep=comma, mark=none] {data/elasticity_2d_border_data.csv};
+        \addplot table [x=x, y=y_d_0025_c_001, col sep=comma, mark=none] {data/elasticity_2d_border_data.csv};
+        \end{axis}
+    \end{tikzpicture}
+    \caption{Тиск на поверхні м'якої тканини залежно від відстані до поверхні}
+    \label{fig:elasticity_2d_solution_border_pressure_depth}
+\end{figure}
+
+Як бачимо на графіках \ref{fig:thermo_2d_solution_border_temp_size} і \ref{fig:thermo_2d_solution_border_temp_depth}
+температура на межі двох середовищ збільшується якщо збільшується розмір злоякісного включення $\Omega_3$ або 
+зменшується його відстань до межі контакту.
+
+
 \section{Просторова стаціонарна задача}
 
 \subsection{Формулюваня задачі}
