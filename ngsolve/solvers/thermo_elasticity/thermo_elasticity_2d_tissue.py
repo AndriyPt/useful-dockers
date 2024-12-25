@@ -75,7 +75,17 @@ mu_coef = mesh.MaterialCF({
 def Stress(strain):
     return 2 * mu_coef * strain + lambda_coef * Trace(strain) * Id(DIMENSIONS)   
 
-fes = VectorH1(mesh, order=3, dirichlet=BORDER_BOTTOM + "|" + BORDER_SIDE + "|" + BORDER_PRESS)
+temperature_fes = H1(mesh, order=3, dirichlet=BORDER_BOTTOM)
+displacement_fes = VectorH1(mesh, order=3, dirichlet=BORDER_BOTTOM + "|" + BORDER_SIDE + "|" + BORDER_PRESS)
+fesm = temperature_fes * displacement_fes
+
+theta, u = fesm.TrialFunction()
+tau, v = fesm.TestFunction()
+
+
+# Finished here based on https://docu.ngsolve.org/ngs24/tutorials/10_Hdiv_mixed_formulation.html !!!
+
+!!!
 
 # Dirichlet conditions
 dirichlet_conditions = mesh.BoundaryCF({BORDER_PRESS: (0, TOOL_DISPLACEMENT)}, default = (0,0))
