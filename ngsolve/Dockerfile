@@ -22,6 +22,7 @@ RUN set -x && \
     apt-get -y install python3-distutils python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake && \
     apt-get -y install git g++ libglu1-mesa-dev liblapacke-dev libocct-data-exchange-dev && \
     apt-get -y install libocct-draw-dev occt-misc libtbb-dev libxi-dev && \
+    chown $MY_USERNAME:$MY_USERNAME /tmp/compile_ngsolve.sh && \
     /usr/local/bin/gosu $MY_USERNAME /bin/bash /tmp/compile_ngsolve.sh && \
     /usr/local/bin/gosu $MY_USERNAME pip install scikit-build-core pybind11_stubgen numpy && \
     \

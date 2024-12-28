@@ -14,6 +14,7 @@ RUN set -x && \
     apt-get update -y && \
     \
     echo "Installing NGBem" && \
+    chown $MY_USERNAME:$MY_USERNAME /tmp/compile_ngbem.sh && \
     /usr/local/bin/gosu $MY_USERNAME /bin/bash /tmp/compile_ngbem.sh && \
     \
     echo "Removing cache" && \
