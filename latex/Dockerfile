@@ -1,26 +1,27 @@
-FROM shadowrobot/build-tools:focal-noetic
+ARG VERSION=jammy
 
-MAINTAINER "Andriy Petlovanyy"
+FROM useful-dockers/ngbem:${VERSION}
+
+LABEL org.opencontainers.image.authors="Andriy.Petlovanyy@noemail.com"
 
 LABEL Description="This image allows to run NGSolve, Tex and ParaView in Docker container" Vendor="Andriy Petlovanyy" Version="1.0"
 
 RUN set -x && \
     \
+    echo "Update apt repositories cache" && \
+    apt-get update -y && \
+    \
     echo "Install VSCode Extensions" && \
     /usr/local/bin/gosu $MY_USERNAME code --install-extension james-yu.latex-workshop && \
     /usr/local/bin/gosu $MY_USERNAME code --install-extension stkb.rewrap && \
     /usr/local/bin/gosu $MY_USERNAME code --install-extension mathematic.vscode-pdf && \
+    /usr/local/bin/gosu $MY_USERNAME code --install-extension streetsidesoftware.code-spell-checker && \
+    /usr/local/bin/gosu $MY_USERNAME code --install-extension streetsidesoftware.code-spell-checker-ukrainian && \
     \
     echo "Installing Latex" && \
     apt-get update -y && \
-    apt-get install -y texstudio texlive* scalable-cyrfonts-tex pandoc evince && \
-    \
-    echo "Installing NGSolve" && \
-    apt-get install -y software-properties-common && \
-    apt-add-repository -y universe && \
-    add-apt-repository -y ppa:ngsolve/ngsolve && \
-    apt-get update -y && \
-    apt-get install -y ngsolve && \
+    #TODO: Check if package scalable-cyrfonts-tex is still needed. It has conflicts with texlive-fonts-extra 
+    apt-get install -y texstudio texlive* pandoc evince && \ 
     \
     echo "Installing ParaView" && \
     wget -O /tmp/ParaView.tar.gz "https://www.paraview.org/paraview-downloads/download.php?submit=Download&version=v5.13&type=binary&os=Linux&downloadFile=ParaView-5.13.0-MPI-Linux-Python3.10-x86_64.tar.gz" && \
