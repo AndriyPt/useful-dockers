@@ -14,6 +14,10 @@ RUN set -x && \
     apt-get update -y && \
     apt-get install -y python3-full python3-venv python3-dev python3-pip && \
     \
+    echo "Install VSCode Extensions" && \
+    /usr/local/bin/gosu $MY_USERNAME code --install-extension ms-python.python && \
+    /usr/local/bin/gosu $MY_USERNAME code --install-extension ms-python.black-formatter && \
+    \
     echo "Installing NGSolve" && \
     apt-get -y install python3-distutils python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake && \
     apt-get -y install git g++ libglu1-mesa-dev liblapacke-dev libocct-data-exchange-dev && \
