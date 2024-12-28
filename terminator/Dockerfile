@@ -2,7 +2,7 @@ ARG VERSION=jammy
 
 FROM ubuntu:${VERSION}
 
-MAINTAINER "Andriy Petlovanyy"
+LABEL org.opencontainers.image.authors="Andriy.Petlovanyy@noemail.com"
 
 LABEL Description="This image allows to run Terminator in Docker container" Vendor="Andriy Petlovanyy" Version="1.0"
 

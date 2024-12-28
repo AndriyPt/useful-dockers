@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 if [ -z ${GOSU_VERSION} ]; then
   export GOSU_VERSION='1.17'
 fi

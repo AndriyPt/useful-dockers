@@ -1,41 +1,24 @@
-FROM shadowrobot/build-tools:focal-noetic
+ARG VERSION=jammy
 
-MAINTAINER "Andriy Petlovanyy"
+FROM useful-dockers/terminator:${VERSION}
 
-LABEL Description="This image allows to run NGSolve, Tex and ParaView in Docker container" Vendor="Andriy Petlovanyy" Version="1.0"
+LABEL org.opencontainers.image.authors="Andriy.Petlovanyy@noemail.com"
+
+LABEL Description="This image allows to run NGSolve in Docker container" Vendor="Andriy Petlovanyy" Version="1.0"
+
+COPY compile_ngsolve.sh /tmp/compile_ngsolve.sh
 
 RUN set -x && \
     \
-    echo "Installing Latex" && \
+    echo "Installing Python3" && \
     apt-get update -y && \
-    apt-get install -y texstudio texlive* pandoc evince && \
-    \
-    echo "Installing VSCode" && \
-    wget https://go.microsoft.com/fwlink/?LinkID=760868 -O /tmp/code.deb && \
-    echo "code code/add-microsoft-repo boolean true" | sudo debconf-set-selections && \
-    apt-get install -y /tmp/code.deb && \
-    echo 'alias vscode="/usr/bin/code --no-sandbox"' >> /home/$MY_USERNAME/.bashrc && \
-    \
-    echo "Install VSCode Extensions" && \
-    /usr/local/bin/gosu $MY_USERNAME code --install-extension james-yu.latex-workshop && \
-    /usr/local/bin/gosu $MY_USERNAME code --install-extension stkb.rewrap && \
-    /usr/local/bin/gosu $MY_USERNAME code --install-extension mathematic.vscode-pdf && \
-    /usr/local/bin/gosu $MY_USERNAME code --install-extension streetsidesoftware.code-spell-checker && \
-    /usr/local/bin/gosu $MY_USERNAME code --install-extension streetsidesoftware.code-spell-checker-ukrainian && \
+    apt-get install -y python3-full python3-venv python3-dev && \
     \
     echo "Installing NGSolve" && \
-    apt-get install -y software-properties-common && \
-    apt-add-repository -y universe && \
-    add-apt-repository -y ppa:ngsolve/ngsolve && \
-    apt-get update -y && \
-    apt-get install -y ngsolve && \
-    echo 'export PYTHONPATH=$PYTHONPATH:/usr/lib/python3.8/site-packages' >> /home/$MY_USERNAME/.bashrc && \
-    \
-    echo "Installing ParaView" && \
-    wget -O /tmp/ParaView.tar.gz "https://www.paraview.org/paraview-downloads/download.php?submit=Download&version=v5.13&type=binary&os=Linux&downloadFile=ParaView-5.13.0-MPI-Linux-Python3.10-x86_64.tar.gz" && \
-    mkdir -p /opt/paraview && \
-    tar -xvzf /tmp/ParaView.tar.gz -C /opt/paraview && \
-    echo 'alias pview="/opt/paraview/ParaView-5.13.0-MPI-Linux-Python3.10-x86_64/bin/paraview"' >> /home/$MY_USERNAME/.bashrc && \
+    apt-get -y install python3-distutils python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake && \
+    apt-get -y install git g++ libglu1-mesa-dev liblapacke-dev libocct-data-exchange-dev && \
+    apt-get -y install libocct-draw-dev occt-misc libtbb-dev libxi-dev && \
+    /usr/local/bin/gosu $MY_USERNAME /bin/bash /tmp/compile_ngsolve.sh && \
     \
     echo "Removing cache" && \
     apt-get clean && \
