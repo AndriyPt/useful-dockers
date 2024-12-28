@@ -33,8 +33,9 @@ RUN set -x && \
     echo "Installing visual, sound libraries and fonts" && \
     apt-get install -y xz-utils file locales dbus-x11 pulseaudio dmz-cursor-theme fonts-dejavu && \ 
     apt-get install -y fonts-liberation hicolor-icon-theme libcanberra-gtk3-0 libcanberra-gtk-module && \ 
-    apt-get install -y libcanberra-gtk3-module libasound2 libgtk2.0-0 libdbus-glib-1-2 libxt6 && \
-    apt-get install -y libexif12 libgl1-mesa-glx libgl1-mesa-dri && \
+    apt-get install -y libcanberra-gtk3-module libgtk2.0-0 libdbus-glib-1-2 libxt6 && \
+    apt-get install -y libexif12 libgl1-mesa-dri && \
+    if [[ "${VERSION}" == "jammy" ]] ; then apt-get install -y libasound2 libgl1-mesa-glx ; else apt-get install -y libasound2t64 libglx-mesa0 ; fi && \
     \
     echo "Create user" && \
     /bin/bash /tmp/setup_user.sh $MY_USERNAME && \
