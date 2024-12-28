@@ -19,7 +19,7 @@ RUN set -x && \
     apt-get -y install git g++ libglu1-mesa-dev liblapacke-dev libocct-data-exchange-dev && \
     apt-get -y install libocct-draw-dev occt-misc libtbb-dev libxi-dev && \
     /usr/local/bin/gosu $MY_USERNAME /bin/bash /tmp/compile_ngsolve.sh && \
-    /usr/local/bin/gosu $MY_USERNAME pip install numpy && \
+    /usr/local/bin/gosu $MY_USERNAME pip install scikit-build-core pybind11_stubgen numpy && \
     \
     echo "Removing cache" && \
     apt-get clean && \
