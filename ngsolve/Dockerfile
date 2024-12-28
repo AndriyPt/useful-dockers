@@ -12,13 +12,14 @@ RUN set -x && \
     \
     echo "Installing Python3" && \
     apt-get update -y && \
-    apt-get install -y python3-full python3-venv python3-dev && \
+    apt-get install -y python3-full python3-venv python3-dev python3-pip && \
     \
     echo "Installing NGSolve" && \
     apt-get -y install python3-distutils python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake && \
     apt-get -y install git g++ libglu1-mesa-dev liblapacke-dev libocct-data-exchange-dev && \
     apt-get -y install libocct-draw-dev occt-misc libtbb-dev libxi-dev && \
     /usr/local/bin/gosu $MY_USERNAME /bin/bash /tmp/compile_ngsolve.sh && \
+    /usr/local/bin/gosu $MY_USERNAME pip install numpy && \
     \
     echo "Removing cache" && \
     apt-get clean && \

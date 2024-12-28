@@ -8,7 +8,7 @@ mkdir -p $BASEDIR
 cd $BASEDIR
 
 git clone https://github.com/NGSolve/ngsolve.git ngsolve-src
-cd $BASEDIR/ngsolve-src 
+cd $BASEDIR/ngsolve-src
 
 git submodule update --init --recursive
 
@@ -25,3 +25,6 @@ echo "export PATH=\$NETGENDIR:\$PATH" >> $HOME/.bashrc
 
 export PYTHONPATH_TMP=`python3 -c "import os.path, sysconfig;print(os.path.relpath(sysconfig.get_path('platlib'), sysconfig.get_path('data')))"`
 echo "export PYTHONPATH=\$NETGENDIR/../${PYTHONPATH_TMP}:\$PATH" >> $HOME/.bashrc
+
+rm -rf $BASEDIR/ngsolve-build
+rm -rf $BASEDIR/ngsolve-src
