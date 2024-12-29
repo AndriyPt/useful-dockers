@@ -2,7 +2,7 @@ from ngsolve import *
 from netgen.occ import *
 
 
-ROBIN_H = 4.184 # W/m^2/^C
+ROBIN_H = 8.368 # W/m^2/^C
 ROBIN_ROOM_TEMPR = 12 # ^C
 
 K_TISSUE = 0.19 # W/m/^C

@@ -3,7 +3,7 @@ from netgen.occ import *
 from ngsolve import VTKOutput
 
 
-ROBIN_H = 4.184 # W/m^2/^C
+ROBIN_H = 8.368 # W/m^2/^C
 ROBIN_T_e = 21 # ^C m, Typical OR temperature
 
 K_TISSUE = 0.19 # W/m/^C
