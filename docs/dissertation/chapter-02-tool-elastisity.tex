@@ -7,9 +7,10 @@
 
 Одним із нововведень у малоінвазивній робототехніці був тактильний відгук від інструментів. Це була суттєва різниця між
 відкритою операцією і малоінвазивною хірургією. Під час відкритої операції хірург міг\textbackslashмогла відчути певні
-характеристики руками і оцінити властивості м'яких тканин. Тільки остання версія робота хірурга від Intuitive Machines
-да Вінчі отримав таку функціональність (???джерело???). Першим роботом був Senhance із такою функціональністю
-(джерело??? Стаття на NHI). Тим не менше, наразі обмежене коло роботів хірургів надає таку функціональність.
+характеристики руками і оцінити властивості м'яких тканин. Тільки остання версія робота хірурга da Vinci 5 від
+Intuitive Machines отримав таку функціональність \cite{elast-intiitive-machines-force-feedback}. Першим сертифікованим 
+роботом із такою функціональністю був Senhance Robotic System. Тим не менше, наразі обмежене коло роботів хірургів надає
+таку функціональність.
 
 Для того щоб можна було розробляти такі системи управління роботами із тактильним відгуком потрібно створити симульоване 
 середовище, яке буде надавати достовірні дані для калібрування інструментів. Його також можна використати для навчання
@@ -63,54 +64,65 @@ $\Gamma_1 = \partial \Omega_1 \backslash \Gamma_2$.
     \label{fig:elasticity_2d_domain}
 \end{figure}
 
-\noindent Параметр a рівний 8 см, b --- 40 см, а товщина хірургічного інструменту c --- 6 мм. Радіус кола $\Omega_3$ r 
+\noindent Параметр a рівний 8 см, b --- 40 см, а товщина хірургічного інструменту c --- 6 мм. Радіус кола $\Omega_3$, r 
 дорівнює 5 мм.
 
 Скориставшись у рівняннях рівноваги законом Гука 
-$\sigma_{ij}(z) = \lambda(z)\delta_{ij}\varepsilon_{kk}(z) + 2\mu(z)\varepsilon_{ij}(z)$ та співвідношеннями Коші, 
+$\sigma_{ij}(x) = \lambda(x)\delta_{ij}\varepsilon_{kk}(x) + 2\mu(x)\varepsilon_{ij}(x)$ та співвідношеннями Коші, 
 одержимо систему диференційних рівнянь у переміщеннях:
 
 \begin{equation}
     \label{eqn:elasticity_2d_eqn}
-    \mu(z)u_{i,jj}(z) + (\lambda(z) + \mu(z))u_{j,ji} = 0, z \in \Omega_1
+    \mu(x)u_{i,jj}(x) + (\lambda(x) + \mu(x))u_{j,ji} = 0, x \in \Omega_1
 \end{equation}
 
 \noindent де $\sigma_{ij}$ і $\varepsilon_{ij}$ --- компоненти відповідно тензора напружень та тензора деформацій; $u_i$
---- компоненти вектора переміщень; $\delta_{ij}$ --- символ Кронекера.
+--- компоненти вектора переміщень; $\delta_{ij}$ --- символ Кронекера; $\lambda$ і $\mu$ --- коефіцієнти Ляме.
 
 \noindent На всій межі $\Gamma_1$ немає переміщень
 \begin{equation}
     \label{eqn:elasticity_2d_cond_1}
-    u_i(z) = 0, z \in \Gamma_1
+    u_i(x) = 0, x \in \Gamma_1
 \end{equation}
 
 \noindent На всій межі $\Gamma_2$ діє хірургічний інструмент вздовж нормалі із компонентами $n_j$ і зусиллям
 \begin{equation}
     \label{eqn:elasticity_2d_cond_2}
-    t_i(z) = t_{pi}, z \in \Gamma_2
+    t_i(x) = t_{pi}, x \in \Gamma_2
 \end{equation}
 
 \noindent де $t_i = \sigma_{ij}n_j$.
 
-Стаття із модулем Юнга для злоякісних утворень Mechanical properties of human tumour tissues and their
-implications for cancer development . E = Normal tissue 1060 Pa, Cancer - 5460 +- 3180
+\textbf{Коефіцієнти Ляме.} Для обчислення коефіцієнтів $\lambda$ і $\mu$ у здорових і уражених тканинах використовується
+модуль Юнга і коефіцієнт Пуассона. Зокрема
 
-Стаття із коефіцієнтом Пуассона Non-invasive imaging of Young’s modulus and Poisson’s ratio in cancers in vivo
-дає значення 0.31 для здорової тканини і 0.26 для ураженої.  
+\begin{equation}
+    \label{eqn:elasticity_2d_lame_lambda_convertion}
+    \lambda = \dfrac{E\nu}{(1+\nu)(1-2\nu)}
+\end{equation}
 
+\begin{equation}
+    \label{eqn:elasticity_2d_lame_mu_convertion}
+    \mu = \dfrac{E\nu}{2(1+\nu)}
+\end{equation}
 
-Коефіцієнти Ляме будуть відрізнятися в області злоякісного утворення. Тому їх можна зобразити так:
+\noindent де $E$ --- модуль Юнга, а $\nu$ --- коефіцієнт Пуассона.  
+
+На основі статті \cite{elast-young-modulus-cancer} візьмемо модулем Юнга для здорової тканини рівним 1060 Па, а у 
+злоякісному утворенні він може досягати 8640 Па. У статті \cite{elast-poisson-rato-cancer} можна знайти відомості про 
+коефіцієнт Пуассона. Для здорової тканини він має значення 0.31, а для ураженої зменшується до 0.26. 
+
+Обчислимо коефіцієнти Ляме за формулами \ref{eqn:elasticity_2d_lame_lambda_convertion} і 
+\ref{eqn:elasticity_2d_lame_mu_convertion}. Враховуючи неоднорідності отримаємо наступне представлення:
 
 \begin{equation}
     \label{eqn:elasticity_2d_lyame_lambda}
-    \lambda(x, y) = (0.495 - 0.19)cos(\frac{\pi}{2r^2}((x - x_3)^2 + (y - y_3)^2))\chi_3 + 0.19
+    \lambda(x) = (3714.3 - 660.1)cos(\frac{\pi}{2r^2}||x-x_c||^2))\chi_3 + 660.1
 \end{equation}
-
-{\hlКоефіцієнт Пуассона ????}
 
 \begin{equation}
     \label{eqn:elasticity_2d_lyame_mu}
-    \mu(x, y) = (0.495 - 0.19)cos(\frac{\pi}{2r^2}((x - x_3)^2 + (y - y_3)^2))\chi_3 + 0.19
+    \mu(x, y) = (3428.6 - 404.6)cos(\frac{\pi}{2r^2}((x - x_3)^2 + (y - y_3)^2))\chi_3 + 404.6
 \end{equation}
 
 \noindent де $\chi_3$ --- характеристична функція області $\Omega_3$, a ($x_3$, $y_3$) - центр області.

@@ -13,6 +13,12 @@ NU_TUMOR = 0.26
 MU_TUMOR  = E_TUMOR / 2 / (1 + NU_TUMOR)
 LAMBDA_TUMOR = E_TUMOR * NU_TUMOR / ((1 + NU_TUMOR) * (1 - 2 * NU_TUMOR))
 
+print("Tissue Lambda: {}".format(LAMBDA_TISSUE))
+print("Tissue Mu: {}".format(MU_TISSUE))
+
+print("Tumor Lambda: {}".format(LAMBDA_TUMOR))
+print("Tumor Mu: {}".format(MU_TUMOR))
+
 DIMENSIONS = 2
 
 BORDER_TOP = "gamma_top"
