@@ -139,19 +139,19 @@ $\sigma_{ij}(x) = \lambda(x)\delta_{ij}\varepsilon_{kk}(x) + 2\mu(x)\varepsilon_
 який містить цей елемент, як свою сторону.
 
 \textbf{Рівняння прямого МГЕ.} На основі прямого методу граничних елементів, як показано у \cite{brebbia-bem}, опишемо 
-розв'язок рівняння пружності (\ref{eqn:elasticity_2d_eqn}) для $\xi \in \Omega_1$, де $\Gamma_L = \partial\Omega_1$:
+розв'язок рівняння пружності (\ref{eqn:elasticity_2d_eqn}) для $\xi \in \Omega_1$, де $\Gamma = \partial\Omega_1$:
 
 \begin{equation}
     \label{eqn:elasticity_2d_bem_direct_elasticity}
-    c^L(\xi)u^L(\xi) + \int_{\Gamma_L}u^L(x)\hat{q}^L(x,\xi)d\Gamma_L(x) = 
-        \int_{\Gamma_L}q^L(x)\hat{u}^L(x,\xi)d\Gamma_L(x)
+    c_{ij}(\xi)u_j(\xi) + \int_{\Gamma}u_j(x)\hat{q_{ij}}(x,\xi)d\Gamma(x) = 
+        \int_{\Gamma}q_j(x)\hat{u_{ij}}(x,\xi)d\Gamma(x) + \int_{\Omega_3} + !!!
 \end{equation}
 
-\noindent$\hat{u}^L$ і $\hat{q}^L$ фундаментальний розв'язок плоского рівняння пружності і його похідна по нормалі 
+\noindent$\hat{u}$ і $\hat{q}$ фундаментальний розв'язок плоского рівняння пружності і його похідна по нормалі 
 відповідно.
 
-Застосуємо підхід описаний у статті \cite{personal-bem-elasticity}, який полягає у поєднанні МГЕ і МСЕ. Для цього рівняння
-перепишемо таким чином, щоб коефіцієнт теплопровідності був сталим майже всюди крім доданка визначеного в 
+Застосуємо підхід описаний у статті \cite{personal-bem-elasticity}, який полягає у поєднанні МГЕ і МСЕ. Для цього
+рівняння перепишемо таким чином, щоб коефіцієнт теплопровідності був сталим майже всюди крім доданка визначеного в
 області неоднорідності $\Omega_3$:  
 
 \subsection{Розв'язок}
