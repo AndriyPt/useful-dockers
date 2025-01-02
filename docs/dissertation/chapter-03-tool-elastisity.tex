@@ -67,9 +67,21 @@ $\Gamma_1 = \partial \Omega_1 \backslash \Gamma_2$.
 \noindent Параметр a рівний 8 см, b --- 40 см, а товщина хірургічного інструменту c --- 6 мм. Радіус кола $\Omega_3$, 
 $r_c$ дорівнює 5 мм.
 
-Скориставшись у рівняннях рівноваги законом Гука 
-$\sigma_{ij}(x) = \lambda(x)\delta_{ij}\varepsilon_{kk}(x) + 2\mu(x)\varepsilon_{ij}(x)$ та співвідношеннями Коші, 
-одержимо систему диференційних рівнянь у переміщеннях:
+Скориставшись у рівняннях рівноваги законом Гука:
+
+\begin{equation}
+    \label{eqn:elasticity_hooke_law}
+    \sigma_{ij}(x) = \lambda(x)\delta_{ij}\varepsilon_{kk}(x) + 2\mu(x)\varepsilon_{ij}(x)
+\end{equation}
+
+\noindent та співвідношеннями Коші:
+
+\begin{equation}
+    \label{eqn:elasticity_gauchy_tensor}
+    \varepsilon_{ij}(x) = \frac{1}{2}(u_{i,j}(x) + u_{j,i}(x))
+\end{equation}
+
+\noindent одержимо систему диференційних рівнянь у переміщеннях:
 
 \begin{equation}
     \label{eqn:elasticity_2d_eqn}
@@ -117,42 +129,95 @@ $\sigma_{ij}(x) = \lambda(x)\delta_{ij}\varepsilon_{kk}(x) + 2\mu(x)\varepsilon_
 
 \begin{equation}
     \label{eqn:elasticity_2d_lyame_lambda}
-    \lambda(x) = (3714,3 - 660,1)cos\left[\frac{\pi}{2}\frac{||x-x_c||^2}{r_c^2}\right]\chi_3 + 660,1, x \in \Omega_1
+    \lambda(x) = \lambda_c(x)\chi_3 + \lambda_t, x \in \Omega_1
 \end{equation}
+
+\begin{equation*}
+    \lambda_c(x) = (3714,3 - \lambda_t)cos\left[\frac{\pi}{2}\frac{||x-x_c||^2}{r_c^2}\right], \lambda_t = 660,1
+\end{equation*}
 
 \begin{equation}
     \label{eqn:elasticity_2d_lyame_mu}
-    \mu(x) = (3428,6 - 404,6)cos\left[\frac{\pi}{2}\frac{||x-x_c||^2}{r_c^2}\right]\chi_3 + 404,6, x \in \Omega_1
+    \mu(x) = \mu_c(x)\chi_3 + \mu_t, x \in \Omega_1
 \end{equation}
+
+\begin{equation*}
+    \mu_c(x) = (3428,6 - \mu_t)cos\left[\frac{\pi}{2}\frac{||x-x_c||^2}{r_c^2}\right], \mu_t = 404,6
+\end{equation*}
 
 \noindent де $\chi_3$ --- характеристична функція області $\Omega_3$, a $x_c$ --- центр області.
 
-Отже, для визначення переміщень маємо змішану крайову задачу \ref{eqn:elasticity_2d_eqn}, \ref{eqn:elasticity_2d_cond_1} 
-і \ref{eqn:elasticity_2d_cond_2} із коефіцієнтами Ляме у вигляді \ref{eqn:elasticity_2d_lyame_lambda} і 
-\ref{eqn:elasticity_2d_lyame_mu}.
+Рівняння \ref{eqn:elasticity_2d_eqn} перепишемо у наступному вигляді:
+
+\begin{equation}
+    \label{eqn:elasticity_2d_eqn_with_f}
+    \mu_t u_{i,jj}(x) + (\lambda_t + \mu_t)u_{j,ji}(x) = -f_{ij,j}(\varepsilon(x)), x \in \Omega_1
+\end{equation}
+
+\noindent, де
+
+\begin{equation*}
+    f_{ij}(\varepsilon) = [ 2\mu_c(x)\varepsilon_{ij}(x) + \lambda_c(x) \delta_{ij} \varepsilon_{kk}(x) ] \chi_3
+\end{equation*}
+
+Отже, для визначення переміщень маємо змішану крайову задачу \ref{eqn:elasticity_2d_eqn_with_f},
+\ref{eqn:elasticity_2d_cond_1} і \ref{eqn:elasticity_2d_cond_2} із коефіцієнтами Ляме у вигляді
+\ref{eqn:elasticity_2d_lyame_lambda} і \ref{eqn:elasticity_2d_lyame_mu}.
 
 \subsection{Дискретизація рівнянь}
+
+\textbf{Інтегральні зображення розв'язків.} На основі прямого методу граничних елементів, як показано у
+\cite{brebbia-bem}, опишемо розв'язок рівняння пружності (\ref{eqn:elasticity_2d_eqn_with_f}) для $\xi \in \Omega_1$, де
+$\Gamma = \partial\Omega_1$:
+
+\begin{equation}
+    \label{eqn:elasticity_2d_bem_direct_elasticity}
+    \begin{split}
+    u_i(\xi) = \int_{\Gamma}\hat{u}_{ij}(x,\xi)p_j(x)d\Gamma(x) - \int_{\Gamma}\hat{p}_{ij}(x,\xi)u_j(x)d\Gamma(x) + \\  
+        + \int_{\Omega_3} \hat{u}_{ij}(x,\xi)f_{jk,k}(\varepsilon(x))d\Omega(x)
+    \end{split}
+\end{equation}
+
+\noindent$\hat{u}_{ij}$ і $\hat{p}_{ij}$ фундаментальні розв'язки плоского рівняння пружності для переміщень і напружень 
+відповідно. Застосуємо до \ref{eqn:elasticity_2d_bem_direct_elasticity} теорему Гріна для інтегрування частинами. 
+Одержимо:
+
+\begin{equation}
+    \label{eqn:elasticity_2d_bem_direct_elasticity_simplified}
+    \begin{split}
+    u_i(\xi) = \int_{\Gamma}\hat{u}_{ij}(x,\xi)p_j(x)d\Gamma(x) - \int_{\Gamma}\hat{p}_{ij}(x,\xi)u_j(x)d\Gamma(x) + \\ 
+        + \int_{\Gamma_3} \hat{u}_{ij}(x,\xi)f_{jk}(\varepsilon(x))n_kd\Gamma(x)
+        - \int_{\Omega_3} \hat{u}_{ij,k}(x,\xi)f_{jk}(\varepsilon(x))d\Omega(x)
+    \end{split}
+\end{equation}
+
+Застосуємо закон Гука \ref{eqn:elasticity_hooke_law} і співвідношеннями Коші \ref{eqn:elasticity_gauchy_tensor} щоб 
+отримати інтегральні представлення для тензора деформацій:
+
+\begin{equation}
+    \label{eqn:elasticity_2d_bem_direct_gauchy_tensor}
+    \begin{split}
+    \varepsilon_{ij}(\xi) = \int_{\Gamma}\tilde{u}_{ijk}(x,\xi)p_k(x)d\Gamma(x) 
+        - \int_{\Gamma}\tilde{p}_{ijk}(x,\xi)u_k(x)d\Gamma(x) + \\ 
+        + \int_{\Gamma_3} \tilde{u}_{ijk}(x,\xi)f_{kl}(\varepsilon(x))n_l d\Gamma(x)
+        - \int_{\Omega_3} \tilde{u}_{ijk,l}(x,\xi)f_{kl}(\varepsilon(x))d\Omega(x),
+    \end{split}
+\end{equation}
+
+\noindent де $\tilde{u}_{ijk} = \frac{1}{2} \{ \hat{u}_{ik,j} + \hat{u}_{jk,i} \} $ і 
+$\tilde{p}_{ijk} = \frac{1}{2} \{ \hat{p}_{ik,j} + \hat{p}_{jk,i} \}$.
 
 \textbf{Граничні і скінчені елементи.} Границі областей $\Omega_1$ і $\Omega_3$ розіб'ємо на граничні елементи. 
 Додатково область $\Omega_3$ розіб'ємо на трикутні елементи. Частина із яких буде мати спільну сторону із 
 граничними елементами, таким чином, що для будь якого граничного елемента знайдеться трикутник всередині $\Omega_3$, 
 який містить цей елемент, як свою сторону.
 
-\textbf{Рівняння прямого МГЕ.} На основі прямого методу граничних елементів, як показано у \cite{brebbia-bem}, опишемо 
-розв'язок рівняння пружності (\ref{eqn:elasticity_2d_eqn}) для $\xi \in \Omega_1$, де $\Gamma = \partial\Omega_1$:
+\textbf{Система рівнянь.} На границі $\Gamma$ побудуємо систему апроксимаційних функцій. Також на основі трикутних 
+елементів і дотичних до них граничних елементів області $\Omega_3$ побудуємо такі функції. Рівняння 
+\ref{eqn:elasticity_2d_bem_direct_elasticity_simplified} і \ref{eqn:elasticity_2d_bem_direct_gauchy_tensor} представимо 
+у дискретному вигляді наступним чином:
 
-\begin{equation}
-    \label{eqn:elasticity_2d_bem_direct_elasticity}
-    c_{ij}(\xi)u_j(\xi) + \int_{\Gamma}u_j(x)\hat{q_{ij}}(x,\xi)d\Gamma(x) = 
-        \int_{\Gamma}q_j(x)\hat{u_{ij}}(x,\xi)d\Gamma(x) + \int_{\Omega_3} + !!!
-\end{equation}
 
-\noindent$\hat{u}$ і $\hat{q}$ фундаментальний розв'язок плоского рівняння пружності і його похідна по нормалі 
-відповідно.
-
-Застосуємо підхід описаний у статті \cite{personal-bem-elasticity}, який полягає у поєднанні МГЕ і МСЕ. Для цього
-рівняння перепишемо таким чином, щоб коефіцієнт теплопровідності був сталим майже всюди крім доданка визначеного в
-області неоднорідності $\Omega_3$:  
 
 \subsection{Розв'язок}
 
@@ -182,16 +247,30 @@ $\sigma_{ij}(x) = \lambda(x)\delta_{ij}\varepsilon_{kk}(x) + 2\mu(x)\varepsilon_
     \label{fig:elasticity_2d_solution_border_pressure_depth}
 \end{figure}
 
-Як бачимо на графіках \ref{fig:thermo_2d_solution_border_temp_size} і \ref{fig:thermo_2d_solution_border_temp_depth}
-температура на межі двох середовищ збільшується якщо збільшується розмір злоякісного включення $\Omega_3$ або 
-зменшується його відстань до межі контакту.
-
+Як бачимо на графіках (рис. \ref{fig:elasticity_2d_solution_border_pressure_size}) і (рис.
+\ref{fig:elasticity_2d_solution_border_pressure_depth}) температура на межі двох середовищ збільшується якщо
+збільшується розмір злоякісного включення $\Omega_3$ або зменшується його відстань до межі контакту.
 
 \section{Просторова стаціонарна задача}
 
 \subsection{Формулювання задачі}
 
 \subsection{Дискретизація рівнянь}
+
+Застосуємо підхід описаний у статті \cite{personal-bem-elasticity}, який полягає у поєднанні МГЕ і МСЕ. Для цього
+рівняння перепишемо таким чином, щоб коефіцієнт теплопровідності був сталим майже всюди крім доданка визначеного в
+області неоднорідності $\Omega_3$: 
+
+Застосуємо закон Гука \ref{eqn:elasticity_hooke_law} і співвідношеннями Коші \ref{eqn:elasticity_gauchy_tensor} щоб 
+отримати інтегральні представлення для тензора напружень, тензора деформацій і напружень:
+
+
+\begin{equation}
+    \label{eqn:elasticity_3d_cobem_direct_elasticity_components}
+    \begin{split}
+        \left\{ \begin{array}{lr} \varepsilon_{ij} \\ \sigma_{ij} \\ p_{ij} \end{array} \right \} = 5
+    \end{split}
+\end{equation}
 
 \subsection{Розв'язок}
 
