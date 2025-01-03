@@ -208,15 +208,64 @@ $\Gamma = \partial\Omega_1$:
 $\tilde{p}_{ijk} = \frac{1}{2} \{ \hat{p}_{ik,j} + \hat{p}_{jk,i} \}$.
 
 \textbf{Граничні і скінчені елементи.} Границі областей $\Omega_1$ і $\Omega_3$ розіб'ємо на граничні елементи. 
+$\partial\Omega_1 = \cup_{v=1}^{V}\Gamma^v$, $\Gamma^n \cap \Gamma^m = \varnothing$, коли $n \neq m$. 
 Додатково область $\Omega_3$ розіб'ємо на трикутні елементи. Частина із яких буде мати спільну сторону із 
 граничними елементами, таким чином, що для будь якого граничного елемента знайдеться трикутник всередині $\Omega_3$, 
-який містить цей елемент, як свою сторону.
+який містить цей елемент, як свою сторону. Тобто $\Omega_3 = \cup_{w=1}^{W} \Omega_3^w$, 
+$\Omega_3^n \cap \Omega_3^m = \varnothing$, якщо $n \neq m$. 
 
-\textbf{Система рівнянь.} На границі $\Gamma$ побудуємо систему апроксимаційних функцій. Також на основі трикутних 
-елементів і дотичних до них граничних елементів області $\Omega_3$ побудуємо такі функції. Рівняння 
-\ref{eqn:elasticity_2d_bem_direct_elasticity_simplified} і \ref{eqn:elasticity_2d_bem_direct_gauchy_tensor} представимо 
-у дискретному вигляді наступним чином:
+\textbf{Система рівнянь.} На границі $\Gamma$ побудуємо систему апроксимаційних функцій і представимо переміщення і 
+поверхневі зусилля у такому вигляді $\left.u(\eta_1)\right|_{\Gamma^m} = \phi^T(\eta_1)u^m$ і 
+$\left.p(\eta_1)\right|_{\Gamma^n} = \phi^T(\eta_1)p^n$. Також на основі трикутних елементів і дотичних до них граничних 
+елементів області $\Omega_3$ побудуємо такі функції для елементів тензора деформацій 
+$\left.\varepsilon(\eta_1, \eta_2)\right|_{\Omega_3^l} = \psi^T(\eta_1,\eta_2)\varepsilon^l$. $\phi(\eta_1)$ і 
+$\psi(\eta_1, \eta_2)$ --- інтерполяційні функції в локальних координатах для границі $\Gamma$ і області $\Omega_3$. 
+Рівняння \ref{eqn:elasticity_2d_bem_direct_elasticity_simplified} і \ref{eqn:elasticity_2d_bem_direct_gauchy_tensor} 
+представимо на основі інтерполяційних функцій наступним чином:
 
+\begin{equation}
+    \begin{split}
+        \left\{ \begin{array}{lr} u_i \\ \varepsilon_{ij}\end{array} \right\}(x) =  
+        \left\{ \begin{array}{lr} \hat{u}_{ij}^{\Gamma^v} \\ \tilde{u}_{ijk}^{\Gamma^v} \end{array} \right\}(x) p_j -
+        \left\{ \begin{array}{lr} \hat{p}_{ij}^{\Gamma^v} \\ \tilde{p}_{ijk}^{\Gamma^v} \end{array} \right\}(x) u_j + \\
+        + \left\{ \begin{array}{lr} \hat{u}_{ijk}^{\Gamma_3^w} \\ \tilde{u}_{ijkl}^{\Gamma_3^w} \end{array} \right\}(x) 
+        \varepsilon_{jk}  
+        - \left\{ \begin{array}{lr} \hat{u}_{ijk}^{\Omega_3^w} \\ \tilde{u}_{ijkl}^{\Omega_3^w} \end{array} \right\}(x) 
+        \varepsilon_{jk},  
+    \end{split}
+\end{equation}
+
+\noindent де
+
+\begin{equation*}
+    \left\{ \begin{array}{lr} \hat{u}_{ij}^{\Gamma^v} \\ \tilde{u}_{ijk}^{\Gamma^v} \end{array} \right\}(x) =
+    \int_{-1}^{1} \left\{ \begin{array}{lr} \hat{u}_{ij} \\ \tilde{u}_{ijk} \end{array} \right\} 
+    \phi^T J_{\Gamma_v} d \eta_1,
+\end{equation*}
+
+\begin{equation*}
+    \left\{ \begin{array}{lr} \hat{p}_{ij}^{\Gamma^v} \\ \tilde{p}_{ijk}^{\Gamma^v} \end{array} \right\}(x) =
+    \int_{-1}^{1} \left\{ \begin{array}{lr} \hat{p}_{ij} \\ \tilde{p}_{ijk} \end{array} \right\} 
+    \phi^T J_{\Gamma_v} d \eta_1,
+\end{equation*}
+
+%TODO: Add more
+\dots
+
+Застосуємо метод колокацій по точках всередині границі і трикутних елементів в області неоднорідності $\Omega_3$. 
+$\xi_0 \in \Gamma_v \cup \Omega_3$.
+
+\begin{equation}
+    \begin{split}
+        \left\{ \begin{array}{lr} u_i \\ \varepsilon_{ij}\end{array} \right\}(\xi_0) =  
+        \left\{ \begin{array}{lr} \hat{u}_{ij}^{\Gamma^v} \\ \tilde{u}_{ijk}^{\Gamma^v} \end{array} \right\}(\xi_0) p_j -
+        \left\{ \begin{array}{lr} \hat{p}_{ij}^{\Gamma^v} \\ \tilde{p}_{ijk}^{\Gamma^v} \end{array} \right\}(\xi_0) u_j + \\
+        + \left\{ \begin{array}{lr} \hat{u}_{ijk}^{\Gamma_3^w} \\ \tilde{u}_{ijkl}^{\Gamma_3^w} \end{array} \right\}(\xi_0) 
+        \varepsilon_{jk}  
+        - \left\{ \begin{array}{lr} \hat{u}_{ijk}^{\Omega_3^w} \\ \tilde{u}_{ijkl}^{\Omega_3^w} \end{array} \right\}(\xi_0) 
+        \varepsilon_{jk},  
+    \end{split}
+\end{equation}
 
 
 \subsection{Розв'язок}
