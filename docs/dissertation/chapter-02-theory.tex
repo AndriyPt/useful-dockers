@@ -1,4 +1,4 @@
-\chapter{ФОРМУЛЮВАННЯ ОДНОРІДНИХ ЗАДАЧ У М'ЯКИХ ТКАНИНАХ ТІЛА}
+\chapter{ФОРМУЛЮВАННЯ ОДНОРІДНИХ ЗАДАЧ У М'ЯКИХ ТКАНИНАХ ТІЛА і МЕТОДІВ ЇХ РОЗВ'ЯЗУВАННЯ}
 
 \section{Стаціонарна задача теплопровідності}
 
@@ -109,10 +109,35 @@ $\varepsilon_{ij}$ визначаються співвідношеннями К�
 
 \begin{equation}
     \label{eqn:theory_elasticity_lame_mu_convertion}
-    \mu = \frac{E\nu}{2(1+\nu)}
+    \mu = \frac{E}{2(1+\nu)}
 \end{equation}
 
 \noindent де $E$ -- модуль Юнга, а $\nu$ -- коефіцієнт Пуассона.  
 
 \section{Стаціонарна задача термопружності}
 
+Розглянемо вплив температури на пружність м'яких тканин тіла. Представимо тіло областю $\Omega$. До закону Гука 
+\ref{eqn:theory_elasticity_hooke_law} додамо співвідношення Дюгамеля-Неймана і отримаємо:
+
+\begin{equation}
+    \label{eqn:theory_thermoelasticity_duhamel_neumann_extension}
+    \sigma_{ij}(x) = \lambda \delta_{ij}\varepsilon_{kk}(x) + 2\mu\varepsilon_{ij}(x) - (2\mu + 3\lambda)\alpha\theta, 
+        x \in \Omega,
+\end{equation}
+
+\noindent де $\alpha$ -- коефіцієнт теплового розширення матеріалу. Температурне поле $\theta$ знайдемо із рівняння 
+\ref{eqn:theory_thermo_pennes_eqn}. Запишемо рівняння рівноваги у переміщеннях із використанням 
+\ref{eqn:theory_thermoelasticity_duhamel_neumann_extension}:
+
+\begin{equation}
+    \label{eqn:theory_thermoelasticity_displacement_eqn}
+    \mu u_{i,jj}(x) + (\lambda + \mu)u_{j,ji} - (2\mu + 3\lambda)\alpha\theta + b_i(x) = 0, x \in \Omega
+\end{equation}
+
+На границі $\Gamma$ можна задати умови для рівняння Пеннеса \ref{eqn:theory_thermo_cond_dirichlet}, 
+\ref{eqn:theory_thermo_cond_neumann} і \ref{eqn:theory_thermo_cond_robin}, а для переміщень і поверхневих напружень 
+\ref{eqn:theory_elasticity_dirichlet} і \ref{eqn:theory_elasticity_neumann} відповідно.
+
+\section{Метод граничних елементів}
+
+\section{Метод приграничних елементів}
