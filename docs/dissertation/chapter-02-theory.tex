@@ -1,0 +1,118 @@
+\chapter{ФОРМУЛЮВАННЯ ОДНОРІДНИХ ЗАДАЧ У М'ЯКИХ ТКАНИНАХ ТІЛА}
+
+\section{Стаціонарна задача теплопровідності}
+
+Серцево-судинна система людини є складною. У зв'язку із цим є два основні підходи до моделювання цієї системи в 
+організмі людини \cite{kutz-zhu-heat-transfer-biological-systems}:
+\begin{itemize}
+    \item Моделі суцільного середовища, де береться усереднений ефект від потоку крові через об'єм у модельованих м'яких
+    тканинах. 
+    \item Судинні моделі, у яких моделюються головні судини, які впливають на температурні процеси органу чи органів, 
+    які досліджуються.
+\end{itemize}
+\noindent Удосконаленням медичних інструментів полегшує створення судинних моделей, які є складнішими, але дають точніші
+результати. 
+
+У цій праці будемо використовувати модель суцільного середовища. Вона базується на статті Пеннеса
+\cite{thermal-process-tissue-pennes}, яка наводить вже класичне рівняння біотеплового процесу у людському організмі. Ця
+стаття, була опублікована у 1948 році, але до тепер залишається актуальною для більшості досліджень. Зокрема це рівняння
+використовується для оцінки ракових утворень у легенях \cite{lung-tumor-thermal-conductivity}.
+
+Нехай нам задана область $\Omega$. Границю області позначимо $\Gamma$, $\Gamma = \partial \Omega$. Стаціонарне 
+температурне поле є розв'язком такого рівняння теплопровідності:
+
+\begin{equation}
+    \label{eqn:theory_thermo_pennes_eqn}
+    \nabla \cdot \lambda_\theta \nabla \theta(x) + \omega \rho_b C_b (\theta_c - \theta(x)) + q_m  = 0, x \in \Omega
+\end{equation}
+
+\noindent де $\lambda_\theta$ -- коефіцієнт теплопровідності, $\theta$ -- шукана температура в області $\Omega$, 
+$\rho_b$ -- густина крові, $\omega$ -- перфузія крові через орган, $C_b$ -- питома теплоємність крові, 
+$\theta_c$ -- внутрішня температура тіла, $q_m$ -- метаболічне тепло у тканині. На межі задамо наступні умови:
+
+\begin{equation}
+    \label{eqn:theory_thermo_cond_dirichlet}
+    \theta(x) = \theta_{\Gamma_D}(x), x \in \Gamma_D 
+\end{equation}
+
+\begin{equation}
+    \label{eqn:theory_thermo_cond_neumann}
+    q(x) = q_{\Gamma_N}(x), x \in \Gamma_N
+\end{equation}
+
+\begin{equation}
+    \label{eqn:theory_thermo_cond_robin}
+    -\lambda_\theta q(x) = h(\theta(x) - \theta_e), x \in \Gamma_R,
+\end{equation}
+
+\noindent де $q(x) = \frac{\partial \theta(x)}{\partial n}$ -- тепловий потік, $n_i$ -- компоненти вектора зовнішньої 
+нормалі до межі $\Gamma$, $\theta_e$ -- температура середовища, $h$ -- коефіцієнт тепловіддачі. Граничні умови 
+\ref{eqn:theory_thermo_cond_dirichlet}, \ref{eqn:theory_thermo_cond_neumann} і \ref{eqn:theory_thermo_cond_robin} -- це 
+умови Діріхле, Неймана і Робіна відповідно. Умова Робіна описує тепловий обмін тіла із навколишнім середовищем.
+
+\section{Стаціонарна задача пружності}
+
+Розглянемо область $\Omega$. $u_i(x)$ -- позначимо компоненти вектора переміщень. Компоненти тензора деформацій 
+$\varepsilon_{ij}$ визначаються співвідношеннями Коші:  
+
+\begin{equation}
+    \label{eqn:theory_elasticity_gauchy_tensor}
+    \varepsilon_{ij}(x) = \frac{1}{2}(u_{i,j}(x) + u_{j,i}(x)), x \in \Omega
+\end{equation}
+
+Компоненти тензора напружень $\sigma_{ij}$ можна виразити через $\varepsilon_{ij}$ використавши закон Гука:
+
+\begin{equation}
+    \label{eqn:theory_elasticity_hooke_law}
+    \sigma_{ij}(x) = \lambda \delta_{ij}\varepsilon_{kk}(x) + 2\mu\varepsilon_{ij}(x), x \in \Omega,
+\end{equation}
+
+\noindent де $\lambda$ і $\mu$ -- це коефіцієнти Ляме, $\delta_{ij}$ -- символ Кронекера. 
+
+Статична рівновага напружень і моментів виражається таким рівнянням:
+
+\begin{equation}
+    \label{eqn:theory_elasticity_sigma_equilibrium}
+    \sigma_{ij,i}(x) + b_j(x) = 0, x \in \Omega,
+\end{equation}
+
+\noindent де $b_j(x)$ -- компоненти вектора об'ємних напружень. Якщо у рівняння рівноваги 
+\ref{eqn:theory_elasticity_sigma_equilibrium} підставити закон Гука \ref{eqn:theory_elasticity_hooke_law} і 
+співвідношення Коші \ref{eqn:theory_elasticity_gauchy_tensor}, то одержимо систему диференційних рівнянь у переміщеннях:
+
+\begin{equation}
+    \label{eqn:theory_elasticity_displacement_eqn}
+    \mu u_{i,jj}(x) + (\lambda + \mu)u_{j,ji} + b_i(x) = 0, x \in \Omega
+\end{equation}
+
+\noindent На межі задамо наступні умови:
+\begin{equation}
+    \label{eqn:theory_elasticity_dirichlet}
+    u_i(x) = u_{\Gamma_Di}(x), x \in \Gamma_D
+\end{equation}
+
+\begin{equation}
+    \label{eqn:theory_elasticity_neumann}
+    t_i(x) = t_{\Gamma_Ni}(x), x \in \Gamma_N,
+\end{equation}
+
+\noindent де $t_i = \sigma_{ij}n_j$, $n_i$ -- компоненти вектора зовнішньої нормалі до межі $\Gamma$. Граничні умови 
+\ref{eqn:theory_elasticity_dirichlet} і \ref{eqn:theory_elasticity_neumann} -- це умови Діріхле і Неймана відповідно.
+
+У практичних задачах замість коефіцієнтів Ляме можуть бути заданими  модуль Юнга і коефіцієнт Пуассона. Для перетворення
+цих величин використовуються наступні формули: 
+
+\begin{equation}
+    \label{eqn:theory_elasticity_lame_lambda_convertion}
+    \lambda = \frac{E\nu}{(1+\nu)(1-2\nu)}
+\end{equation}
+
+\begin{equation}
+    \label{eqn:theory_elasticity_lame_mu_convertion}
+    \mu = \frac{E\nu}{2(1+\nu)}
+\end{equation}
+
+\noindent де $E$ -- модуль Юнга, а $\nu$ -- коефіцієнт Пуассона.  
+
+\section{Стаціонарна задача термопружності}
+
