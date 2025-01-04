@@ -83,53 +83,347 @@ $\Gamma_1 = \partial \Omega_1 \backslash \Gamma_2$.
 \noindent Параметр a рівний 8 см, b --- 40 см, а товщина хірургічного інструменту c --- 6 мм. Радіус кола $\Omega_3$ r 
 дорівнює 5 мм.
 
-Скориставшись у рівняннях рівноваги законом Гука 
-$\sigma_{ij}(z) = \lambda(z)\delta_{ij}\varepsilon_{kk}(z) + 2\mu(z)\varepsilon_{ij}(z)$ та співвідношеннями Коші, 
-одержимо систему диференційних рівнянь у переміщеннях:
+Розглянемо тіло, що займає область $\Omega$ із краєм $\Gamma$. Нехай коефіцієнт теплопровідності $\lambda_{t}(x)$ та
+коефіцієнти Ляме $\lambda(x),\mspace{9mu}\mu(x)$ матеріалу тіла описуються неперервними функціями, які набувають сталих
+значень скрізь у $\Omega$ за винятком локальних областей неоднорідності $\Omega_{m}\subset\Omega$ ($m =
+\overline{1,M}$), причому ${\Omega_{m} \cap \Omega_{l}} = \varnothing$($m \neq l$), де вони залежать від декартових
+координат ${x = (}x_{1},x_{2})$, а саме 
+$\lambda_{t}(x{) = {\lambda_{t0} + {\sum\limits_{m = 1}^{M}{\lambda_{\mathit{\text{tm}}}(x{) \cdot \chi_{m}}(x)}}}}$,
+$\mu(x{) = {\mu_{0} + {\sum\limits_{m = 1}^{M}{\mu_{m}(x{) \cdot \chi_{m}}(x)}}}}$,
+$\lambda(x{) = {\lambda_{0} + {\sum\limits_{m = 1}^{M}{\lambda_{m}(x{) \cdot \chi_{m}}(x)}}}}$.(5.1)
 
-\begin{equation}
-    \label{eqn:elasticity_2d_eqn}
-    \mu(z)u_{i,jj}(z) + (\lambda(z) + \mu(z))u_{j,ji} = 0, z \in \Omega_1
-\end{equation}
+Тут $\chi_{m}(x)$ -- характеристична функція області $\Omega_m$ $\lambda_{t0}$, -- коефіцієнти в $\Omega{}_{m =
+1}^{M}\Omega_{m}$; ${\lambda_{t0} + \lambda_{\mathit{\text{tm}}}}(x)$, ${\lambda_{0} + \lambda_{m}}(x)$, ${\mu_{t0} +
+\mu_{\mathit{\text{tm}}}}(x)$ -- коефіцієнти області Ω\textsubscript{\emph{m}}, причому
+$\lambda_{\mathit{\text{tm}}}(x){|_{\Gamma_{m}} = 0}$, $\lambda_{m}(x){|_{\Gamma_{m}} = 0}$, $\mu_{m}(x){|_{\Gamma_{m}}
+= 0}$, де Г\textsubscript{\emph{m}} -- край області Ω\textsubscript{\emph{m}}.
 
-\noindent де $\sigma_{ij}$ і $\varepsilon_{ij}$ --- компоненти відповідно тензора напружень та тензора деформацій; $u_i$
---- компоненти вектора переміщень; $\delta_{ij}$ --- символ Кронекера.
+Підставивши у рівняння теплопровідності та рівняння рівноваги в переміщеннях вирази (5.1), співвідношення
+Дюгамеля-Неймана
 
-\noindent На всій межі $\Gamma_1$ немає переміщень
-\begin{equation}
-    \label{eqn:elasticity_2d_cond_1}
-    u_i(z) = 0, z \in \Gamma_1
-\end{equation}
+\begin{equation*}
+    \begin{split}
+        \sigma_{\mathit{\text{ij}}}(x{) = \lambda_{0}}\delta_{\mathit{\text{ij}}}\varepsilon_{\mathit{\text{kk}}}(x{) + 2}\mu_{0}
+            \varepsilon_{\mathit{\text{ij}}}(x{) - \beta_{0}}\theta + \\ + {{\sum\limits_{m = 1}^{M}{\lbrack\lambda_{m}(x)\delta_{\mathit{\text{ij}}}
+            \varepsilon_{\mathit{\text{kk}}}(x{) + 2}\mu_{m}(x)\varepsilon_{\mathit{\text{ij}}}(x)-\beta_{m}(x)\theta(x)\rbrack}} \cdot \chi_{m}}(x)
+    \end{split}
+\end{equation*}
 
-\noindent На всій межі $\Gamma_2$ діє хірургічний інструмент вздовж нормалі із компонентами $n_j$ і зусиллям
-\begin{equation}
-    \label{eqn:elasticity_2d_cond_2}
-    t_i(z) = t_{pi}, z \in \Gamma_2
-\end{equation}
+\noindent та співвідношеннями Коші, одержимо систему диференціальних рівнянь:
 
-\noindent де $t_i = \sigma_{ij}n_j$.
+$\mathit{\Delta\theta} = {- f_{\theta}}$,(5.2)
 
-Коефіцієнти Ляме будуть відрізнятися в області злоякісного утворення. Тому їх можна зобразити так:
+$\mu_{0}{u_{i,\mathit{\text{jj}}} + (}{\lambda_{0} + \mu_{0}}){u_{j,\mathit{\text{ji}}} = {{- f_{\mathit{\text{ij}},j}} + \beta\theta_{,i} + \beta_{,i}}}\theta$,(5.3)
 
-\begin{equation}
-    \label{eqn:elasticity_2d_lyame_lambda}
-    \lambda(x, y) = (0.495 - 0.19)cos(\frac{\pi}{2r^2}((x - x_3)^2 + (y - y_3)^2))\chi_3 + 0.19
-\end{equation}
+\noindent де $\Delta$ -- оператор Лапласа,
+${f_{\theta} = f_{\theta}}(\theta_{,i}{) = {\sum\limits_{m = 1}^{M}{\chi_{m}\lambda_{\mathit{\text{tm}},i}{\theta_{,i}/\lambda_{\mathit{\text{tm}}}}}}}$,
+\begin{equation*}
+    {f_{\mathit{\text{ij}}} = f_{\mathit{\text{ij}}}}(\varepsilon{) = {\sum\limits_{m = 1}^{M}{\lbrack\lambda_{m}\delta_{\mathit{\text{ij}}}{\varepsilon_{\mathit{\text{kk}}} + 2}\mu_{m}\varepsilon_{\mathit{\text{ij}}}\rbrack\chi_{m}}}}    
+\end{equation*}
+${\beta_{0} = (}2{\mu_{0} + 3}\lambda_{0}{) \cdot \alpha}$, $\beta_{m}(x{) = (}2\mu_{m}(x{) + 3}\lambda_{m}(x){) \cdot
+\alpha}$; $\beta(x{) = {\beta_{0} + {\sum\limits_{m = 1}^{M}{\beta_{m}(x{) \cdot \chi_{m}}(x)}}}}$, $\sigma_{ij}$,
+$\varepsilon_{ij}$ -- компоненти відповідно тензора напружень та тензора деформацій; $u_{ij}$ -- компоненти вектора
+переміщень; $\theta$ -- стаціонарне температурне поле; $\alpha$ -- коефіцієнт теплового розширення матеріалу;
+$\delta_{ij}$-- символ Кронекера.
 
-{\hlКоефіцієнт Пуасона ????}
+\noindent Вважатимемо, що на P\textsubscript{1}, P\textsubscript{2 } задані температура й тепловий потік
 
-\begin{equation}
-    \label{eqn:elasticity_2d_lyame_mu}
-    \mu(x, y) = (0.495 - 0.19)cos(\frac{\pi}{2r^2}((x - x_3)^2 + (y - y_3)^2))\chi_3 + 0.19
-\end{equation}
+$\theta{|_{P_{1}} = \theta_{p}}$,
+$q{|_{P_{2}} = q_{p}}$(5.4)
 
-\noindent де $\chi_3$ --- характеристична функція області $\Omega_3$, a ($x_3$, $y_3$) - центр області.
+\noindent а на P\textsubscript{1}, P\textsubscript{2 } -- переміщення та поверхневі зусилля
 
-Отже, для визначення переміщень маємо змішану крайову задачу \ref{eqn:elasticity_2d_eqn}, \ref{eqn:elasticity_2d_cond_1} 
-і \ref{eqn:elasticity_2d_cond_2} із коефіцієнтами Ляме у вигляді \ref{eqn:elasticity_2d_lyame_lambda} і 
-\ref{eqn:elasticity_2d_lyame_mu}.
+$u_{i}{|_{P_{1}} = u_{\mathit{\text{pi}}}}$,
+$t_{i}{|_{P_{2}} = t_{\mathit{\text{pi}}}}$, (5.5)
+
+\noindent де ${P_{1} \cup P_{2}} = \Gamma$, ${P_{1} \cap P_{2}} = \varnothing$, $t_i=\sigma_{ij}n_j$, $n_j$ --
+компоненти одиничного вектора зовнішньої нормалі до краю $\Gamma$. Отже, для визначення температурних переміщень $u_j$
+маємо незв'язану змішану крайову задачу (5.2)-(5.5).
+
+Апроксимувавши компоненти невідомих похідної від температури $\theta_{,i}$ та тензора деформацій $\varepsilon_{ij}$ в
+областях Ω\textsubscript{m} функціями $\theta_{,i}^{m}$, $\varepsilon_{\mathit{\text{ij}}}^{m}$ і використавши їх у
+$f_{\theta}$, перейдемо від крайової задачі відносно $\theta$, $u_i$ до крайової задачі відносно $\theta^*$, $u^*$
+
+$\mathit{\Delta\theta}^{} = {- f_{\theta}}$,(5.6)
+
+$\theta^{}{|_{P_{1}} = \theta_{p}}$,\emph{}$q^{}{|_{P_{2}} = q_{p}}$,(5.7)
+
+$\mu_{0}{u_{i,\mathit{\text{jj}}}^{} + (}{\lambda_{0} + \mu_{0}}){u_{j,\mathit{\text{ji}}}^{} = {- f_{\mathit{\text{ij}},j}}}(\varepsilon^{}) + \beta\theta_{\mathrm{,i}}^{\mathrm{}} + \beta_{,i}\theta^{}$,(5.8)
+
+$u_{i}^{}{|_{P_{1}} = u_{\mathit{\text{pi}}}}$,
+$t_{i}^{}{|_{P_{2}} = t_{\mathit{\text{pi}}}}$.(5.9)
 
 \subsection{Дискретизація рівнянь}
+
+Для побудови розв'язків задачі (5.6)-(5.9) застосуємо МГЕ, а також МПГЕ у поєднанні з ермітовими скінченними елементами
+в областях локальних неоднорідностей. З цією метою розглянемо таку область $B\subset R^{2}$, що $\Omega\subset
+B,\quad\partial{\Omega \cap \partial}{B = \varnothing}$. Позначимо приграничну область $G = B$\textsubscript{.
+}Розв'язки рівнянь (5.6), (5.8) зобразимо у вигляді:
+
+$\theta^{*\gamma}(X) = \int\limits_\gamma U(X,Y)\phi_{\theta}^{\gamma}(X)d\gamma(Y) + 
+\sum\limits_{m = 1}^{M}\int\limits_{\Omega_{m}}U(X,Y)f_\theta(\theta_{,j}^{\gamma m})d\Omega_{m}(Y) + C_{\theta}$, (5.10)
+
+$u_{i}^{\gamma}(X{) = {\int\limits_{\gamma}{E_{\mathit{\text{ij}}}(X,Y)\phi_{j}^{\gamma}(X)\mathit{d\gamma}(Y{) + {\sum\limits_{m = 1}^{M}{\int\limits_{\Omega_{m}}{E_{\mathit{\text{ij}}}(X,Y)f_{\mathit{\text{jk}},k}(\varepsilon^{\gamma_{m}}(Y))d\Omega_{m}{(Y{) -}}}}}}}}}$
+
+${- {\int\limits_{\Omega}{E_{\mathit{\text{ij}}}(X,Y)\lbrack\beta(Y)\theta_{,j}(Y{) + \beta_{,j}}(Y)\theta(Y)\rbrack d\Omega(Y)}}} + C_{i}$,(5.11)
+
+\noindent де $\gamma\in \{G,\Gamma\}$. Застосувавши до (5.10), (5.11) теорему Гріна інтегрування частинами,
+одержимо зображення для температури та компонент вектора переміщень:
+
+$\theta^{\gamma}(X{) = {\int\limits_{\gamma}{U(X,Y)\phi_{\theta}^{\gamma}(X)\mathit{d\gamma}(Y{) - {\sum\limits_{m = 1}^{M}{{\int\limits_{\Omega_{m}}{U_{,i}(X,Y)f_{\theta}(\theta^{\gamma_{m}}(Y))d\Omega_{m}{(Y{) + C_{\theta}}}}},}}}}}}$
+(5.12)
+
+$u_{i}^{\gamma}(X{) = {\int\limits_{\gamma}{E_{\mathit{\text{ij}}}(X,Y)\phi_{j}^{\gamma}(X)\mathit{d\gamma}(Y{) - {\sum\limits_{m = 1}^{M}{\int\limits_{\Omega_{m}}{E_{\mathit{\text{ij}},k}(X,Y)f_{\mathit{\text{jk}}}(\varepsilon^{\gamma_{m}}(Y))d\Omega_{m}{(Y{) -}}}}}}}}}$
+
+${- {\int\limits_{\Gamma}{E_{\mathit{\text{ij}}}(X,Y)\beta(Y)\theta(Y)n_{j}(Y)\mathit{d\Gamma}(Y{) +}}}}$
+
+$+{{\int\limits_{\Omega}{\theta(Y)\lbrack E_{\mathit{\text{ij}},j}(X,Y)\beta(Y{) - E_{\mathit{\text{ij}}}}(X,Y)\beta_{,j}(Y)\rbrack d\Omega(Y)}} + C_{i}}$(5.13)
+
+і на основі них інтегральні зображення теплового потоку та компонент деформацій, напружень та поверхневих зусиль
+
+$q^{\gamma}(X{) = {\int\limits_{\gamma}{Q(X,Y)\phi_{\theta}^{\gamma}(X)\mathit{d\gamma}(Y{) + {\sum\limits_{m = 1}^{M}{{\int\limits_{\Omega_{m}}{Q_{,i}(X,Y)f_{\theta}(\theta^{\gamma_{m}}(Y))d\Omega_{m}{(Y)}}},}}}}}}$
+(5.14)
+
+\begin{equation*}
+    \begin{split}
+        \left\{ \begin{array}{lr} \varepsilon_{ij}^{*\gamma}(X) \\ \sigma_{ij}^{*\gamma}(X) \\ t_{i}^{*\gamma} (X) \end{array} \right \} =
+        \int\limits_{\gamma} \left\{ \begin{array}{lr} B_{ijk}(X,Y) \\ T_{ijk}(X,Y) \\ F_{ik}(X,Y) \end{array} \right \}
+            \phi_k^\gamma(Y)d\gamma(Y) - \\ - 
+        \sum \limits_{m=1}^M \int \limits_{\Omega_m} \left\{ \begin{array}{lr} B_{ijk,l}(X,Y) \\ T_{ijk,l}(X,Y) \\ F_{ik,l}(X,Y) \end{array} \right \}
+            f_{kl}(\varepsilon^{\gamma m}(Y))d\Omega_m(Y) - \\ -
+        \int \limits_{\Gamma} \beta(Y) \theta(Y) \left\{ \begin{array}{lr} B_{ijk}(X,Y) \\ T_{ijk}(X,Y) \\ F_{ik}(X,Y) \end{array} \right \}
+            n_k(Y)d\Gamma(Y) + \\ +
+        \int \limits_{\Omega} \beta(Y) \theta(Y) \left\{ \begin{array}{lr} B_{ijk,k}(X,Y) \\ T_{ijk,k}(X,Y) \\ F_{ik,k}(X,Y) \end{array} \right \}
+            d\Omega(Y) - \\ - 
+        \sum \limits_{m=1}^M \int \limits_{\Omega_m} \beta_{m,k}(Y) \theta(Y) 
+                \left\{ \begin{array}{lr} B_{ijk}(X,Y) \\ T_{ijk}(X,Y) \\ F_{ik}(X,Y) \end{array} \right \} d\Omega_m(Y) +
+        f_{ij}(\varepsilon^{\gamma m}(X)) 
+        \left\{ \begin{array}{lr} 0 \\ 1 \\ n_j \end{array} \right \}, (5.15)
+    \end{split}
+\end{equation*}
+
+\noindent де $U(X,Y)$ -- фундаментальний розв'язок стаціонарного рівняння теплопровідності,
+$E_{\mathit{\text{ij}}}(X,Y{) = E_{\mathit{\text{ij}}} = \frac{\lambda_{0} + \mu_{0}}{4 \pi \mu_0({\lambda_{0} + \mu_{0}})}}\left\{ {{- \frac{{\lambda_{0} + 3}\mu_{0}}{\lambda_{0} + \mu_{0}}}\text{ln}{\mathit{r\delta}_{\mathit{\text{ij}}} + r_{,i}}r_{,j}} \right\}$
+-- фундаментальний розв'язок системи рівнянь задачі пружності; ${Y = (}Y_{1},Y_{2}), Y_{1},Y_{2}$--- система координат,
+що збігається зі системою $x_{1},x_{2}$ і використовується для опису точки, в якій діють невідомі фіктивні джерела тепла
+$\phi_{\theta}^{\gamma}$ чи прикладені компоненти невідомих фіктивних поверхневих зусиль $\phi_{j}^{\Gamma}$ чи масових
+сил $\phi_{j}^{G}$; $C_{\theta}$, невідомі сталі,
+$B_{\mathit{\text{ijk}}}(X,Y{) = B_{\mathit{\text{ijk}}} = \frac{1}{2}}({E_{\mathit{\text{ik}},j} + E_{\mathit{\text{jk}},i}})$,
+$T_{\mathit{\text{jk}}}(X,Y{) = T_{\mathit{\text{jk}}} = \lambda_{0}}\delta_{\mathit{\text{ij}}}{B_{\mathit{\text{llk}}} + 2}\mu_{0}B_{\mathit{\text{ijk}}}$,
+$F_{\mathit{\text{ij}}}(X,Y{) = F_{\mathit{\text{ij}}} = T_{\mathit{\text{ijk}}}}n_{k}$.
+
+У приграничній області \emph{G} і на ділянках краю $P_{1},P_{2}$ уведемо відповідно приграничні $G_v$ та граничні
+${\Gamma_{v} = \partial}{G_{v} \cap \Gamma}\mspace{9mu}$$({v = 1},\text{.}\text{.}\text{.},V)$ елементи, при­чому
+$\mathit{\text{mes}} {G_{\nu} = 2}$, ${}_{v = 1}^{V}{G_{v} = G}$, ${{G_{v} \cap G_{w}} = \varnothing},$ ${{\Gamma_{v}
+\cap \Gamma_{w}} = \varnothing},$ при $v \neq w$, ${}_{v = 1}^{V_{1}}\Gamma_{v}{= P_{1}}$, ${}_{v = {V_{1} +
+1}}^{V}\Gamma_{v}{= P_{2}}$. Геометрію приграничних і граничних елементів моделюємо за допомогою вектора $\Psi$ 
+інтерполяційних функцій у локальній системі координат. Вздовж кожного з елементів $\Gamma_v$ та по площі елемента
+$G_v$ здійснимо апроксимацію невідомих функцій $\phi_{\theta}^\gamma$, $\phi_{j}^\gamma$ за допомогою інтерполяційних 
+поліномів $\phi_{\theta}^{\gamma}(\eta){|_{\gamma_{\nu}} = \psi^{T}}{(\eta{) \cdot \phi_{\theta \nu}^{\gamma}}}$,
+$\phi_{j}^{\gamma}(\eta){|_{\gamma_{\nu}} = \psi^{T}}{(\eta{) \cdot \phi_{\mathit{j\nu}}^{\gamma}}}$,
+де $\phi_{\theta \nu}^{\gamma}$, $\phi_{jv}^{\gamma}$ --- вектори невідомих вузлових апроксимацій функцій 
+$\phi_{\theta}^{\gamma}$, $\phi_{j}^{\gamma}$ на $\nu$ -ому елементі.
+
+Області $\Omega_m$ дискретизуємо системою ермітових скінчених елементів $\Omega_{ms}$ ($s = \overline{1,S_{m}}$, 
+зобразивши функції $\theta^{\gamma m}$, $\varepsilon_{ij}^{\gamma m}$ на кожному з них пробними функціями
+
+$\theta^{\mathit{\gamma m}}{|_{\Omega_{\mathit{\text{ms}}}} = \xi^{T}}{(\zeta_{1}}{,\zeta_{2}}{) \cdot \theta^{\gamma\mathit{\text{ms}}}}$,
+$\varepsilon_{\mathit{\text{ij}}}^{\mathit{\gamma m}}{|_{\Omega_{\mathit{\text{ms}}}} = \xi^{T}}{(\zeta_{1}}{,\zeta_{2}}{) \cdot \varepsilon_{\mathit{\text{ij}}}^{\gamma\mathit{\text{ms}}}}$,
+
+\noindent де $\theta^{\gamma_{ms}}$, $\varepsilon_{ij}^{\gamma_{ms}}$ -- вузлові вектори значень температури 
+$\theta^{\gamma m}$ та компоненти $\varepsilon_{\mathit{\text{ij}}}^{\mathit{\gamma m}} $тензора деформацій на s-тому 
+елементі, $\xi$ -- вектор базових функцій у локальній системі координат.
+
+На основі таких апроксимацій одержимо дискретні аналоги формул (5.12)-(5.15)
+
+$\theta^{\gamma}(X{) = U^{\gamma \nu}}(X{{) \cdot \phi_{\theta \nu}^{\gamma}} + U_{i}^{\mathit{\text{ms}}}}(X{{) \cdot \lambda_{t,i}^{\mathit{\text{ms}}}/\lambda_{t}^{\mathit{\text{ms}}}} + C_{\theta}}$,(5.16)
+
+$q^{\gamma}(X{) = Q^{\gamma \nu}}(X{{) \cdot \phi_{\theta \nu}^{\gamma}} + Q_{i}^{\mathit{\text{ms}}}}(X{) \cdot \lambda_{t,i}^{\mathit{\text{ms}}}/\lambda_{t}^{\mathit{\text{ms}}}}$,(5.17)
+
+$u_{i}^{\gamma}(X{) = E_{\mathit{\text{ij}}}^{\gamma \nu}}(X{{) \cdot \phi_{\mathit{j\nu}}^{\gamma}} + E_{i}^{\lambda\mathit{\text{ms}}}}(X{{) \cdot \varepsilon_{\mathit{\text{kk}}}^{\gamma\mathit{\text{ms}}}} + E_{\mathit{\text{ijl}}}^{\mu\mathit{\text{ms}}}}(X{{) \cdot \varepsilon_{\mathit{\text{jl}}}^{\gamma\mathit{\text{ms}}}} + C_{i}}$,
+(5.18)
+
+\begin{equation*}
+    \left\{ \begin{array}{lr} \varepsilon_{ij}^{*\gamma} \\ \sigma_{ij}^{*\gamma} \\ t_{i}^{*\gamma} \end{array} \right \} (X) =
+    \left\{ \begin{array}{lr} B_{ijk}^\nu \\ T_{ijk}^\nu \\ F_{ik}^\nu \end{array} \right \} (X) \phi_{k \nu}^\gamma + 
+    \left\{ \begin{array}{lr} B_{ij}^{\lambda m s} \\ T_{ij}^{\lambda m s} \\ F_{i}^{\lambda m s} \end{array} \right \} (X) \varepsilon_{kk}^{\gamma m s} + 
+    \left\{ \begin{array}{lr} B_{ijkl}^{\mu m s} \\ T_{ijkl}^{\mu m s} \\ F_{ikl}^{\mu m s} \end{array} \right \} (X) \varepsilon_{kl}^{\gamma m s}, (5.19)
+\end{equation*}
+
+\noindent де
+
+$\begin{Bmatrix}
+U^{\Gamma_{v}} \\
+Q^{\Gamma_{v}} \\
+\end{Bmatrix}{(X{) = {\int\limits_{- 1}^{1}\begin{Bmatrix}
+U^{\Gamma_{v}} \\
+Q^{\Gamma_{v}} \\
+\end{Bmatrix}}}}\psi^{T}J_{\mathit{\Gamma\nu}}\mathit{d\eta}$,
+$\begin{Bmatrix}
+U^{\Gamma_{v}} \\
+Q^{\Gamma_{v}} \\
+\end{Bmatrix}{(X{) = {\int\limits_{- 1}^{1}\begin{Bmatrix}
+U^{\Gamma_{v}} \\
+Q^{\Gamma_{v}} \\
+\end{Bmatrix}}}}\psi^{T}J_{\mathit{\Gamma\nu}}\mathit{d\eta}$
+
+\begin{equation*}
+    \left\{ \begin{array}{lr} E_{ij}^{\Gamma_\nu} \\ B_{ijk}^{\Gamma_\nu} \\ T_{ijk}^{\Gamma_\nu} \\ F_{ik}^{\Gamma_\nu} \end{array} \right \} (X) =
+    \int \limits_{-1}^1 
+        \left\{ \begin{array}{lr} E_{ij} \\ B_{ijk} \\ T_{ijk} \\ F_{ik} \end{array} \right \} \psi^T J_{\Gamma_\nu} d \eta;
+    \left\{ \begin{array}{lr} E_{ij}^{G_\nu} \\ B_{ijk}^{G_\nu} \\ T_{ijk}^{G_\nu} \\ F_{ik}^{G_\nu} \end{array} \right \} (X) =
+    \int \limits_{-1}^1 \int \limits_{-1}^1 
+        \left\{ \begin{array}{lr} E_{ij} \\ B_{ijk} \\ T_{ijk} \\ F_{ik} \end{array} \right \} \psi^T J_{G_\nu} d \eta_1 d \eta_2;
+\end{equation*}
+
+\begin{equation*}
+    \left\{ \begin{array}{lr} E_{i}^{\lambda m s} \\ B_{ij}^{\lambda m s} \\ T_{ij}^{\lambda m s} \\ F_{i}^{\lambda m s} \end{array} \right \} (X) =
+    - \int \limits_{-1}^1 \int \limits_{-1}^1 
+        \left\{ \begin{array}{lr} E_{ij,j} \\ B_{ijk,k} \\ T_{ijk,k} \\ F_{ik,k} \end{array} \right \} \lambda_{ms} \xi^T H_{ms} d \zeta_1 d \zeta_2 +
+    \lambda_{ms} \left\{ \begin{array}{lr} 0 \\ 0 \\ \delta_{ij} \\ n_j \end{array} \right \} \xi^T \chi_{ms}(X),
+\end{equation*}
+
+\begin{equation*}
+    \left\{ \begin{array}{lr} E_{il}^{\mu m s} \\ B_{ijkl}^{\mu m s} \\ T_{ijkl}^{\mu m s} \\ F_{il}^{\mu m s} \end{array} \right \} (X) =
+    -2 \int \limits_{-1}^1 \int \limits_{-1}^1
+        \left\{ \begin{array}{lr} E_{ij,j} \\ B_{ijk,k} \\ T_{ijk,k} \\ F_{ik,k} \end{array} \right \} \mu_{ms} \xi^T H_{ms} d \zeta_1 d \zeta_2 +
+    2 \mu_{ms} \left\{ \begin{array}{lr} 0 \\ 0 \\ 1 \\ n_j \end{array} \right \} \xi^T \chi_{ms}(X),
+\end{equation*}
+
+$J_{\Gamma_{v}}$, $J_{G_{v}}$, $H_{ms}$ -- якобіани переходу від змінних $\eta$, $\eta_1$, $\eta_2$;$\zeta_1$, $\zeta_2$
+до Х відповідно. $\chi_{ms}$ -- характеристична функція елемента $\Omega_{ms}$, $\lambda_{ms}$, $\mu_{ms}$ -- значення
+функцій $\lambda_{m}(X)$, $\mu_{m}(X)$ при $X\in\Omega_{ms}$.
+
+Уведемо функції нев'язок
+$R_{\mathit{\text{ij}}}^{\gamma\mathit{\text{ms}}}(x{) = \varepsilon_{\mathit{\text{ij}}}^{\gamma}}(x{) - \varepsilon_{\mathit{\text{ij}}}^{\gamma\mathit{\text{ms}}}}(x)$
+на $\underset{s = 1}{\overset{S_{m}}{}}\Omega_{\mathit{\text{ms}}}$ ($m = \overline{1,M}$), $R_{1i}^{\gamma}(x{) =
+u_{i}^{\gamma}}(x{) - u_{\mathit{\text{pi}}}}(x)$ на $P_1$ і $R_{2i}^{\gamma}(x{) = t_{i}^{\gamma}}(x{) -
+t_{\mathit{\text{pi}}}}(x)$ на $P_2$.
+
+Унаслідок граничного переходу та дискретизації виразів для переміщень (5.9) та зусиль (5.10), одержимо їх дискретні
+аналоги у точці $X_{0}{\in\underset{\nu = 1}{\overset{V}{\cup}}\Gamma_{\nu}}$:
+
+$u_{i}^{\gamma}(X_{0}{) = E_{\mathit{\text{ij}}}^{\gamma \nu}}(X_{0}{{) \cdot \phi_{\mathit{j\nu}}^{\gamma}} + E_{i}^{\lambda\mathit{\text{ms}}}}(X_{0}{{) \cdot \varepsilon_{\mathit{\text{kk}}}^{\gamma\mathit{\text{ms}}}} + E_{\mathit{\text{ijl}}}^{\mu\mathit{\text{ms}}}}(X_{0}{{) \cdot \varepsilon_{\mathit{\text{jl}}}^{\gamma\mathit{\text{ms}}}} + C_{i}}$,
+(5.11)
+
+$t_{i}^{\Gamma}(X_{0}{) = {\pm \frac{1}{2}}}\delta_{\mathit{\text{ij}}}\psi^{T}(X_{0}{{) \cdot \phi_{\mathit{j\nu}}^{\Gamma}} + F_{\mathit{\text{ij}}}^{\mathit{\Gamma\nu}}}(X_{0}{{) \cdot \phi_{\mathit{j\nu}}^{\Gamma}} + F_{i}^{\lambda\mathit{\text{ms}}}}(X_{0}{{) \cdot \varepsilon_{\mathit{\text{kk}}}^{\Gamma\mathit{\text{ms}}}} + F_{\mathit{\text{ijl}}}^{\mu\mathit{\text{ms}}}}(X_{0}{) \cdot \varepsilon_{\mathit{\text{jl}}}^{\Gamma\mathit{\text{ms}}}}$,
+$t_{i}^{G}(X_{0}{) = F_{\mathit{\text{ij}}}^{\mathit{G\nu}}}(X_{0}{{) \cdot \phi_{\mathit{j\nu}}^{G}} + F_{i}^{\lambda\mathit{\text{ms}}}}(X_{0}{{) \cdot \varepsilon_{\mathit{\text{kk}}}^{\mathit{\text{Gms}}}} + F_{\mathit{\text{ijl}}}^{\mu\mathit{\text{ms}}}}(X_{0}{) \cdot \varepsilon_{\mathit{\text{jl}}}^{\mathit{\text{Gms}}}}$(5.12)
+
+\noindent причому точка X\textsubscript{0} така, що в ній існує єдина дотична до $\underset{\nu =
+1}{\overset{V}{}}\Gamma_{\nu}$; інтеграли $F_{\mathit{\text{ij}}}^{\mathit{\Gamma\nu}}(X_{0})$ слід розуміти у сенсі
+головного значення Коші, а всі решта --- у сенсі Рімана.
+
+Для визначення невідомих векторів вузлових значень фіктивних поверхневих зусиль $\phi_{j\nu}^\Gamma$ та масових сил
+$\phi_{j\nu}^G$, векторів вузлових значень компонент тензора $\varepsilon_{ij}^{\gamma ms}$ в областях неоднорідностей
+та вектора $C(C_1, C2)$ побудуємо систему лінійних алгебричних рівнянь за методом зважених нев'язок. Враховуємо для цього і дискретні
+аналоги
+
+${{W^{\gamma \nu} \cdot \phi_{\mathit{j\nu}}^{\gamma}} + {W_{j}^{\lambda\mathit{\text{ms}}} \cdot \varepsilon_{\mathit{\text{kk}}}^{\gamma\mathit{\text{ms}}}} + {W_{l}^{\mu\mathit{\text{ms}}} \cdot \varepsilon_{\mathit{\text{jl}}}^{\gamma\mathit{\text{ms}}}}} = 0$
+(5.13)
+
+\noindent умов
+
+$\int\limits_{\gamma}{\phi_{j}^{\gamma}(Y)\mathit{d\gamma}(Y{) + {\sum\limits_{m = 1}^{M}{\int\limits_{\Omega_{m}}{f_{\mathit{\text{jk}},k}(\varepsilon^{\gamma_{m}}(Y))d\Omega_{m}{(Y{) = 0}}}}}}}$,
+
+\noindent де
+
+$W^{\mathit{\Gamma\nu}} = {\int\limits_{- 1}^{1}{\psi^{T}J_{\mathit{\Gamma\nu}}\mathit{d\eta}}}$,
+$W^{\mathit{G\nu}} = {\int\limits_{- 1}^{1}{\int\limits_{- 1}^{1}{\psi^{T}J_{\mathit{G\nu}}\mathit{d\eta}_{1}\mathit{d\eta}_{2}}}}$,
+$W_{j}^{\lambda\mathit{\text{ms}}} = {\int\limits_{- 1}^{1}{\int\limits_{- 1}^{1}{\lambda_{\mathit{\text{ms}}}\xi^{T}H_{\mathit{\text{ms}}}\mathit{d\zeta}_{1}\mathit{d\zeta}_{2}}}}$,
+${W_{j}^{\mu\mathit{\text{ms}}} = 2}{\int\limits_{- 1}^{1}{\int\limits_{- 1}^{1}{\mu_{\mathit{\text{ms}}}\xi^{T}H_{\mathit{\text{ms}}}\mathit{d\zeta}_{1}\mathit{d\zeta}_{2}}}}$.
+
+У матричній формі система для знаходження невідомих $\phi_{jv}^\gamma$, $\varepsilon_{ij}^{\gamma ms}$ та $C_j$ набуде
+такого загального вигляду
+
+$\begin{bmatrix}
+\begin{matrix}
+E^{\gamma} \\
+F^{\gamma} \\
+B^{\gamma} \\
+W^{\gamma} \\
+\end{matrix} & {\begin{matrix}
+E^{1} \\
+F^{1} \\
+B^{1} \\
+W^{1} \\
+\end{matrix}\text{.}\text{.}\text{.}\begin{matrix}
+E^{M} \\
+F^{M} \\
+B^{M} \\
+W^{M} \\
+\end{matrix}} & \begin{matrix}
+I \\
+0 \\
+0 \\
+0 \\
+\end{matrix} \\
+\end{bmatrix}{\begin{bmatrix}
+\phi^{\gamma} \\
+\varepsilon^{1} \\
+ \vdots \\
+\varepsilon^{M} \\
+C \\
+\end{bmatrix} = \begin{bmatrix}
+u^{p} \\
+t^{p} \\
+0 \\
+0 \\
+\end{bmatrix}}$,(5.14)
+
+\noindent де $\phi^\gamma$ --- вектор невідомих вузлових значень фіктивних поверхневих зусиль або масових сил у всьому
+дискретному аналогові $\underset{\nu = 1}{\overset{V}{}}\gamma_{v}$ краю тіла або приграничної до нього області;
+
+$\varepsilon^m$ --- вектор невідомих вузлових значень компонент деформацій та їх похідних у дискретному аналогові
+$\underset{s = 1}{\overset{S_{m}}{}}\Omega_{\mathit{\text{ms}}}$ ($m = \overline{1,M}$) області локальної неоднорідності
+$\Omega_m$;
+
+u\textsuperscript{p}, t\textsuperscript{p} --- вектори значень заданих на краю тіла переміщень та поверхневих зусиль.
+
+Елементи блоків глобальної матриці системи є сумами внесків окремих
+елементів (5.10)-(5.13). А саме блок $E^\gamma$ сформований з
+$E_{ij}^{\gamma \nu}$; блок $E^m$ ---
+з $E_{i}^{\lambda ms}$ та
+$E_{ijl}^{\mu ms}$; блок
+$F^\gamma$ --- з
+$F_{ik}^{\gamma \nu}$; блок $F^m$ ---
+з $F_{i}^{\lambda ms}$ та
+$F_{ijl}^{\mu ms}$; блок
+\[B^{\gamma$--- з
+\[B_{\mathit{\text{ijk}}}^{\mathit{\text{γν}}$; блок \[B^{m$ ---
+з \[B_{\mathit{\text{ij}}}^{\lambda\mathit{\text{ms}}$ та
+\[B_{\mathit{\text{ijkl}}}^{\mu\mathit{\text{ms}}$; блок
+\[W^{\gamma$--- з \[W^{\mathit{\text{γν}}$; блок \[W^{m$ ---
+з \[W_{j}^{\lambda\mathit{\text{ms}}$ та
+\[W_{l}^{\mu\mathit{\text{ms}}$.
+
+У довільній точці
+\includegraphics[width=0.8854in,height=0.2071in]{./ObjectReplacements/Obj925}
+переміщення, деформації, напруження та поверх­неві зусилля визначають з
+формул (5.9), (5.10), використовуючи розв'язок системи (5.14).
+
+\hypertarget{ux43fux43eux440ux456ux432ux43dux44fux43dux43dux44f-ux447ux438ux441ux43bux43eux432ux438ux445-ux440ux435ux437ux443ux43bux44cux442ux430ux442ux456ux432-1}{%
+\subsection[5.5. Порівняння числових
+результатів]{\texorpdfstring{\protect\hypertarget{anchor-65}{}{}5.5.
+Порівняння числових
+результатів}{5.5. Порівняння числових результатів}}\label{ux43fux43eux440ux456ux432ux43dux44fux43dux43dux44f-ux447ux438ux441ux43bux43eux432ux438ux445-ux440ux435ux437ux443ux43bux44cux442ux430ux442ux456ux432-1}}
+
+Наведемо результати досліджень, які проведені для тіла, що займає
+область
+
+Ω=\{0.0\textless=x\textsubscript{1}\textless=2.0;
+0.0\textless=x\textsubscript{2}\textless=2.0 \}
+
+і містить у собі наступну неоднорідність
+
+Ω\textsubscript{g}=\{0.7\textless=x\textsubscript{1}\textless=1.3;
+0.7\textless=x\textsubscript{2}\textless=1.3 \}
+
+для уникнення громіздкості запису тут і надалі не будемо приводити
+розмірності декартових координат, які, як і решта величин, розглядаються
+в системі СІ. Зрозуміло, що в цьому випадку гранична поверхня тіла
+описується виразом
+${\Gamma = \underset{i = 1}{\overset{4}{}}}\Gamma_{i}$ , де
+
 
 \subsection{Розв'язок}
 
