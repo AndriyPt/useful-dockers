@@ -340,13 +340,310 @@ $U^L = U^P$ і $Q^L = -Q^P$. Для умови типу Робіна вираз�
 температура на межі двох середовищ збільшується якщо збільшується розмір злоякісного включення $\Omega_3$ або 
 зменшується його відстань до межі контакту.
 
-% \section{Просторова стаціонарна задача}
+\section{Просторова стаціонарна задача}
 
-% \subsection{Формулювання задачі}
+\subsection{Формулювання задачі}
 
-% \subsection{Дискретизація рівнянь}
+Спочатку розв'яжемо плоский випадок із стаціонарним розподілом температури.
+Візьмемо перетин області проведення малоінвазивного втручання
 
-% \subsection{Розв'язок}
+На (рис. \ref{fig:thermo_2d_domain}) зображено область перерізу, яка складається із трьох областей $\Omega_1$, 
+$\Omega_2$ і $\Omega_3$. Зовнішня границя $\Gamma$ складається із двох частин $\Gamma_1$ і $\Gamma_2$, тобто 
+$\Gamma=\Gamma_1\cap\Gamma_2$. 
+
+\begin{figure}[ht!]
+    \centering
+    \begin{tikzpicture}
+        \draw (1,3) rectangle (11,7);
+        \draw (1,1) rectangle (11,3);
+        \draw (6,2.5) circle (0.5);
+
+        \draw[thick,->] (0,0) -- (12,0) node[anchor=north west] {x};
+        \draw[thick,->] (0,0) -- (0,9) node[anchor=south east] {y};        
+    
+        \foreach \x in {0,...,4}
+            \pgfmathtruncatemacro{\label}{\x * 10}
+            \draw ( \x * 2.5 cm,1pt) -- ( \x * 2.5 cm,-1pt) node[anchor=north] {\label};
+        \foreach \y in {0,...,3}
+            \pgfmathtruncatemacro{\label}{\y * 10}
+            \draw (1pt,\y * 2.5 cm) -- (-1pt,\y * 2.5 cm) node[anchor=east] {\label};
+        
+        \node at (11.5,2) {a};
+        \node at (11.5,5) {b};
+        \node at (6,7.5) {c};
+
+        \node at (8,2) {$\Omega_2$};
+        \node at (8,5) {$\Omega_1$};
+        \node at (6,2.5) {$\Omega_3$};
+        \node at (6,0.5) {$\Gamma_1$};
+        \node at (4,3.5) {$\Gamma_c$};
+
+    \end{tikzpicture}
+    
+    \caption{Переріз тканин}
+    \label{fig:thermo_2d_domain}
+\end{figure}
+
+\noindent Параметр a рівний 8 см, b - 16 см, а с дорівнює 40 см. Радіус кола $\Omega_3$ $r_c$ дорівнює 5 мм. Область 
+$\Omega_1$ - моделює черевну порожнину у яку закачаний газ, для збільшення операційного простору. $\Omega_2$ - це 
+м'які тканини черевної порожнини, над якими буде проводитися операційне втручання, а область $\Omega_3$ - це злоякісне
+утворення в м'яких тканинах.
+
+\noindent Задача формулюється так:
+
+\begin{equation}
+    \label{eqn:thermo_2d_eqn_co2}
+    \nabla \cdot (k_1 \nabla u(x)) = 0, x \in \Omega_1
+\end{equation}
+
+\begin{equation}
+    \label{eqn:thermo_2d_eqn_tissue}
+    \nabla \cdot (k_2(x) \nabla u(x)) + \omega \rho_b C_b (T_c - u(x)) + q_m  = 0, x \in \Omega_2
+\end{equation}
+
+\noindent На границі $\Gamma_2$ задані умови Робіна, а на $\Gamma_1$ -- Діріхле.
+
+\begin{equation}
+    \label{eqn:thermo_2d_cond_1}
+    u(x) = T_c, x \in \Gamma_1
+\end{equation}
+
+\begin{equation}
+    \label{eqn:thermo_2d_cond_2}
+    -k\dfrac{\partial{u(x)}}{\partial{n}} = h(u(x) - T_e), x \in \Gamma_2
+\end{equation}
+
+\noindent y рівняннях \ref{eqn:thermo_2d_eqn_co2} і \ref{eqn:thermo_2d_eqn_tissue} використовуються наступні позначення:
+$k_1$ і $k_2$ -- коефіцієнти теплопровідності, $\omega$ -- перфузія крові через орган, $\rho_b$ -- густина крові, $C_b$ 
+-- питома теплоємність крові, $T_c$ -- внутрішня температура тіла, $q_m$ -- метаболічне тепло у тканині. В умовах 
+\ref{eqn:thermo_2d_cond_1} і \ref{eqn:thermo_2d_cond_2}: $T_e$ -- температура середовища, h -- коефіцієнт тепловіддачі і
+$$k=\begin{cases}
+k_1, u \in \partial{\Omega_1} \\
+k_2, u \in \partial{\Omega_2}
+\end{cases}
+$$
+
+\textbf{Коефіцієнт теплопровідності у м'яких тканинах.} Коефіцієнт теплопровідності у ракових утвореннях взято із статті 
+\cite{lung-tumor-thermal-conductivity}. Модель злоякісного утворення взята із статті \cite{tumor-thermal-model}.
+Коефіцієнт теплопровідності у пухлині рівний 0,495 Вт/м/К, у прилеглих тканинах 0,445 Вт/м/К і у здорових тканинах 
+0,19 Вт/м/К. Злоякісна пухлини представлена областю $\Omega_3$. Відповідно коефіцієнт теплопровідності $k_1$ буде 
+залежати від координат і його можна представити у вигляді наступної функції:
+
+\begin{equation}
+    \label{eqn:thermo_2d_thermal_conductivity}
+    k_1(x) = (0,495 - 0,19)cos\left[\frac{\pi}{2}\frac{||x-x_c||^2}{r_c^2}\right]\chi_3 + 0,19
+\end{equation}
+
+\noindent де $\chi_3$ - характеристична функція області $\Omega_3$, a $x_c$ --- центр області.
+
+\noindent На (рис. \ref{fig:thermo_2d_thermal_conductivity}) зображено графік коефіцієнта теплопровідності. 
+Припускається, що центр області $\Omega_3$ знаходиться у точці (0, 0) і $x_{c,2}$ зафіксована на 0, міняється тільки 
+координата $x_1$. Для наочності функцію помножили на 5. 
+
+\begin{figure}[ht!]
+    \centering
+    \begin{tikzpicture}[domain=-5:5]
+        \draw[->] (-7,0) -- (7,0) node[right] {$x_1$};
+        \draw[->] (0,-1) -- (0,5) node[above] {$5k(x_1, x_{c,2})$};
+    
+        \draw[color=blue] plot (\x, {5 * (0.305 * cos(1.57 / 25 * (\x * \x r)) + 0.19)});
+        \draw[color=blue] (-6,0.95) -- (-5,0.95);
+        \draw[color=blue] (5,0.95) -- (6,0.95);
+    \end{tikzpicture}
+    \caption{Коефіцієнт теплопровідності}
+    \label{fig:thermo_2d_thermal_conductivity}
+\end{figure}
+
+\textbf{Метаболічне тепло.} У цій статті \cite{metabolic-heat-exchange-value-tumor} описується перфузія крові і 
+метаболічне виділення тепла у злоякісних включеннях. Автори публікації ставлять значення у 10 разів вищим. Тобто, якщо 
+метаболічне виділення тепла у м'якій тканині рівне 1303,2 Вт/м\textsuperscript{3}, то у злоякісному включенні воно буде 
+13032 Вт/м\textsuperscript{3}.
+
+\textbf{Коефіцієнт тепловіддачі.} Стаття \cite{thermal-process-tissue-pennes-explained} приурочена до п'ятдесятиліття 
+виходу оригінальної праці Пеннеса. У ній уточнюється значення коефіцієнту тепловіддачі. Пропонується взяти удвічі більше 
+значення, яке рівне 8,368 Вт/м\textsuperscript{2}/К. Саме це значення буде використано в умові 
+\ref{eqn:thermo_2d_cond_2}.
+
+\textbf{Інші параметри.} \cite[Пеннес змоделював руку як довгий цилінд і обчислив стаціонарний розроділ температури. 
+У його моделі не можна було просто виміряти перфузію крові через м'які тканини $\omega$, тому Пеннес узгодив цей 
+параметр із експерементальними даними для фіксованої температури навколишнього середовища і метаболічного виділення 
+тепла. Він отримав значення перфузії крові $\omega$ між 1,2 і 1,8 мл/хв/100г м'яких тканин, що є типовими діапазоном 
+значень для м'язів людської руки у стані спокою]{kutz-zhu-heat-transfer-biological-systems}. Усереднимо це значення і 
+візьмемо 1,5 мл/хв/100г м'яких тканин, як значення $\omega$. В одиницях СІ це буде 0,0002715 1/с. Використаємо підхід
+із статті \cite{metabolic-heat-exchange-value-tumor} і покладемо $\omega$ рівним 0,001086 1/с для злоякісного включення.
+
+\noindent Головним джерелом даних для фізичних параметрів органів тіла була онлайн база даних 
+\cite{database-tissue-properties}. Значення параметрів:
+
+\begin{center}
+    \begin{tabular}{|c|c|c|c|} 
+        \hline
+            Величина & М'яка тканина & Злоякісне включення & Одиниці \\
+        \hline
+            \(\omega\) & 0,0002715 & 0,001086 & 1/с \\
+        \hline
+            \(\rho_b\) & 1050 & 1050 & кг/м\textsuperscript{3} \\
+        \hline
+            \(C_b\) & 3617 & 3617 & Дж/кг/К  \\
+        \hline
+            \(T_c\) & 36,8 & 36,8 & \textcelsius \\
+        \hline
+            \(q_m\) & 1303,2 & 13032 & Вт/м\textsuperscript{3} \\
+        \hline
+    \end{tabular}
+\end{center}
+
+\subsection{Дискретизація рівнянь}
+
+\textbf{Граничні і скінчені елементи.} Границі областей $\Omega_1$, $\Omega_2$ і $\Omega_3$ розіб'ємо на граничні 
+елементи. Додатково область $\Omega_3$ розіб'ємо на трикутні елементи. Частина із яких буде мати спільну сторону із 
+граничними елементами, таким чином, що для будь якого граничного елемента знайдеться трикутник всередині $\Omega_3$, 
+який містить цей елемент, як свою сторону.
+
+\textbf{Рівняння прямого МГЕ.} На основі прямого методу граничних елементів, як показано у \cite{brebbia-bem}, опишемо 
+розв'язок рівняння Лапласа (\ref{eqn:thermo_2d_eqn_co2}) для $\xi \in \Omega_1$, де $\Gamma_L = \partial\Omega_1$:
+
+\begin{equation}
+    \label{eqn:thermo_2d_bem_direct_laplace}
+    c^L(\xi)u^L(\xi) + \int_{\Gamma_L}u^L(x)\hat{q}^L(x,\xi)d\Gamma_L(x) = 
+        \int_{\Gamma_L}q^L(x)\hat{u}^L(x,\xi)d\Gamma_L(x)
+\end{equation}
+
+\noindent$\hat{u}^L$ і $\hat{q}^L$ фундаментальний розв'язок плоского рівняння Лапласа і його похідна по нормалі 
+відповідно.
+
+У рівнянні Пеннеса (\ref{eqn:thermo_2d_eqn_tissue}) зробимо заміну змінних щоб уникнути інтегрування по цілій області 
+$\Omega_2$ у МГЕ. Для цього введемо $v = u - \frac{q_m}{\omega \rho_b C_b}$. Відповідно отримаємо рівняння:
+
+\begin{equation*}
+    \nabla \cdot (k_2\nabla{v}) + \omega \rho_b C_b (T_c - v) = 0
+\end{equation*}
+
+Застосуємо підхід описаний у статті \cite{personal-bem-thermo}, який полягає у поєднанні МГЕ і МСЕ. Для цього рівняння
+перепишемо таким чином, щоб коефіцієнт теплопровідності був сталим майже всюди крім доданка визначеного в 
+області неоднорідності $\Omega_3$:  
+
+\begin{equation*}
+    k_2\nabla^2{v} + \omega \rho_b C_b (T_c - v) + \nabla{k_2}\nabla{v} = 0
+\end{equation*}
+
+Для отриманого рівняння використаємо фундаментальний розв'язок представимо на основі прямого формулювання МГЕ із 
+джерелом тепла, як показано у \cite{brebbia-bem}. Проте замість джерела тепла використаємо частину із неоднорідним 
+коефіцієнтом теплопровідності. Фундаментальні розв'язок рівняння Пеннеса візьмемо із статті 
+\cite{pennes-equation-bem-fundamental-solutions} і позначимо його $\hat{u}^P$, а його похідну по нормалі $\hat{q}^P$. 
+Також у рівнянні $\Gamma_P = \partial \Omega_2$.
+
+\begin{equation*}
+    \begin{split}
+    c^P(\xi)v^P(\xi) + \int_{\Gamma_P}v^P(x)\hat{q}^P(x,\xi)d\Gamma_P(x) + \\ 
+        + \int_{\Omega_3} \nabla{k_2(x)}\nabla{v^P(x)} \hat{u}^P(x,\xi) d \Omega_3(x) = 
+        \int_{\Gamma_P}q^P(x)\hat{u}^P(x,\xi)d\Gamma_P(x)
+    \end{split}
+\end{equation*}
+
+За допомогою теореми Гріна рівняння можна звести до наступного вигляду:
+
+\begin{equation}
+    \label{eqn:thermo_2d_bem_direct_pennes}
+    \begin{split}
+    c^P(\xi)v^P(\xi) + \int_{\Gamma_P}v^P(x)\hat{q}^P(x,\xi)d\Gamma_P(x) 
+        +  \int_{\Gamma_I} v^P(x) \frac{\partial{k_2(x)}}{\partial{n}} \hat{u}^P(x,\xi) d \Gamma_I(x) - \\
+        - \int_{\Omega_3}v^P(x) \nabla^2 k_2(x) \hat{u}^P(x,\xi) d\Omega_3(x) 
+        - \int_{\Omega_3}v^P(x) \nabla k_2(x) \nabla \hat{u}^P(x,\xi) d\Omega_3(x) = \\
+        = \int_{\Gamma_P}q^P(x)\hat{u}^P(x,\xi)d\Gamma_P(x)
+    \end{split}
+\end{equation}
+
+\noindent, де $\Gamma_I = \partial \Omega_3$.
+
+\textbf{Система лінійних алгебраїчних рівнянь.} Згідно із \cite{brebbia-bem} дискретну форму рівняння 
+(\ref{eqn:thermo_2d_bem_direct_laplace}) можна записати у вигляді 
+$H^LU^L=G^LQ^L$. $\hat{H}_{ij}^L=\int_{\Gamma_j} \hat{q}^L d \Gamma = \frac{l_j}{2} \sum_{k=1}^{K} (\hat{q}^L)_k w_k $,
+де $l_j$ -- довжина $j$-го граничного елемента, $w_k$ -- ваговий коефіцієнт, для числового інтегрування квадратурними 
+формулами Гауса, який відповідає точці $k$. 
+
+$$H_{ij}^L=\begin{cases}
+\hat{H}_{ij}^L, i \neq j \\
+\hat{H}_{ij}^L + 1/2, i = j
+\end{cases}
+$$
+
+\noindent Відповідно $\hat{G}_{ij}^L=\int_{\Gamma_j} \hat{u}^L d \Gamma = \frac{l_j}{2} 
+\sum_{k=1}^{K} (\hat{u}^L)_k w_k$.
+
+Аналогічним чином можна отримати дискретне представлення для рівняння Пеннеса (\ref{eqn:thermo_2d_bem_direct_pennes}) у 
+вигляді $H^P V^P = G^P Q^P$.
+
+Невідомі, які ми шукаємо у системі лінійних алгебраїчних рівнянь $U_R^L$, $U_R^P$ -- температура при умові Робіна, 
+$Q_D^P$ -- потік тепла при умові Діріхле, $U_c$, $Q_c$ --температура і потік на границі контакту середовищ 
+$\Gamma_c$ ($\Gamma_c = \partial \Omega_1 \cap \partial \Omega_2$), $U_I^P$ -- температура на границі і в області 
+неоднорідності $\Omega_3$.
+
+На $\Gamma_c$ спільній границі між $\Omega_1$ і $\Omega_2$ згідно \cite{brebbia-bem} маємо такі умови 
+$U^L = U^P$ і $Q^L = -Q^P$. Для умови типу Робіна виразимо потік через температуру $Q = D - EU$. На границі із умовою 
+типу Діріхле замінимо температуру на значення. 
+
+\begin{equation*}
+    \begin{bmatrix}
+        H_R^L & H_c^L & 0 & 0 & 0 \\ 
+        0 & H_c^P & H_R^P & H_D^P & H_I^P
+    \end{bmatrix}
+    \begin{bmatrix}
+        U_R^L \\ 
+        U_c \\
+        U_R^P \\ 
+        U_D^P \\ 
+        U_I^P  
+    \end{bmatrix} 
+    = 
+    \begin{bmatrix}
+        G_R^LD-G_R^LE & G_c^L & 0 & 0 & 0\\ 
+        0 & -G_c^P & G_D^P & 0 & 0
+    \end{bmatrix}
+    \begin{bmatrix}
+        U_R^L \\
+        Q_c \\
+        Q_D^P \\
+        1 \\
+        1  
+    \end{bmatrix} 
+\end{equation*}
+
+Розв'язавши це рівняння отримаємо значення температури в областях $\Omega_1$ і $\Omega_2$. Нас буде цікавити аналіз 
+температури на межі двох середовищ, отриманий із дискретного представлення рівняння 
+(\ref{eqn:thermo_2d_bem_direct_pennes}). 
+
+\subsection{Розв'язок}
+
+Для різних діаметрів злоякісних включень маємо наступні результати
+
+\begin{figure}[ht!]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[xmin=0.1, xmax=0.3]
+        \addplot table [x=x, y=y_d_0025_c_0, col sep=comma, mark=none] {data/thermo_2d_border_data.csv};
+        \addplot table [x=x, y=y_d_005_c_0, col sep=comma, mark=none] {data/thermo_2d_border_data.csv};
+        \end{axis}
+    \end{tikzpicture}
+    \caption{Температура на поверхні м'якої тканини залежно від розмірів включення}
+    \label{fig:thermo_2d_solution_border_temp_size}
+\end{figure}
+
+\begin{figure}[ht!]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[xmin=0.1, xmax=0.3]
+        \addplot table [x=x, y=y_d_0025_c_0, col sep=comma, mark=none] {data/thermo_2d_border_data.csv};
+        \addplot table [x=x, y=y_d_0025_c_001, col sep=comma, mark=none] {data/thermo_2d_border_data.csv};
+        \end{axis}
+    \end{tikzpicture}
+    \caption{Температура на поверхні м'якої тканини залежно від відстані до поверхні}
+    \label{fig:thermo_2d_solution_border_temp_depth}
+\end{figure}
+
+Як бачимо на графіках \ref{fig:thermo_2d_solution_border_temp_size} і \ref{fig:thermo_2d_solution_border_temp_depth}
+температура на межі двох середовищ збільшується якщо збільшується розмір злоякісного включення $\Omega_3$ або 
+зменшується його відстань до межі контакту.
 
 \section{Висновок}
 
@@ -354,8 +651,8 @@ $U^L = U^P$ і $Q^L = -Q^P$. Для умови типу Робіна вираз�
 включень у пацієнтів \cite{temperature-difference-in-tumor-and-tissue}. Відповідно можна використовувати запропоновану 
 математичну модель для моделювання температури від злоякісного включення у симуляторах малоінвазивної хірургії.
 
-До розв'язування послідовності задач для основного рівняння
-стаціонарного поля в локально-неоднорідній області застосовано
+До розв'язування послідовності задач для основного рівняння стаціонарного 
+поля в локально-неоднорідній області застосовано
 комбіновану методику поєднання процедури типу прогноз--коректування з
 комплексним методом граничних елементів. Виконані числові дослідження
 температурного поля для широкого діапазону зміни значень коефіцієнта
@@ -364,8 +661,8 @@ $U^L = U^P$ і $Q^L = -Q^P$. Для умови типу Робіна вираз�
 невеликих, так і при значних відхиленнях значень коефіцієнта в області
 неоднорідності від значень у решті тіла.
 
-Поширено область застосування КМГЕ на змішані плоскі задачі теорії
-потенціалу для однозв'язних областей із сукупністю локальних
+Поширено область застосування КМГЕ на змішані плоскі задачі теорії потенціалу 
+для однозв'язних областей із сукупністю локальних
 неоднорідних включень. Система рівнянь побудована за методом зважених
 залишків, уведених як для крайових умов, так і для областей локальних
 включень. Проведено широкий спектр числових досліджень стосовно
