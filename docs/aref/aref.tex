@@ -1,0 +1,128 @@
+\documentclass[a4paper,14pt]{extreport}
+
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[ukrainian]{babel}
+
+\usepackage{lastpage}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{listings}
+\lstset{frame=single,basicstyle=\ttfamily\scriptsize,extendedchars=\true}
+
+\usepackage{amssymb}
+\usepackage{amsmath}
+
+\newtheorem{lemma}{Лема}
+\newtheorem{theorem}{Теорема}
+\newtheorem{proposition}{Твердження}
+
+\usepackage{multirow}
+\usepackage{array}
+
+% maybe unused
+\usepackage{longtable}
+
+\usepackage{zvit}
+
+\usepackage[unicode]{hyperref}
+\hypersetup{colorlinks=false}
+
+% for literature
+\usepackage{datetime}
+\renewcommand{\dateseparator}{.}
+\newcommand{\todayiso}{01.01.2025}
+
+% extra packages
+\usepackage{copyrightbox}
+\usepackage{tikz}
+\usepackage{pgf-umlcd}
+\usepackage{pgfplots}
+
+% Debug
+% Highlighting
+\usepackage{xcolor}
+\newcommand*\hl{\color{blue}}
+
+% --- Zvit Settings -----
+
+\NirOrgLongName{Львівський національний університет ім. І.Я. Франка
+
+12345, Офіційна адреса
+
+тел. (044) 123-45-67} %% 
+
+\NirBoss{Директор Інституту Назва \newline
+ НАН України \newline
+академік НАН України}{ПІБ директора} 
+\NirManager{доктор фізико-математичних наук, професор}{ПІБ Керівника} 
+
+
+\NirYear{2025}
+\NirTown{м. Львів,} 
+ 
+\NirDate{~~~ 2025 р.}
+
+
+\NirUdk{517.958:539.37}
+\NirGosNo{№ держреєстрації 0000U000001}
+
+\NirStage{не використовується}{заключний}{}
+
+
+
+\begin{document}
+
+\usefont{T2A}{ftm}{m}{n} 
+
+% Add C. to start of contents
+\cftaddtitleline{toc}{part}{}{С.}
+
+\frontmatter 
+
+% Title page
+\thispagestyle{empty}
+
+УДК \quad 000.000.00
+
+ \begin{centering}
+  \linespread{1.1}
+  \vspace{2em}
+
+{Міністерство oсвіти і науки України
+
+Львівський національний університет імені Івана Франка}
+
+  \vspace{5em}
+
+ПЕТЛЬОВАНИЙ АНДРІЙ ТЕОДОРОВИЧ
+
+  \vspace{2em}
+
+МОДЕЛЮВАННЯ ПРОЦЕСІВ ТЕРМОПРУЖНОСТІ У КОМПОЗИТАХ МЕТОДАМИ ГРАНИЧНИХ І ПРИГРАНИЧНИХ ЕЛЕМЕНТІВ
+
+  \vspace{5em}
+
+спеціальність 01.05.02 -- математичне моделювання та обчислювальні методи
+
+\vspace{5em}
+
+АВТОРЕФЕРАТ 
+
+дисертації на здобуття наукового ступеня 
+
+кандидата технічних наук
+
+
+\vspace{15em}
+
+  Львів -- 2025
+
+\end{centering}
+% End of Titlepage
+
+\mainmatter %% turns on page numeration for pages below
+
+\input{chapter-01-content.tex}
+
+\end{document}
