@@ -7,7 +7,7 @@
 спричинену розтином. Ці дії проводяться в умовах стерильності, які серйозно обмежують кількість рухів, які виконує
 лікар. Це зменшує комфорт проведення операційного втручання.
 
-З іншої сторони великий розтин дозволяє отримати широкий кут огляду місця провення хірургічної операції. Проте така 
+З іншої сторони великий розтин дозволяє отримати широкий кут огляду місця проведення хірургічної операції. Проте така 
 зручність супроводжується суттєвими недоліками:
 \begin{itemize}
   \item Збільшення ймовірності інфекції.
@@ -41,7 +41,7 @@
   \item Хірург повинен\textbackslashповинна бути у стерильні зоні протягом операції
 \end{itemize}
 
-Малоінвазивна роботохірургія є наступним удосконаленням процесу проведення хірургічного стручання. Завдяки поєднанню 
+Малоінвазивна роботохірургія є наступним удосконаленням процесу проведення хірургічного втручання. Завдяки поєднанню 
 сильних сторін людини і машини вдалося усунути майже всі недоліки лапароскопічних операцій. Проте головними викликами 
 для хірургів стали:
 \begin{itemize}
@@ -216,10 +216,10 @@ $\theta_c$ -- внутрішня температура тіла, $q_m$ -- ме�
     -\lambda_\theta q(x) = h(\theta(x) - \theta_e), x \in \Gamma_R,
 \end{equation}
 
-\noindent де $q(x) = \frac{\partial \theta(x)}{\partial n}$ -- тепловий потік, $n_i$ -- компоненти вектора зовнішньої 
-нормалі до межі $\Gamma$, $\theta_e$ -- температура середовища, $h$ -- коефіцієнт тепловіддачі. Граничні умови 
-\ref{eqn:theory_thermo_cond_dirichlet}, \ref{eqn:theory_thermo_cond_neumann} і \ref{eqn:theory_thermo_cond_robin} -- це 
-умови Діріхле, Неймана і Робіна відповідно. Умова Робіна описує тепловий обмін тіла із навколишнім середовищем.
+\noindent де $q(x) = \frac{\partial \theta(x)}{\partial n}$ -- тепловий потік, $n_i$ -- компоненти вектора зовнішньої
+нормалі до межі $\Gamma$, $\theta_e$ -- температура середовища, $h$ -- коефіцієнт тепловіддачі. Граничні умови
+(\ref{eqn:theory_thermo_cond_dirichlet}), (\ref{eqn:theory_thermo_cond_neumann}) і (\ref{eqn:theory_thermo_cond_robin})
+-- це умови Діріхле, Неймана і Робіна відповідно. Умова Робіна описує тепловий обмін тіла із навколишнім середовищем.
 
 \textbf{Стаціонарна задача пружності.} Розглянемо область $\Omega$. $u_i(x)$ -- позначимо компоненти вектора переміщень. 
 Компоненти тензора деформацій $\varepsilon_{ij}$ визначаються співвідношеннями Коші:  
@@ -245,9 +245,10 @@ $\theta_c$ -- внутрішня температура тіла, $q_m$ -- ме�
     \sigma_{ij,i}(x) + b_j(x) = 0, x \in \Omega,
 \end{equation}
 
-\noindent де $b_j(x)$ -- компоненти вектора об'ємних напружень. Якщо у рівняння рівноваги 
-\ref{eqn:theory_elasticity_sigma_equilibrium} підставити закон Гука \ref{eqn:theory_elasticity_hooke_law} і 
-співвідношення Коші \ref{eqn:theory_elasticity_gauchy_tensor}, то одержимо систему диференційних рівнянь у переміщеннях:
+\noindent де $b_j(x)$ -- компоненти вектора об'ємних напружень. Якщо у рівняння рівноваги
+(\ref{eqn:theory_elasticity_sigma_equilibrium}) підставити закон Гука (\ref{eqn:theory_elasticity_hooke_law}) і
+співвідношення Коші (\ref{eqn:theory_elasticity_gauchy_tensor}), то одержимо систему диференційних рівнянь у
+переміщеннях:
 
 \begin{equation}
     \label{eqn:theory_elasticity_displacement_eqn}
@@ -265,8 +266,9 @@ $\theta_c$ -- внутрішня температура тіла, $q_m$ -- ме�
     t_i(x) = t_{\Gamma_Ni}(x), x \in \Gamma_N,
 \end{equation}
 
-\noindent де $t_i = \sigma_{ij}n_j$, $n_i$ -- компоненти вектора зовнішньої нормалі до межі $\Gamma$. Граничні умови 
-\ref{eqn:theory_elasticity_dirichlet} і \ref{eqn:theory_elasticity_neumann} -- це умови Діріхле і Неймана відповідно.
+\noindent де $t_i = \sigma_{ij}n_j$, $n_i$ -- компоненти вектора зовнішньої нормалі до межі $\Gamma$. Граничні умови
+(\ref{eqn:theory_elasticity_dirichlet}) і (\ref{eqn:theory_elasticity_neumann}) -- це умови Діріхле і Неймана
+відповідно.
 
 У практичних задачах замість коефіцієнтів Ляме можуть бути заданими  модуль Юнга і коефіцієнт Пуассона. Для перетворення
 цих величин використовуються наступні формули: 
@@ -284,7 +286,7 @@ $\theta_c$ -- внутрішня температура тіла, $q_m$ -- ме�
 \noindent де $E$ -- модуль Юнга, а $\nu$ -- коефіцієнт Пуассона.  
 
 \textbf{Стаціонарна задача термопружності.} Розглянемо вплив температури на пружність м'яких тканин тіла. 
-Представимо тіло областю $\Omega$. До закону Гука \ref{eqn:theory_elasticity_hooke_law} додамо співвідношення 
+Представимо тіло областю $\Omega$. До закону Гука (\ref{eqn:theory_elasticity_hooke_law}) додамо співвідношення 
 Дюгамеля-Неймана і отримаємо:
 
 \begin{equation}
@@ -294,35 +296,36 @@ $\theta_c$ -- внутрішня температура тіла, $q_m$ -- ме�
 \end{equation}
 
 \noindent де $\alpha$ -- коефіцієнт теплового розширення матеріалу. Температурне поле $\theta$ знайдемо із рівняння 
-\ref{eqn:theory_thermo_pennes_eqn}. Запишемо рівняння рівноваги у переміщеннях із використанням 
-\ref{eqn:theory_thermoelasticity_duhamel_neumann_extension}:
+(\ref{eqn:theory_thermo_pennes_eqn}). Запишемо рівняння рівноваги у переміщеннях із використанням 
+(\ref{eqn:theory_thermoelasticity_duhamel_neumann_extension}):
 
 \begin{equation}
     \label{eqn:theory_thermoelasticity_displacement_eqn}
     \mu u_{i,jj}(x) + (\lambda + \mu)u_{j,ji} - (2\mu + 3\lambda)\alpha\theta + b_i(x) = 0, x \in \Omega
 \end{equation}
 
-На границі $\Gamma$ можна задати умови для рівняння Пеннеса \ref{eqn:theory_thermo_cond_dirichlet}, 
-\ref{eqn:theory_thermo_cond_neumann} і \ref{eqn:theory_thermo_cond_robin}, а для переміщень і поверхневих напружень 
-\ref{eqn:theory_elasticity_dirichlet} і \ref{eqn:theory_elasticity_neumann} відповідно.
+На границі $\Gamma$ можна задати умови для рівняння Пеннеса (\ref{eqn:theory_thermo_cond_dirichlet}), 
+(\ref{eqn:theory_thermo_cond_neumann}) і (\ref{eqn:theory_thermo_cond_robin}), а для переміщень і поверхневих напружень 
+(\ref{eqn:theory_elasticity_dirichlet}) і (\ref{eqn:theory_elasticity_neumann}) відповідно.
 
 У \textbf{третьому розділі} сформульовані плоска і просторова задачі стаціонарної теплопровідності із злоякісними 
-включеннями \ref{eqn:theory_thermo_pennes_eqn}, \ref{eqn:theory_thermo_cond_dirichlet}, 
-\ref{eqn:theory_thermo_cond_neumann} і \ref{eqn:theory_thermo_cond_robin}. Коефіцієнт теплопровідності залежить від 
+включеннями (\ref{eqn:theory_thermo_pennes_eqn}), (\ref{eqn:theory_thermo_cond_dirichlet}), 
+(\ref{eqn:theory_thermo_cond_neumann}) і (\ref{eqn:theory_thermo_cond_robin}). Коефіцієнт теплопровідності залежить від 
 координат в області вишколювання і сталий поза нею:
 
 \begin{equation}
   \label{eqn:thermo_thermal_conductivity}
-  \lambda_\theta=\begin{cases}
-    0,305 \cdot cos\left[\frac{\pi}{2}\frac{||x-x_c||^2}{r_c^2}\right]\chi_c + 0,19; x \in \Omega \\
-    0,19; x \in \Omega_c,
+  \lambda_\theta(x)=\begin{cases}
+    0,305 \cdot cos\left[\frac{\pi}{2}\frac{||x-x_c||^2}{r_c^2}\right]\chi_c + 0,19; x \in \Omega_c \\
+    0,19; x \in \Omega \setminus \Omega_c,
     \end{cases}
 \end{equation}
 
 \noindent де $\chi_c$ - характеристична функція області $\Omega_c$, a $x_c$ --- центр області.
 
-Задача розв'язується методом адитивного розчеплення оператора рівняння \ref{eqn:theory_thermo_pennes_eqn} на частину із 
-сталим $\lambda_\theta$ \ref{eqn:thermo_thermal_conductivity} і залежним від координат, тільки в області $\Omega_c$.
+Задача розв'язується методом адитивного розчеплення оператора рівняння (\ref{eqn:theory_thermo_pennes_eqn}) на частину
+із сталим $\lambda_\theta$ (\ref{eqn:thermo_thermal_conductivity}) і залежним від координат, тільки в області
+$\Omega_c$.
 
 Для МГЕ інтегральне зображення розв'язку запишеться у такому вигляді: 
 
@@ -334,7 +337,7 @@ $\theta_c$ -- внутрішня температура тіла, $q_m$ -- ме�
   \end{split}
 \end{equation*}
 
-\noindent де $\hat{\theta}$ і $\hat{q}$ -- фундаментальні розв'язки рівняння \ref{eqn:theory_thermo_pennes_eqn}. За 
+\noindent де $\hat{\theta}$ і $\hat{q}$ -- фундаментальні розв'язки рівняння (\ref{eqn:theory_thermo_pennes_eqn}). За 
 допомогою теореми Гріна рівняння можна звести до:
 
 \begin{equation}
@@ -364,13 +367,79 @@ $\theta_c$ -- внутрішня температура тіла, $q_m$ -- ме�
   \end{split}
 \end{equation}
 
-Із інтегральних зображень розв'язків \ref{eqn:thermo_bem_direct_pennes} і \ref{eqn:thermo_cobem_pennes} отримаємо 
+Із інтегральних зображень розв'язків (\ref{eqn:thermo_bem_direct_pennes}) і (\ref{eqn:thermo_cobem_pennes}) отримаємо 
 систему лінійних алгебраїчних рівнянь для значень температури і потоку на межі, а також для температури всередині 
 області $\Omega_c$. Цю область розіб'ємо на скінчені елементи, а границю на граничні.
 
 Завдяки такому підходу було отримано розв'язки для включень різних розмірів і відстаней від поверхні органу. Вплив на 
 температурне поле здорової тканини узгоджується із клінічними спостереженнями. Даний підхід можна використовувати для
 моделювання температури злоякісних включень у медичних симуляторах.
+
+\textbf{Четвертий розділ} присвячений задачі пружності м'яких тканини людини із неоднорідностями. Обчислюється тиск, 
+який чинить тканина на медичний інструмент під час контакту. 
+
+\begin{figure}[ht!]
+  \centering
+  \begin{tikzpicture}
+      \draw (5.7,3) rectangle (6.3,7);
+      \draw (1,1) rectangle (11,3);
+      \draw (6,2.5) circle (0.5);
+      \draw[thick, ->] (5.3,6) -- (5.3,4);
+
+      \draw[thick,->] (0,0) -- (12,0) node[anchor=north west] {x};
+      \draw[thick,->] (0,0) -- (0,9) node[anchor=south east] {y};        
+  
+      \foreach \x in {0,...,4}
+          \pgfmathtruncatemacro{\label}{\x * 10}
+          \draw ( \x * 2.5 cm,1pt) -- ( \x * 2.5 cm,-1pt) node[anchor=north] {\label};
+      \foreach \y in {0,...,3}
+          \pgfmathtruncatemacro{\label}{\y * 10}
+          \draw (1pt,\y * 2.5 cm) -- (-1pt,\y * 2.5 cm) node[anchor=east] {\label};
+      
+      \node at (6,3.5) {$\Gamma_i$};
+
+      \node at (8,2) {$\Omega$};
+      \node at (6,5) {$\Omega_i$};
+      \node at (6,2.5) {$\Omega_c$};
+      \node at (4,0.5) {$\Gamma_b$};
+
+  \end{tikzpicture}
+  
+  \caption{Переріз тканин і інструмента}
+  \label{fig:elasticity_domain}
+\end{figure}
+
+Як зображено на (рис. \ref{fig:elasticity_domain}) на частині границі $\Gamma_i$ медичний інструмент взаємодіє із
+органом людини $\Omega$ із включенням $\Omega_c$. Для знаходження тиску органу на інструмент розв'яжемо задачу
+(\ref{eqn:theory_elasticity_displacement_eqn}), (\ref{eqn:theory_elasticity_dirichlet}) і
+(\ref{eqn:theory_elasticity_neumann}). Коефіцієнти Лями сталі на всій області $\Omega$ крім $\Omega_c$, де вони залежать 
+від координат:
+
+\begin{equation}
+  \label{eqn:elasticity_lyame_lambda}
+  \lambda(x)=\begin{cases}
+    3054,2 \cdot cos\left[\frac{\pi}{2}\frac{||x-x_c||^2}{r_c^2}\right]\chi_c + 660,1; x \in \Omega_c \\
+    660,1; x \in \Omega \setminus \Omega_c
+    \end{cases}
+\end{equation}
+
+\begin{equation}
+  \label{eqn:elasticity_lyame_mu}
+  \mu(x)=\begin{cases}
+    3024 \cdot cos\left[\frac{\pi}{2}\frac{||x-x_c||^2}{r_c^2}\right]\chi_c + 404,6; x \in \Omega_c \\
+    404,6; x \in \Omega \setminus \Omega_c,
+    \end{cases}
+\end{equation}
+
+\noindent де $\chi_c$ - характеристична функція області $\Omega_c$, a $x_c$ --- центр області.
+
+Застосуємо адитивне розчеплення оператора рівняння (\ref{eqn:theory_elasticity_displacement_eqn}) на частину із сталими
+$\lambda$ і $\mu$ (\ref{eqn:elasticity_lyame_lambda}), (\ref{eqn:elasticity_lyame_mu}) і залежним від координат, тільки
+в області $\Omega_c$.
+
+Для МГЕ інтегральне зображення розв'язку запишеться у такому вигляді: 
+
+
 
 {\hl Другий розділ містить опис двох підходів для розв'язування задачі теплопровідності. Перший підхід базується на ідеї
 предиктор-коректор, а другий -- на рівняннях нев'язки у точках областей локальної неоднорідності коефіцієнта
