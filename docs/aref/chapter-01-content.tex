@@ -326,20 +326,21 @@ $\theta_c$ -- внутрішня температура тіла, $q_m$ -- ме�
   \lambda_{\theta c} = 0,19;
 \end{equation*}
 
-\noindent де $\chi_H$ - характеристична функція області $H$, a $x_H$ і $r_H$ --- центр області і радіус відповідно.
+\noindent де $\chi_H$ - характеристична функція області $H$, a $x_H$ і $r_H$ --- центр області і радіус відповідно. 
+Для подальших міркувань буде важливим, що $\lambda_{\theta H}(x) = 0$ для всіх $x \in L$, де $L = \partial H$.
 
 Задача розв'язується методом адитивного розчеплення оператора рівняння (\ref{eqn:theory_thermo_pennes_eqn}) на частину
 із сталим $\lambda_{\theta c}$ (\ref{eqn:thermo_thermal_conductivity}) і залежним від координат $\lambda_{\theta H}(x)$, 
 тільки в області $H$:
 
 \begin{equation}
-  \label{eqn:theory_thermo_pennes_eqn}
+  \label{eqn:theory_thermo_pennes_separation_eqn}
   \lambda_{\theta c} \nabla^2 \theta(x) + \omega \rho_b C_b (\theta_c - \theta(x)) = 
-    - \nabla \lambda_{\theta H} (x) \cdot \nabla \theta(x), x \in \Omega
+    - \nabla \lambda_{\theta H} (x) \cdot \nabla \theta(x) \cdot \chi_H, x \in \Omega
 \end{equation}
 
-
-Для МГЕ інтегральне зображення розв'язку запишеться у такому вигляді: 
+Для МГЕ інтегральне зображення розв'язку для (\ref{eqn:theory_thermo_pennes_separation_eqn}) запишеться у такому 
+вигляді: 
 
 \begin{equation*}
   \begin{split}
@@ -447,14 +448,58 @@ $\theta_c$ -- внутрішня температура тіла, $q_m$ -- ме�
   \mu_c = 404,6;
 \end{equation*}
 
-\noindent де $\chi_H$ --- характеристична функція області $H$, a $x_H$ і $r_H$ --- центр і радіус області відповідно.
+\noindent де $\chi_H$ --- характеристична функція області $H$, a $x_H$ і $r_H$ --- центр і радіус області відповідно. 
+Надалі буде важливим, що $\lambda_H(x) = 0$ і $\mu_H(x) = 0$ для всіх $x \in L$, де $L = \partial H$.
 
 Застосуємо адитивне розчеплення оператора рівняння (\ref{eqn:theory_elasticity_displacement_eqn}) на частину із сталими
 $\lambda_c$ і $\mu_c$ (\ref{eqn:elasticity_lyame_lambda}), (\ref{eqn:elasticity_lyame_mu}) і залежним від координат 
-$\lambda_H(x)$ і $\mu_H(x)$, тільки в області $H$.
+$\lambda_H(x)$ і $\mu_H(x)$, тільки в області $H$:
 
-Для МГЕ інтегральне зображення розв'язку запишеться у такому вигляді: 
+\begin{equation}
+  \label{eqn:theory_elasticity_displacement_separation_eqn}
+  \mu_c u_{i,jj}(x) + (\lambda_c + \mu_c)u_{j,ji} = -f_{ij,j}(\varepsilon(x)), x \in \Omega,
+\end{equation}
 
+\noindent де
+
+\begin{equation*}
+  f_{ij,j}(\varepsilon(x)) = [ 2\mu_H(x)\varepsilon_{ij}(x) + \lambda_H(x) \delta_{ij} \varepsilon_{kk}(x) ] \chi_H
+\end{equation*}
+
+Для МГЕ інтегральне зображення розв'язку рівняння (\ref{eqn:theory_elasticity_displacement_separation_eqn}) запишеться 
+у такому вигляді: 
+
+\begin{equation}
+  \label{eqn:elasticity_bem_direct_elasticity}
+  \begin{split}
+  c_{ij}(\xi) u_j(\xi) = \int \limits_{\Gamma}\hat{u}_{ij}(x,\xi)t_j(x)d\Gamma(x) - 
+      \int \limits_{\Gamma}\hat{t}_{ij}(x,\xi)u_j(x)d\Gamma(x) + \\  
+      + \int \limits_H \hat{u}_{ij}(x,\xi)f_{jk,k}(\varepsilon(x))dH(x)
+  \end{split}
+\end{equation}
+
+\noindent$\hat{u}_{ij}$ і $\hat{t}_{ij}$ фундаментальні розв'язки рівняння пружності для переміщень і напружень 
+відповідно. Застосуємо до (\ref{eqn:elasticity_bem_direct_elasticity}) теорему Гріна для інтегрування частинами. 
+Одержимо:
+
+\begin{equation}
+  \label{eqn:elasticity_bem_direct_elasticity_simplified}
+  \begin{split}
+  c_{ij}(\xi) u_j(\xi) = \int \limits_{\Gamma}\hat{u}_{ij}(x,\xi)t_j(x)d\Gamma(x) - 
+      \int \limits_{\Gamma}\hat{t}_{ij}(x,\xi)u_j(x)d\Gamma(x) - \\ 
+      - \int \limits_H \hat{u}_{ij,k}(x,\xi)f_{jk}(\varepsilon(x))d H(x)
+  \end{split}
+\end{equation}
+
+У випадку МПГЕ із приграничною областю $G$ застосуємо теорему Гріна до інтегрального зображення отримаємо: 
+
+\begin{equation}
+  \label{eqn:elasticity_cobem_direct_elasticity_simplified}
+  \begin{split}
+  u_i(\xi) = \int \limits_G \hat{u}_{ij}(x,\xi) g_j(x)d G(x)
+      - \int \limits_H \hat{u}_{ij,k}(x,\xi)f_{jk}(\varepsilon(x))d H(x)
+  \end{split}
+\end{equation}
 
 
 {\hl Другий розділ містить опис двох підходів для розв'язування задачі теплопровідності. Перший підхід базується на ідеї
