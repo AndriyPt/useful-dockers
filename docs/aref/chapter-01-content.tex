@@ -315,24 +315,36 @@ $\theta_c$ -- внутрішня температура тіла, $q_m$ -- ме�
 
 \begin{equation}
   \label{eqn:thermo_thermal_conductivity}
-  \lambda_\theta(x)=\begin{cases}
-    0,305 \cdot cos\left[\frac{\pi}{2}\frac{||x-x_c||^2}{r_c^2}\right]\chi_c + 0,19; x \in \Omega_c \\
-    0,19; x \in \Omega \setminus \Omega_c,
-    \end{cases}
+  \lambda_\theta(x) = \lambda_{\theta H}(x)\chi_H + \lambda_{\theta c}, x \in \Omega
 \end{equation}
 
-\noindent де $\chi_c$ - характеристична функція області $\Omega_c$, a $x_c$ --- центр області.
+\begin{equation*}
+  \lambda_{\theta H}(x) = (0,495 - \lambda_{\theta c}) \cdot cos\left[\frac{\pi}{2}\frac{||x-x_H||^2}{r_H^2}\right]
+\end{equation*}
+
+\begin{equation*}
+  \lambda_{\theta c} = 0,19;
+\end{equation*}
+
+\noindent де $\chi_H$ - характеристична функція області $H$, a $x_H$ і $r_H$ --- центр області і радіус відповідно.
 
 Задача розв'язується методом адитивного розчеплення оператора рівняння (\ref{eqn:theory_thermo_pennes_eqn}) на частину
-із сталим $\lambda_\theta$ (\ref{eqn:thermo_thermal_conductivity}) і залежним від координат, тільки в області
-$\Omega_c$.
+із сталим $\lambda_{\theta c}$ (\ref{eqn:thermo_thermal_conductivity}) і залежним від координат $\lambda_{\theta H}(x)$, 
+тільки в області $H$:
+
+\begin{equation}
+  \label{eqn:theory_thermo_pennes_eqn}
+  \lambda_{\theta c} \nabla^2 \theta(x) + \omega \rho_b C_b (\theta_c - \theta(x)) = 
+    - \nabla \lambda_{\theta H} (x) \cdot \nabla \theta(x), x \in \Omega
+\end{equation}
+
 
 Для МГЕ інтегральне зображення розв'язку запишеться у такому вигляді: 
 
 \begin{equation*}
   \begin{split}
   c(\xi)\theta(\xi) + \int \limits_{\Gamma}\theta(x)\hat{q}(x,\xi)d\Gamma(x)  
-      + \int \limits_{\Omega_c} \nabla{\lambda_\theta(x)}\nabla{\theta(x)} \hat{\theta}(x,\xi) d \Omega_c(x) = \\ 
+      + \int \limits_{H} \nabla{\lambda_{\theta H}(x)}\nabla{\theta(x)} \hat{\theta}(x,\xi) d H(x) = \\ 
       = \int \limits_{\Gamma}q(x)\hat{\theta}(x,\xi)d\Gamma(x),
   \end{split}
 \end{equation*}
@@ -343,15 +355,12 @@ $\Omega_c$.
 \begin{equation}
   \label{eqn:thermo_bem_direct_pennes}
   \begin{split}
-    c(\xi)\theta(\xi) + \int \limits_{\Gamma}\theta(x)\hat{q}(x,\xi)d\Gamma(x)  
-      + \int \limits_{\Gamma_c} \theta(x) \frac{\partial{\lambda_\theta(x)}}{\partial{n}} \hat{\theta}(x,\xi) d \Gamma_c(x) = \\
-      = \int \limits_{\Omega_c}\theta(x) [ \nabla^2 \lambda_\theta(x) \hat{\theta}(x,\xi) + 
-          \nabla \lambda_\theta(x) \nabla \hat{\theta}(x,\xi) ] d\Omega_c(x)
-      + \int \limits_{\Gamma}q(x)\hat{\theta}(x,\xi)d\Gamma(x),
+    c(\xi)\theta(\xi) + \int \limits_{\Gamma}\theta(x)\hat{q}(x,\xi)d\Gamma(x) = \\
+      = \int \limits_{H}\theta(x) [ \nabla^2 \lambda_{\theta H}(x) \hat{\theta}(x,\xi) + 
+          \nabla \lambda_{\theta H}(x) \nabla \hat{\theta}(x,\xi) ] dH(x)
+      + \int \limits_{\Gamma}q(x)\hat{\theta}(x,\xi)d\Gamma(x)
   \end{split}
 \end{equation}
-
-\noindent де $\Gamma_c = \partial \Omega_c$ -- межа області злоякісного включення.
 
 Для МПГЕ розглянемо таку область $B \subset R^n$, що $\Omega \subset B$, $\partial\Omega \cap \partial B = \varnothing$. 
 Позначимо приграничну область $G = B \setminus \Omega$. Після застосуємо теорему Гріна до інтегрального зображення 
@@ -359,17 +368,14 @@ $\Omega_c$.
 
 \begin{equation}
   \label{eqn:thermo_cobem_pennes}
-  \begin{split}
-    \int \limits_G g(x)\hat{\theta}(x,\xi)dG(x)   
-      + \int \limits_{\Gamma_c} \theta(x) \frac{\partial{\lambda_\theta(x)}}{\partial{n}} \hat{\theta}(x,\xi) d \Gamma_c(x) = \\
-      = \int \limits_{\Omega_c}\theta(x) [ \nabla^2 \lambda_\theta(x) \hat{\theta}(x,\xi) + 
-          \nabla \lambda_\theta(x) \nabla \hat{\theta}(x,\xi) ] d\Omega_c(x),
-  \end{split}
+    \int \limits_G g(x)\hat{\theta}(x,\xi)dG(x)
+      = \int \limits_{H}\theta(x) [ \nabla^2 \lambda_{\theta H}(x) \hat{\theta}(x,\xi) + 
+          \nabla \lambda_{\theta H}(x) \nabla \hat{\theta}(x,\xi) ] dH(x)
 \end{equation}
 
 Із інтегральних зображень розв'язків (\ref{eqn:thermo_bem_direct_pennes}) і (\ref{eqn:thermo_cobem_pennes}) отримаємо 
 систему лінійних алгебраїчних рівнянь для значень температури і потоку на межі, а також для температури всередині 
-області $\Omega_c$. Цю область розіб'ємо на скінчені елементи, а границю на граничні.
+області $H$. Цю область розіб'ємо на скінчені елементи, а $G$ на приграничні.
 
 Завдяки такому підходу було отримано розв'язки для включень різних розмірів і відстаней від поверхні органу. Вплив на 
 температурне поле здорової тканини узгоджується із клінічними спостереженнями. Даний підхід можна використовувати для
@@ -400,7 +406,7 @@ $\Omega_c$.
 
       \node at (8,2) {$\Omega$};
       \node at (6,5) {$\Omega_i$};
-      \node at (6,2.5) {$\Omega_c$};
+      \node at (6,2.5) {$H$};
       \node at (4,0.5) {$\Gamma_b$};
 
   \end{tikzpicture}
@@ -410,32 +416,42 @@ $\Omega_c$.
 \end{figure}
 
 Як зображено на (рис. \ref{fig:elasticity_domain}) на частині границі $\Gamma_i$ медичний інструмент взаємодіє із
-органом людини $\Omega$ із включенням $\Omega_c$. Для знаходження тиску органу на інструмент розв'яжемо задачу
+органом людини $\Omega$ із включенням $H$. Для знаходження тиску органу на інструмент розв'яжемо задачу
 (\ref{eqn:theory_elasticity_displacement_eqn}), (\ref{eqn:theory_elasticity_dirichlet}) і
-(\ref{eqn:theory_elasticity_neumann}). Коефіцієнти Лями сталі на всій області $\Omega$ крім $\Omega_c$, де вони залежать 
+(\ref{eqn:theory_elasticity_neumann}). Коефіцієнти Лями сталі на всій області $\Omega$ крім $H$, де вони залежать 
 від координат:
 
 \begin{equation}
   \label{eqn:elasticity_lyame_lambda}
-  \lambda(x)=\begin{cases}
-    3054,2 \cdot cos\left[\frac{\pi}{2}\frac{||x-x_c||^2}{r_c^2}\right]\chi_c + 660,1; x \in \Omega_c \\
-    660,1; x \in \Omega \setminus \Omega_c
-    \end{cases}
+  \lambda(x) = \lambda_H(x)\chi_H + \lambda_c, x \in \Omega
 \end{equation}
+
+\begin{equation*}
+  \lambda_H(x) = (3714,3 - \lambda_c) \cdot cos\left[\frac{\pi}{2}\frac{||x-x_H||^2}{r_H^2}\right]
+\end{equation*}
+
+\begin{equation*}
+  \lambda_c = 660,1
+\end{equation*}
 
 \begin{equation}
   \label{eqn:elasticity_lyame_mu}
-  \mu(x)=\begin{cases}
-    3024 \cdot cos\left[\frac{\pi}{2}\frac{||x-x_c||^2}{r_c^2}\right]\chi_c + 404,6; x \in \Omega_c \\
-    404,6; x \in \Omega \setminus \Omega_c,
-    \end{cases}
+  \mu(x) = \mu_H(x)\chi_H + \mu_c, x \in \Omega
 \end{equation}
 
-\noindent де $\chi_c$ - характеристична функція області $\Omega_c$, a $x_c$ --- центр області.
+\begin{equation*}
+  \mu_H(x) = (3428,6 - \mu_c)cos\left[\frac{\pi}{2}\frac{||x-x_H||^2}{r_H^2}\right]
+\end{equation*}
+
+\begin{equation*}
+  \mu_c = 404,6;
+\end{equation*}
+
+\noindent де $\chi_H$ --- характеристична функція області $H$, a $x_H$ і $r_H$ --- центр і радіус області відповідно.
 
 Застосуємо адитивне розчеплення оператора рівняння (\ref{eqn:theory_elasticity_displacement_eqn}) на частину із сталими
-$\lambda$ і $\mu$ (\ref{eqn:elasticity_lyame_lambda}), (\ref{eqn:elasticity_lyame_mu}) і залежним від координат, тільки
-в області $\Omega_c$.
+$\lambda_c$ і $\mu_c$ (\ref{eqn:elasticity_lyame_lambda}), (\ref{eqn:elasticity_lyame_mu}) і залежним від координат 
+$\lambda_H(x)$ і $\mu_H(x)$, тільки в області $H$.
 
 Для МГЕ інтегральне зображення розв'язку запишеться у такому вигляді: 
 
