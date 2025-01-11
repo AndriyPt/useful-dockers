@@ -20,8 +20,8 @@ RUN set -x && \
     \
     echo "Installing Latex" && \
     apt-get update -y && \
-    #TODO: Check if package scalable-cyrfonts-tex is still needed. It has conflicts with texlive-fonts-extra 
     apt-get install -y texstudio texlive* pandoc evince && \ 
+    apt-get install -y scalable-cyrfonts-tex && \
     \
     echo "Installing ParaView" && \
     wget -O /tmp/ParaView.tar.gz "https://www.paraview.org/paraview-downloads/download.php?submit=Download&version=v5.13&type=binary&os=Linux&downloadFile=ParaView-5.13.0-MPI-Linux-Python3.10-x86_64.tar.gz" && \
