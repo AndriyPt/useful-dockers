@@ -5,9 +5,12 @@
 \usepackage[utf8]{inputenc}
 \usepackage[ukrainian]{babel}
 
+\usepackage{copyrightbox}
+\usepackage{tikz}
+\usepackage{pgf-umlcd}
+\usepackage{pgfplots}
 
-\title{My Presentation}
-\subtitle{Using Beamer}
+\title{Моделювання процесів термопружності у композитах методами граничних і приграничних елементів}
 \author{Андрій Петльований}
 \institute{Львівський національний університет ім. І. Франка}
 \date{\today}
@@ -23,12 +26,154 @@
     \tableofcontents
 \end{frame}
 
-\section{Привіт}
-\subsection{sub a}
+\section{Вступ}
+
+\section{Задача теплопровідності}
+% \subsection{sub a}
+
+\begin{frame}
+    \frametitle{Постановка задачі}
+    \begin{equation}
+        \label{eqn:theory_thermo_pennes_eqn}
+        \nabla \cdot \lambda_\theta \nabla \theta(x) + \omega \rho_b C_b (\theta_c - \theta(x)) + q_m  = 0
+    \end{equation}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Область}
+    \begin{figure}[ht!]
+        \centering
+        \begin{tikzpicture}[scale=0.75, transform shape]
+            \draw (1,1) rectangle (11,3);
+            \draw (6,2.5) circle (0.5);
+      
+            \draw[thick,->] (0,0) -- (12,0) node[anchor=north west] {x};
+            \draw[thick,->] (0,0) -- (0,6) node[anchor=south east] {y};        
+        
+            \foreach \x in {0,...,4}
+                \pgfmathtruncatemacro{\label}{\x * 10}
+                \draw ( \x * 2.5 cm,1pt) -- ( \x * 2.5 cm,-1pt) node[anchor=north] {\label};
+            \foreach \y in {0,...,2}
+                \pgfmathtruncatemacro{\label}{\y * 10}
+                \draw (1pt,\y * 2.5 cm) -- (-1pt,\y * 2.5 cm) node[anchor=east] {\label};
+            
+            \node at (8,2) {$\Omega$};
+            \node at (6,2.5) {$H$};
+            \node at (4,0.5) {$\Gamma$};
+      
+        \end{tikzpicture}
+      \end{figure}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Коефіцієнт теплопровідності}
+    \begin{figure}[ht!]
+        \centering
+        \begin{tikzpicture}[domain=-5:5, scale=0.75, transform shape]
+            \draw[->] (-7,0) -- (7,0) node[right] {$x_1$};
+            \draw[->] (0,-1) -- (0,5) node[above] {$5\lambda_\theta(x)$};
+        
+            \draw[color=blue] plot (\x, {5 * (0.305 * cos(1.57 / 25 * (\x * \x r)) + 0.19)});
+            \draw[color=blue] (-6,0.95) -- (-5,0.95);
+            \draw[color=blue] (5,0.95) -- (6,0.95);
+        \end{tikzpicture}
+    \end{figure}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Адитивне розщеплення оператора}
+    \begin{equation}
+        \label{eqn:thermo_pennes_separation_eqn}
+        \lambda_{\theta c} \nabla^2 \theta(x) + \omega \rho_b C_b (\theta_c - \theta(x)) = 
+          - \nabla \lambda_{\theta H} (x) \cdot \nabla \theta(x) \cdot \chi_H
+      \end{equation}
+\end{frame}
+
+\begin{frame}
+    \frametitle{МГЕ -- інтегральне подання розв'язку}
+    \begin{equation}
+        \label{eqn:thermo_bem_direct_pennes}
+        \begin{split}
+        c(\xi)\theta(\xi) + \int \limits_{\Gamma}\theta(x)\hat{q}(x,\xi)d\Gamma(x) + \\
+            + \int \limits_{H} \nabla{\lambda_{\theta H}(x)}\nabla{\theta(x)} \hat{\theta}(x,\xi) d H(x) 
+            = \int \limits_{\Gamma}q(x)\hat{\theta}(x,\xi)d\Gamma(x)
+        \end{split}
+      \end{equation}
+\end{frame}
+
+\begin{frame}
+    \frametitle{МГЕ -- зведення за формулою Гріна}
+    \begin{equation}
+        \label{eqn:thermo_bem_direct_pennes_simplified}
+        \begin{split}
+          c(\xi)\theta(\xi) + \int \limits_{\Gamma}\theta(x)\hat{q}(x,\xi)d\Gamma(x) = \\
+            = \int \limits_{H}\theta(x) [ \nabla^2 \lambda_{\theta H}(x) \hat{\theta}(x,\xi) + 
+                \nabla \lambda_{\theta H}(x) \nabla \hat{\theta}(x,\xi) ] dH(x) + \\
+            + \int \limits_{\Gamma}q(x)\hat{\theta}(x,\xi)d\Gamma(x)
+        \end{split}
+      \end{equation}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Висновки}
+    Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+    aliqua.
+\end{frame}
+
+
+\section{Задача пружності}
 
 \begin{frame}
     \frametitle{Title}
-    Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+    Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+    aliqua.
+\end{frame}
+
+\begin{frame}
+    \frametitle{Область}
+    \begin{figure}[ht!]
+        \centering
+        \begin{tikzpicture}[scale=0.75, transform shape]
+            \draw (5.7,3) rectangle (6.3,7);
+            \draw (1,1) rectangle (11,3);
+            \draw (6,2.5) circle (0.5);
+            \draw[thick, ->] (5.3,6) -- (5.3,4);
+      
+            \draw[thick,->] (0,0) -- (12,0) node[anchor=north west] {x};
+            \draw[thick,->] (0,0) -- (0,9) node[anchor=south east] {y};        
+        
+            \foreach \x in {0,...,4}
+                \pgfmathtruncatemacro{\label}{\x * 10}
+                \draw ( \x * 2.5 cm,1pt) -- ( \x * 2.5 cm,-1pt) node[anchor=north] {\label};
+            \foreach \y in {0,...,3}
+                \pgfmathtruncatemacro{\label}{\y * 10}
+                \draw (1pt,\y * 2.5 cm) -- (-1pt,\y * 2.5 cm) node[anchor=east] {\label};
+            
+            \node at (6,3.5) {$\Gamma_i$};
+      
+            \node at (8,2) {$\Omega$};
+            \node at (6,5) {$\Omega_i$};
+            \node at (6,2.5) {$H$};
+            \node at (4,0.5) {$\Gamma_b$};
+      
+        \end{tikzpicture}
+      \end{figure}
+\end{frame}
+
+\section{Задача термопружності}
+
+\begin{frame}
+    \frametitle{Title}
+    Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+    aliqua.
+\end{frame}
+
+\section{Підсумки}
+
+\begin{frame}
+    \frametitle{Title}
+    Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+    aliqua.
 \end{frame}
 
 
