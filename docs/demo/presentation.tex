@@ -17,8 +17,25 @@
 
 \begin{document}
 
+\section{Вступ}
+
 \begin{frame}
     \titlepage
+\end{frame}
+
+\begin{frame}
+    \frametitle{Науковий керівник}
+    
+    \hspace{4em}доктор технічних наук,
+
+    \hspace{4em}старший науковий співробітник,
+    
+    \hspace{4em}професор кафедри програмного забезпечення
+    
+    \hspace{4em}Національного університет “Львівська політехніка”,
+    
+    \hspace{4em}\textbf{Журавчак Любов Михайлівна} 
+    
 \end{frame}
 
 \begin{frame}
@@ -26,18 +43,30 @@
     \tableofcontents
 \end{frame}
 
-\section{Вступ}
-
-\section{Задача теплопровідності}
-% \subsection{sub a}
+\begin{frame}
+    \frametitle{Лапароскопія}
+    
+    \begin{figure}[ht!]
+        \centering
+        \copyrightbox[b]
+          {\includegraphics[width=0.6\linewidth]{../common/images/intro_laparoscopy.png}}
+          {Medical gallery of Blausen Medical 2014}
+      \end{figure}
+\end{frame}
 
 \begin{frame}
-    \frametitle{Постановка задачі}
-    \begin{equation}
-        \label{eqn:theory_thermo_pennes_eqn}
-        \nabla \cdot \lambda_\theta \nabla \theta(x) + \omega \rho_b C_b (\theta_c - \theta(x)) + q_m  = 0
-    \end{equation}
+    \frametitle{Роботохірургія}
+    
+    \begin{figure}[ht!]
+        \centering
+        \copyrightbox[b]
+          {\includegraphics[width=1.0\linewidth]{../common/images/surgical_robot.jpg}}
+          {Wikipedia by user Albertsimo}
+      \end{figure}
 \end{frame}
+
+
+\section{Задача теплопровідності}
 
 \begin{frame}
     \frametitle{Область}
@@ -66,7 +95,31 @@
 \end{frame}
 
 \begin{frame}
+    \frametitle{Рівняння Пеннеса}
+    \begin{equation}
+        \label{eqn:theory_thermo_pennes_eqn}
+        \nabla \cdot \lambda_\theta \nabla \theta(x) + \omega \rho_b C_b (\theta_c - \theta(x)) + q_m  = 0
+    \end{equation}
+\end{frame}
+
+\begin{frame}
     \frametitle{Коефіцієнт теплопровідності}
+    \begin{equation}
+        \label{eqn:thermo_thermal_conductivity}
+        \lambda_\theta(x) = \lambda_{\theta H}(x)\chi_H + \lambda_{\theta c}, x \in \Omega
+      \end{equation}
+      
+      \begin{equation*}
+        \lambda_{\theta H}(x) = (0,495 - \lambda_{\theta c}) \cdot cos\left[\frac{\pi}{2}\frac{||x-x_H||^2}{r_H^2}\right]
+      \end{equation*}
+      
+      \begin{equation*}
+        \lambda_{\theta c} = 0,19
+      \end{equation*}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Графік коефіцієнта теплопровідності}
     \begin{figure}[ht!]
         \centering
         \begin{tikzpicture}[domain=-5:5, scale=0.75, transform shape]
@@ -120,14 +173,7 @@
     aliqua.
 \end{frame}
 
-
 \section{Задача пружності}
-
-\begin{frame}
-    \frametitle{Title}
-    Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
-    aliqua.
-\end{frame}
 
 \begin{frame}
     \frametitle{Область}
@@ -158,6 +204,82 @@
       
         \end{tikzpicture}
       \end{figure}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Рівняння рівноваги у переміщеннях}
+    \begin{equation}
+        \label{eqn:theory_elasticity_displacement_eqn}
+        \mu u_{i,jj}(x) + (\lambda + \mu)u_{j,ji} + b_i(x) = 0
+    \end{equation}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Коефіцієнти Ляме}
+    \begin{equation}
+        \label{eqn:elasticity_lyame_lambda}
+        \lambda(x) = \lambda_H(x)\chi_H + \lambda_c, x \in \Omega
+      \end{equation}
+      
+      \begin{equation*}
+        \lambda_H(x) = (3714,3 - \lambda_c) \cdot cos\left[\frac{\pi}{2}\frac{||x-x_H||^2}{r_H^2}\right]
+      \end{equation*}
+      
+      \begin{equation*}
+        \lambda_c = 660,1
+      \end{equation*}
+      
+      \begin{equation}
+        \label{eqn:elasticity_lyame_mu}
+        \mu(x) = \mu_H(x)\chi_H + \mu_c, x \in \Omega
+      \end{equation}
+      
+      \begin{equation*}
+        \mu_H(x) = (3428,6 - \mu_c)cos\left[\frac{\pi}{2}\frac{||x-x_H||^2}{r_H^2}\right]
+      \end{equation*}
+      
+      \begin{equation*}
+        \mu_c = 404,6
+      \end{equation*}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Адитивне розщеплення оператора}
+    \begin{equation}
+        \label{eqn:elasticity_displacement_separation_eqn}
+        \mu_c u_{i,jj}(x) + (\lambda_c + \mu_c)u_{j,ji} = -f_{ij,j}(\varepsilon(x))
+      \end{equation}
+      
+      \begin{equation*}
+        f_{ij,j}(\varepsilon(x)) = [ 2\mu_H(x)\varepsilon_{ij}(x) + \lambda_H(x) \delta_{ij} \varepsilon_{kk}(x) ] \chi_H
+      \end{equation*}
+      \end{frame}
+
+\begin{frame}
+    \frametitle{МПГЕ -- інтегральне подання розв'язку}
+    \begin{equation*}
+        \begin{split}
+        u_i(\xi) = \int \limits_G \hat{u}_{ij}(x,\xi) g_j(x)d G(x)
+            + \int \limits_H \hat{u}_{ij}(x,\xi)f_{jk,k}(\varepsilon(x))d H(x)
+        \end{split}
+      \end{equation*}
+\end{frame}
+
+\begin{frame}
+    \frametitle{МПГЕ -- зведення за формулою Гріна}
+    \begin{equation}
+        \label{eqn:elasticity_cobem_direct_elasticity_simplified}
+        \begin{split}
+        u_i(\xi) = \int \limits_G \hat{u}_{ij}(x,\xi) g_j(x)d G(x)
+            - \int \limits_H \hat{u}_{ij,k}(x,\xi)f_{jk}(\varepsilon(x))d H(x)
+        \end{split}
+      \end{equation}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Висновки}
+    Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+    aliqua.
 \end{frame}
 
 \section{Задача термопружності}
