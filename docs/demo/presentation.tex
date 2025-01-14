@@ -168,10 +168,33 @@
 \end{frame}
 
 \begin{frame}
-    \frametitle{Висновки}
-    Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore
-    magna
-    aliqua.
+    \frametitle{Залежність від розмірів включення}
+    \begin{figure}[ht!]
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[xmin=0.1, xmax=0.3]
+                \addplot table [x=x, y=y_d_0025_c_0, col sep=comma, mark=none]
+                    {../common/data/thermo_2d_border_data.csv};
+                \addplot table [x=x, y=y_d_005_c_0, col sep=comma, mark=none]
+                    {../common/data/thermo_2d_border_data.csv};
+            \end{axis}
+        \end{tikzpicture}
+    \end{figure}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Залежність від глибини включення}
+    \begin{figure}[ht!]
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[xmin=0.1, xmax=0.3]
+                \addplot table [x=x, y=y_d_0025_c_0, col sep=comma, mark=none]
+                    {../common/data/thermo_2d_border_data.csv};
+                \addplot table [x=x, y=y_d_0025_c_001, col sep=comma, mark=none]
+                    {../common/data/thermo_2d_border_data.csv};
+            \end{axis}
+        \end{tikzpicture}
+    \end{figure}
 \end{frame}
 
 \section{Задача пружності}
@@ -279,10 +302,16 @@
 \end{frame}
 
 \begin{frame}
-    \frametitle{Висновки}
-    Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore
-    magna
-    aliqua.
+    \frametitle{Висновок}
+    \begin{center}
+        \begin{tabular}{ c|c|c }
+            \textbf{Діаметр (мм)} & \textbf{Глибина (мм)} & \textbf{Сила (Н)} \\
+            \hline
+            5                     & 0                     & 0,49              \\
+            5                     & 1                     & 0,02              \\
+            10                    & 0                     & 2,99              \\
+        \end{tabular}
+    \end{center}
 \end{frame}
 
 \section{Задача термопружності}
@@ -348,10 +377,8 @@
     \begin{equation*}
         \begin{split}
             u_i(\xi) = \int \limits_G \hat{u}_{ij}(x,\xi) g_j(x)d G(x)
-            - \int \limits_H \hat{u}_{ij,k}(x,\xi)f_{jk}(\varepsilon(x))d H(x) - \\
-            - \int \limits_{\Gamma} \hat{u}_{ij} \beta(x) \theta (x) n_j d \Gamma(x)
-            + \int \limits_{\Omega} \theta(x)
-            [\hat{u}_{ij,j}(x,\xi)\beta(x)-\hat{u}_{ij}(x,\xi)\beta_{,j}(x)]d\Omega(x)
+            + \int \limits_H \hat{u}_{ij}(x,\xi)f_{jk,k}(\varepsilon(x))d H(x) - \\
+            - \int \limits_{\Omega} \hat{u}_{ij}(x, \xi) [\beta_{,j}(x) \theta(x) + \beta(x) \theta_{,j}(x)]d\Omega(x)
         \end{split}
     \end{equation*}
 \end{frame}
@@ -369,19 +396,22 @@
     \end{equation*}
 \end{frame}
 
-\begin{frame}
-    \frametitle{Висновки}
-    Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore
-    magna aliqua.
-\end{frame}
-
 \section{Підсумки}
 
 \begin{frame}
-    \frametitle{Title}
-    Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore
-    magna
-    aliqua.
+    \frametitle{Досягнення}
+    \begin{itemize}
+        \item Використано МГЕ і МПГЕ для задач із локальними неоднорідностями залежними від координат у задачах:
+              \begin{itemize}
+                  \item теплопровідності
+                  \item пружності
+                  \item термопружності
+              \end{itemize}
+        \item Досліджено математичну модель теплообміну в органах людського тіла із урахуванням злоякісних включень
+        \item Обчислено вплив злоякісного включення в органі на поверхневі напруження органу
+        \item Охарактеризована поведінка злоякісних включень, для подальшого використання у симуляторах малоінвазивної
+              хірургії
+    \end{itemize}
 \end{frame}
 
 \end{document}

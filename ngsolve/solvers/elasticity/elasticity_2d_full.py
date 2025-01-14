@@ -133,7 +133,9 @@ def calculate(params: TumorParams, x_values:List[float], y_value:float, visualiz
 
     normal = CoefficientFunction((0.0, 1.0))
 
-    traction = gfstress * normal 
+    traction = gfstress * normal
+
+    print(params.__dict__)
 
     print ("Force applied (Newtons):", TOOL_RADIUS * Integrate(traction, mesh, definedon=mesh.Boundaries(BORDER_PRESS)))
     
