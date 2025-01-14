@@ -15,6 +15,7 @@ RUN set -x && \
     /usr/local/bin/gosu $MY_USERNAME code --install-extension james-yu.latex-workshop && \
     /usr/local/bin/gosu $MY_USERNAME code --install-extension stkb.rewrap && \
     /usr/local/bin/gosu $MY_USERNAME code --install-extension mathematic.vscode-pdf && \
+    /usr/local/bin/gosu $MY_USERNAME code --install-extension mathematic.vscode-latex && \
     /usr/local/bin/gosu $MY_USERNAME code --install-extension streetsidesoftware.code-spell-checker && \
     /usr/local/bin/gosu $MY_USERNAME code --install-extension streetsidesoftware.code-spell-checker-ukrainian && \
     \

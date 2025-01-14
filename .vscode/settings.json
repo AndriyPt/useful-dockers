@@ -31,5 +31,6 @@
     ],
     "cSpell.language": "en,uk",
     "editor.wordWrapColumn": 120,
-    "rewrap.wrappingColumn": 120
+    "rewrap.wrappingColumn": 120,
+    "latex.formatter.columnLimit": 120
 }
