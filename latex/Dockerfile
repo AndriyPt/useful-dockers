@@ -28,6 +28,7 @@ RUN set -x && \
     wget -O /tmp/ParaView.tar.gz "https://www.paraview.org/paraview-downloads/download.php?submit=Download&version=v5.13&type=binary&os=Linux&downloadFile=ParaView-5.13.0-MPI-Linux-Python3.10-x86_64.tar.gz" && \
     mkdir -p /opt/paraview && \
     tar -xvzf /tmp/ParaView.tar.gz -C /opt/paraview && \
+    echo "alias pview=/opt/paraview/ParaView-5.13.0-MPI-Linux-Python3.10-x86_64/bin/paraview" >> /home/$USERNAME/.bashrc && \
     \
     echo "Removing cache" && \
     apt-get clean && \
