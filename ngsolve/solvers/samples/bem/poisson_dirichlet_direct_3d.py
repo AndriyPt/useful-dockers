@@ -5,6 +5,8 @@ from ngbem import *
 from ngsolve.krylovspace import CG
 
 sp = Sphere((0, 0, 0), 1)
+sp.faces.name = "body"
+sp.edges.name = "outer"
 mesh = Mesh(OCCGeometry(sp).GenerateMesh(maxh=0.2)).Curve(4)
 
 fesL2 = SurfaceL2(mesh, order=3, dual_mapping=True)
@@ -39,6 +41,7 @@ with TaskManager():
 
     B = SingleLayerPotentialOperator(
         fesH1,
+        definedon=mesh.Boundaries("outer"),
         intorder=12,
         leafsize=40,
         eta=3.0,
