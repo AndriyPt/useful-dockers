@@ -101,6 +101,8 @@ NGSolve BEM extension https://weggler.github.io/ngbem/intro.html
 
 Good explanation of FEM approach in NGSolve https://jschoeberl.github.io/iFEM/primal/first_example.html
 
+Explanation of BEM and spaces https://bempp.com/handbook/theory/function_spaces.html
+
 ## Working articles
 
 Thermophysical and mechanical properties of biological tissues as a function of temperature: a systematic literature review 
