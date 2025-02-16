@@ -13,3 +13,7 @@ sudo apt install python-is-python3
 ```bash
 pip3 install matplotlib
 ```
+
+```bash
+pip3 install --upgrade gmsh
+```

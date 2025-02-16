@@ -21,8 +21,6 @@ dirichlet_fun = bempp.api.GridFunction(p1_space, fun=dirichlet_data)
 
 rhs = (0.5 * identity + dlp) * dirichlet_fun
 
-# solver = solver_interface(actual_mat)
-
 neumann_fun, info = bempp.api.linalg.cg(slp, rhs, tol=1e-3)
 
 n_grid_points = 150
@@ -54,4 +52,4 @@ from matplotlib import pylab as plt
 plt.imshow(np.log(np.abs(u_evaluated.T)), extent=(-1, 1, -1, 1))
 plt.title("Computed solution")
 plt.colorbar()
-plt.savefig("example-laplace_interior_dirichlet.png")
+plt.savefig("/tmp/example-laplace_interior_dirichlet.png")
