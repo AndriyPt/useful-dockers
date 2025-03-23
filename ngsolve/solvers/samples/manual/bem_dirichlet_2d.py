@@ -22,6 +22,11 @@ class BoundaryCondition:
     def get_border_elements(self):
         return self.__border_elements
 
+    def get_boundary_points(self):
+        if len(self.__border_elements) > 1:
+            return (self.__border_elements + (self.__border_elements[1] - self.__border_elements[0]) * 0.5)
+        return self.__border_elements
+
 
 class BottomDirichletCondition(BoundaryCondition):
     def __init__(self):
@@ -61,6 +66,12 @@ class ExpressionTerm:
 
     def value(self, a: float, b: float):
         raise NotImplementedError("Call to abstract method")
+    
+    def calculate_coefficients(self, matrix_row: np.array):
+        pass
+    
+    def calculate_right_side(self):
+        return 0.0 # TODO: Implement in children
 
 
 class SingleLayerBoundaryTerm(ExpressionTerm):
@@ -100,36 +111,36 @@ expression = [SingleLayerBoundaryTerm(), DoubleLayerBoundaryTerm(), SingleLayerV
 
 unknown_count = 10
 
-# print("Create SLAE...")
+print("Create SLAE...")
 
-# matrix = None
-# right_side = None
+matrix = None
+right_side = None
 
-# for boundary in boundary_conditions:
-#     for point in boundary.get_boundary_points():
-#         matrix_row = np.zeros(unknown_count)
-#         right_side_value = 0.0
-#         for term in expression:
-#             term.calculate_coefficients(matrix_row)
-#             right_side += term.calculate_right_side()
-#         if matrix is None:
-#             matrix = matrix_row
-#         else:
-#             matrix = np.vstack((matrix, matrix_row))
-#         if right_side is None:
-#             right_side = np.array([right_side_value])
-#         else:
-#             right_side = np.append(right_side, [right_side_value])
+for boundary in boundary_conditions:
+    for point in boundary.get_boundary_points():
+        matrix_row = np.zeros(unknown_count)
+        right_side_value = 0.0
+        for term in expression:
+            term.calculate_coefficients(matrix_row)
+            right_side_value += term.calculate_right_side()
+        if matrix is None:
+            matrix = matrix_row
+        else:
+            matrix = np.vstack((matrix, matrix_row))
+        if right_side is None:
+            right_side = np.array([right_side_value])
+        else:
+            right_side = np.append(right_side, [right_side_value])
 
 
-# print("Solving SLAE...")
+print("Solving SLAE...")
 
-# solution = np.linalg.solve(matrix, right_side)
+solution = np.linalg.solve(matrix, right_side)
 
-# print("Setting data back...")
+print("Setting data back...")
 
-# for term in expression:
-#     term.propagate_solution(solution)
+for term in expression:
+    term.propagate_solution(solution)
 
 print("Visualizing data...")
 
