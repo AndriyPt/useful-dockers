@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from enum import Enum
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -11,10 +12,25 @@ BORDER_ELEMENTS_COUNT = 10
 class ExpressionTerm:
     pass
 
+class BoundaryConditionType(Enum):
+    DIRICHLET = 1
+    NEUMANN = 2
+    ROBIN = 3
+    UNKNOWN = 4
+
+class Point2DInfo:
+    def __init__(self):
+        self.point = np.zeros(2)
+        self.type = BoundaryConditionType.UNKNOWN
+        self.normal = np.zeros(2)
+        self.element = np.empty(0)
 
 class BoundaryCondition:
-    def __init__(self, border_elements: np.array):
+    def __init__(self, border_elements: np.array, type: BoundaryConditionType):
+        assert border_elements is not None
         self.__border_elements = border_elements
+        for point in self 
+
 
     def value(self, point: np.array):
         raise NotImplementedError("Call to abstract method")
@@ -24,7 +40,7 @@ class BoundaryCondition:
 
     def get_boundary_points(self):
         if len(self.__border_elements) > 1:
-            return (self.__border_elements + (self.__border_elements[1] - self.__border_elements[0]) * 0.5)
+            return self.__border_elements + (self.__border_elements[1] - self.__border_elements[0]) * 0.5
         return self.__border_elements
 
 
@@ -60,42 +76,110 @@ class TopDirichletCondition(BoundaryCondition):
         return 2.0
 
 
+class Kernel:
+    def value(self, point_x: np.array, point_y: np.array, normal: np.array):
+        raise NotImplementedError("Call to abstract method")
+
+class Laplace2DKernel:
+
+    def value(self, point_x: np.array, point_y: np.array, normal: np.array):
+        temp = point_x - point_y
+        distance_sq = np.dot(temp.T, temp)
+        return 0.25 / np.pi * np.log(distance_sq)
+
+class Laplace2DNormKernel:
+
+    def value(self, point_x: np.array, point_y: np.array, normal: np.array):
+        raise NotImplementedError("Implement")
+    
+
+class Integrator:
+    def calculate(self, kernel: Kernel, normal: np.array, point_x: np.array, point_y: np.array):
+        # TODO: Implement
+        return 0.0
+
 class ExpressionTerm:
-    def __init__(self):
-        pass
+    def __init__(self, kernel: Kernel):
+        self.__kernel = kernel
+        assert self.__kernel is not None
 
     def value(self, a: float, b: float):
         raise NotImplementedError("Call to abstract method")
     
-    def calculate_coefficients(self, matrix_row: np.array):
-        pass
-    
-    def calculate_right_side(self):
-        return 0.0 # TODO: Implement in children
+    def kernel(self):
+        return self.__kernel
+
+    def calculate_coefficients(
+        self, point: np.array, boundary_conditions: list[BoundaryCondition], matrix_row: np.array
+    ):
+        raise NotImplementedError("Call to abstract method")
+
+    def calculate_right_side(self, point: np.array, boundary_conditions: list[BoundaryCondition]):
+        raise NotImplementedError("Call to abstract method")
 
 
 class SingleLayerBoundaryTerm(ExpressionTerm):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, kernel: Kernel):
+        super().__init__(kernel)
+
+    def calculate_coefficients(
+        self, point: np.array, boundary_conditions: list[BoundaryCondition], matrix_row: np.array
+    ):
+        integrator = Integrator()
+        coefficients = np.empty(0)
+        right_side_ret = 0.0
+
+        for boundary_condition in boundary_conditions:
+            for boundary_point, element, normal, type in boundary_condition.get_boundary_points_info():
+                if BoundaryConditionType.DIRICHLET == type:
+                    res = integrator.calculate(self.kernel(), normal, point, boundary_point)
+                    coefficients = np.append(coefficients, [res])
+                elif BoundaryConditionType.NEUMANN == type:
+                    right_side_ret += integrator.calculate(self.kernel(), normal, point, boundary_point)
+                elif BoundaryConditionType.ROBIN == type:
+                    raise NotImplementedError("Not implemented")
+                else:
+                    raise AttributeError("Not supported boundary element type")
+        
+        return (coefficients, right_side_ret)
+
+    def calculate_right_side(self, point: np.array, boundary_conditions: list[BoundaryCondition]):
+        pass
 
     def value(self, a: float, b: float):
         return a * b
 
 
 class DoubleLayerBoundaryTerm(ExpressionTerm):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, kernel: Kernel):
+        super().__init__(kernel)
+
+    def calculate_coefficients(
+        self, point: np.array, boundary_conditions: list[BoundaryCondition], matrix_row: np.array
+    ):
+        pass
+
+    def calculate_right_side(self, point: np.array, boundary_conditions: list[BoundaryCondition]):
+        pass
 
     def value(self, a: float, b: float):
-        return 10.0
+        return a * b
 
 
 class SingleLayerVolumeTerm(ExpressionTerm):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, kernel: Kernel):
+        super().__init__(kernel)
+
+    def calculate_coefficients(
+        self, point: np.array, boundary_conditions: list[BoundaryCondition], matrix_row: np.array
+    ):
+        pass
+
+    def calculate_right_side(self, point: np.array, boundary_conditions: list[BoundaryCondition]):
+        pass
 
     def value(self, a: float, b: float):
-        return 10.0
+        return a * b
 
 
 print("Define boundary conditions...")
@@ -107,7 +191,10 @@ boundary_conditions = [
     TopDirichletCondition(),
 ]
 
-expression = [SingleLayerBoundaryTerm(), DoubleLayerBoundaryTerm(), SingleLayerVolumeTerm()]
+# TODO: Debug
+# expression = [SingleLayerBoundaryTerm(), DoubleLayerBoundaryTerm(), SingleLayerVolumeTerm()]
+
+expression = [SingleLayerBoundaryTerm()]
 
 unknown_count = 10
 
@@ -121,7 +208,7 @@ for boundary in boundary_conditions:
         matrix_row = np.zeros(unknown_count)
         right_side_value = 0.0
         for term in expression:
-            term.calculate_coefficients(matrix_row)
+            term.calculate_coefficients(boundary_conditions, matrix_row)
             right_side_value += term.calculate_right_side()
         if matrix is None:
             matrix = matrix_row
