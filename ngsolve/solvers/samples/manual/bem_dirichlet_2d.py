@@ -86,7 +86,7 @@ class BoundaryCondition:
         raise NotImplementedError("Call to abstract method")
 
     def get_border_elements(self):
-        return [item.element[0] for item in self.__points] + [self.__points[-1].element[1]]
+        return np.array([item.element[0] for item in self.__points] + [self.__points[-1].element[1]])
 
     def get_boundary_points(self):
         return [item.point for item in self.__points]
@@ -193,13 +193,16 @@ class ExpressionTerm:
         self.__kernel = kernel
         assert self.__kernel is not None
 
-    def value(self, a: float, b: float):
+    def value(self, point: np.array):
         raise NotImplementedError("Call to abstract method")
 
     def kernel(self):
         return self.__kernel
 
     def calculate_coefficients(self, point: np.array, boundary_conditions: list[BoundaryCondition]):
+        raise NotImplementedError("Call to abstract method")
+
+    def propagate_solution(self, solution: np.array):
         raise NotImplementedError("Call to abstract method")
 
 
@@ -210,6 +213,8 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
 
     def __init__(self, kernel: Kernel):
         super().__init__(kernel)
+        self.__unknown_count = 0
+        self.__unknown_values = np.empty(0)
 
     def calculate_coefficients(self, point: np.array, boundary_conditions: list[BoundaryCondition]):
         integrator = Integrator1D(
@@ -233,11 +238,39 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
                     raise NotImplementedError("Not implemented")
                 else:
                     raise AttributeError("Not supported boundary element type")
+        self.__unknown_count = len(coefficients)
 
         return (coefficients, right_side_ret)
 
-    def value(self, a: float, b: float):
-        return a * b
+    def propagate_solution(self, solution: np.array):
+        self.__unknown_values = solution[: self.__unknown_count]
+        return solution[self.__unknown_count :]
+
+    def value(self, point: np.array, boundary_conditions: list[BoundaryCondition]):
+        assert self.__unknown_count == len(self.__unknown_values), "Data should be calculated"
+        integrator = Integrator1D(
+            SingleLayerBoundaryTerm.NOMINAL_INTEGRATION_POINTS, SingleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS
+        )
+        result = 0.0
+        unknown_index = 0
+
+        for boundary_condition in boundary_conditions:
+            for boundary_item in boundary_condition.get_boundary_points_info():
+                integral_value = integrator.calculate(
+                    self.kernel(), boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                )
+                if BoundaryConditionType.DIRICHLET == boundary_item.type:
+                    result += self.__unknown_values[unknown_index] * integral_value
+                    unknown_index += 1
+                elif BoundaryConditionType.NEUMANN == boundary_item.type:
+                    result += boundary_item.value * integral_value
+                elif BoundaryConditionType.ROBIN == boundary_item.type:
+                    raise NotImplementedError("Not implemented")
+                else:
+                    raise AttributeError("Not supported boundary element type")
+
+        assert self.__unknown_count == unknown_count, "Unknown could should match"
+        return result
 
 
 class DoubleLayerBoundaryTerm(ExpressionTerm):
@@ -308,7 +341,7 @@ solution = np.linalg.solve(matrix, right_side)
 print("Setting data back...")
 
 for term in expression:
-    term.propagate_solution(solution)
+    solution = term.propagate_solution(solution)
 
 print("Visualizing data...")
 
@@ -323,8 +356,13 @@ x_data = np.linspace(x_min, x_max, CHART_STEPS)
 y_data = np.linspace(y_min, y_max, CHART_STEPS)
 
 x_data, y_data = np.meshgrid(x_data, y_data)
+z_data = np.empty(0)
 
-z_data = sum(np.vectorize(term.value)(x_data, y_data) for term in expression)
+for x, y in zip(x_data, y_data):
+    point = np.array([x, y])
+    np.append(z_data, sum(term.value(point, boundary_conditions) for term in expression))
+
+# z_data = sum(np.vectorize(term.value)(x_data, y_data) for term in expression)
 
 surf = ax.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0)
 
