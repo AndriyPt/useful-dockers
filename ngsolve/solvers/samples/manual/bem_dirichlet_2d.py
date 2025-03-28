@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from enum import Enum
+import itertools
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -29,6 +30,38 @@ class Point2DInfo:
         self.value = 0.0
 
 
+class Utils:
+    @staticmethod
+    def distance(point1: np.array, point2: np.array):
+        return np.linalg.norm(point1 - point2)
+
+    @staticmethod
+    def squared_distance(point1: np.array, point2: np.array):
+        temp = point1 - point2
+        return np.dot(temp.T, temp)
+
+    @staticmethod
+    def normalize(vector: np.array):
+        norm = np.linalg.norm(vector)
+        if 0 == norm:
+            vector /= norm
+        return vector
+
+    @staticmethod
+    def cross_product(vector1: np.array, vector2: np.array):
+        if 2 == len(vector1) and 2 == len(vector2):
+            value = vector1[0] * vector2[1] - vector1[1] * vector2[0]
+            result = np.array([0.0, 0.0, value])
+        else:
+            result = np.cross(vector1, vector2)
+        return result
+
+    @staticmethod
+    def is_point_within_segment(point: np.array, begin: np.array, end: np.array, eps: float):
+        cross_product = Utils.cross_product(point - begin, end - begin)
+        return np.linalg.norm(cross_product) < eps
+
+
 class BoundaryCondition:
     def __init__(self, border_elements: np.array, type: BoundaryConditionType):
         assert border_elements is not None
@@ -43,7 +76,7 @@ class BoundaryCondition:
             border_vector /= np.linalg.norm(border_vector)
 
             # TODO: Check if it is always external normal
-            item.normal = np.array([-border_vector[1], border_vector[0]])
+            item.normal = np.array([border_vector[1], -border_vector[0]])
             item.element = np.array([border_elements[index], border_elements[index + 1]])
             item.value = self.value(item.point)
 
@@ -108,23 +141,51 @@ class Kernel:
 
 
 class Laplace2DKernel:
-
     def value(self, point_x: np.array, point_y: np.array, normal: np.array):
-        temp = point_x - point_y
-        distance_sq = np.dot(temp.T, temp)
-        return 0.25 / np.pi * np.log(distance_sq)
+        return 0.25 / np.pi * np.log(Utils.squared_distance(point_x, point_y))
 
 
 class Laplace2DNormKernel:
-
     def value(self, point_x: np.array, point_y: np.array, normal: np.array):
         raise NotImplementedError("Implement")
 
 
 class Integrator:
-    def calculate(self, kernel: Kernel, normal: np.array, point_x: np.array, point_y: np.array):
-        # TODO: Implement
-        return 0.0
+    def __init__(self):
+        pass
+
+    def calculate(self, kernel: Kernel, normal: np.array, point: np.array, min_limit: np.array, max_limit: np.array):
+        raise NotImplementedError("Call to abstract method")
+
+    def convert_leggauss_to_segment(self, nodes: np.array, begin: np.array, end: np.array):
+        result = [(node - (-1.0)) * (end - begin) / 2.0 + begin for node in nodes]
+        return result
+
+
+class Integrator1D(Integrator):
+
+    epsilon = 0.01
+
+    def __init__(self, nominal_count: int, singularity_count: int):
+        super().__init__()
+
+        assert 0 < nominal_count and nominal_count < 10, "Not supported points count"
+        assert nominal_count < singularity_count and singularity_count < 10, "Not supported points count"
+
+        self.__nominal_number_of_points = nominal_count
+        self.__singular_number_of_points = singularity_count
+
+    def calculate(self, kernel: Kernel, normal: np.array, point: np.array, min_limit: np.array, max_limit: np.array):
+        result = 0.0
+        count = self.__nominal_number_of_points
+        if Utils.is_point_within_segment(point, min_limit, max_limit, Integrator1D.epsilon):
+            count = self.__singular_number_of_points
+        nodes, weights = np.polynomial.legendre.leggauss(count)
+        real_nodes = self.convert_leggauss_to_segment(nodes, min_limit, max_limit)
+
+        for real_node, weight in zip(real_nodes, weights):
+            result += weight * kernel.value(point, real_node, normal)
+        return result
 
 
 class ExpressionTerm:
@@ -143,18 +204,26 @@ class ExpressionTerm:
 
 
 class SingleLayerBoundaryTerm(ExpressionTerm):
+
+    NOMINAL_INTEGRATION_POINTS = 4
+    SINGULARITY_INTEGRATION_POINTS = 6
+
     def __init__(self, kernel: Kernel):
         super().__init__(kernel)
 
     def calculate_coefficients(self, point: np.array, boundary_conditions: list[BoundaryCondition]):
-        integrator = Integrator()
+        integrator = Integrator1D(
+            SingleLayerBoundaryTerm.NOMINAL_INTEGRATION_POINTS, SingleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS
+        )
         coefficients = np.empty(0)
         right_side_ret = 0.0
 
         for boundary_condition in boundary_conditions:
             for boundary_item in boundary_condition.get_boundary_points_info():
                 if BoundaryConditionType.DIRICHLET == boundary_item.type:
-                    res = integrator.calculate(self.kernel(), boundary_item.normal, point, boundary_item.point)
+                    res = integrator.calculate(
+                        self.kernel(), boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                    )
                     coefficients = np.append(coefficients, [res])
                 elif BoundaryConditionType.NEUMANN == boundary_item.type:
                     right_side_ret += integrator.calculate(
