@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
-CHART_STEPS = 100
+CHART_STEPS = 25
 BORDER_ELEMENTS_COUNT = 10
 
 
@@ -269,7 +269,9 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
                 else:
                     raise AttributeError("Not supported boundary element type")
 
-        assert self.__unknown_count == unknown_count, "Unknown could should match"
+        assert self.__unknown_count == unknown_index, "Unknown could should match {} and {}".format(
+            self.__unknown_count, unknown_index
+        )
         return result
 
 
@@ -352,16 +354,18 @@ y_min = min(np.min(boundary_condition.get_border_elements()[:, 1]) for boundary_
 x_max = max(np.max(boundary_condition.get_border_elements()[:, 0]) for boundary_condition in boundary_conditions)
 y_max = max(np.max(boundary_condition.get_border_elements()[:, 1]) for boundary_condition in boundary_conditions)
 
-x_data = np.linspace(x_min, x_max, CHART_STEPS)
-y_data = np.linspace(y_min, y_max, CHART_STEPS)
+x_data_linear = np.linspace(x_min, x_max, CHART_STEPS)
+y_data_linear = np.linspace(y_min, y_max, CHART_STEPS)
 
-x_data, y_data = np.meshgrid(x_data, y_data)
-z_data = np.empty(0)
+x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
 
-for x, y in zip(x_data, y_data):
-    point = np.array([x, y])
-    np.append(z_data, sum(term.value(point, boundary_conditions) for term in expression))
+z_data = np.empty([CHART_STEPS, CHART_STEPS])
+for x_index in range(CHART_STEPS):
+    for y_index in range(CHART_STEPS):
+        point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
+        z_data[x_index][y_index] = sum(term.value(point, boundary_conditions) for term in expression)
 
+# TODO: Work on numpy way of data visualization
 # z_data = sum(np.vectorize(term.value)(x_data, y_data) for term in expression)
 
 surf = ax.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0)
