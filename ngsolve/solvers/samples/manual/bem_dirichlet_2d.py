@@ -2,6 +2,7 @@
 
 from enum import Enum
 import itertools
+from collections.abc import Callable
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -188,6 +189,32 @@ class Integrator1D(Integrator):
         return result
 
 
+class Integrator2D(Integrator):
+
+    epsilon = 0.01
+
+    def __init__(self, nominal_count: int, singularity_count: int):
+        super().__init__()
+
+        assert 0 < nominal_count and nominal_count < 10, "Not supported points count"
+        assert nominal_count < singularity_count and singularity_count < 10, "Not supported points count"
+
+        self.__nominal_number_of_points = nominal_count
+        self.__singular_number_of_points = singularity_count
+
+    def calculate(self, kernel: Kernel, normal: np.array, point: np.array, min_limit: np.array, max_limit: np.array):
+        result = 0.0
+        # count = self.__nominal_number_of_points
+        # if Utils.is_point_within_segment(point, min_limit, max_limit, Integrator1D.epsilon):
+        #     count = self.__singular_number_of_points
+        # nodes, weights = np.polynomial.legendre.leggauss(count)
+        # real_nodes = self.convert_leggauss_to_segment(nodes, min_limit, max_limit)
+
+        # for real_node, weight in zip(real_nodes, weights):
+        #     result += weight * kernel.value(point, real_node, normal)
+        return result
+
+
 class ExpressionTerm:
     def __init__(self, kernel: Kernel):
         self.__kernel = kernel
@@ -287,14 +314,70 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
 
 
 class SingleLayerVolumeTerm(ExpressionTerm):
-    def __init__(self, kernel: Kernel):
+    NOMINAL_INTEGRATION_POINTS_PER_AXIS = 4
+    SINGULARITY_INTEGRATION_POINTS_PER_AXIS = 6
+
+    def __init__(self, kernel: Kernel, value_function: Callable):
         super().__init__(kernel)
+        assert value_function is not None
+        self.__value_function = value_function
 
     def calculate_coefficients(self, point: np.array, boundary_conditions: list[BoundaryCondition]):
-        pass
+        integrator = Integrator2D(
+            SingleLayerVolumeTerm.NOMINAL_INTEGRATION_POINTS, SingleLayerVolumeTerm.SINGULARITY_INTEGRATION_POINTS
+        )
+        coefficients = np.empty(0)
+        right_side_ret = 0.0
 
-    def value(self, a: float, b: float):
-        return a * b
+        for boundary_condition in boundary_conditions:
+            for boundary_item in boundary_condition.get_boundary_points_info():
+                if BoundaryConditionType.DIRICHLET == boundary_item.type:
+                    res = integrator.calculate(
+                        self.kernel(), boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                    )
+                    coefficients = np.append(coefficients, [res])
+                elif BoundaryConditionType.NEUMANN == boundary_item.type:
+                    right_side_ret += integrator.calculate(
+                        self.kernel(), boundary_item.normal, point, boundary_item.point
+                    )
+                elif BoundaryConditionType.ROBIN == boundary_item.type:
+                    raise NotImplementedError("Not implemented")
+                else:
+                    raise AttributeError("Not supported boundary element type")
+        self.__unknown_count = len(coefficients)
+
+        return (coefficients, right_side_ret)
+
+    def propagate_solution(self, solution: np.array):
+        return solution
+
+    def value(self, point: np.array, boundary_conditions: list[BoundaryCondition]):
+        assert self.__unknown_count == len(self.__unknown_values), "Data should be calculated"
+        integrator = Integrator1D(
+            SingleLayerBoundaryTerm.NOMINAL_INTEGRATION_POINTS, SingleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS
+        )
+        result = 0.0
+        unknown_index = 0
+
+        for boundary_condition in boundary_conditions:
+            for boundary_item in boundary_condition.get_boundary_points_info():
+                integral_value = integrator.calculate(
+                    self.kernel(), boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                )
+                if BoundaryConditionType.DIRICHLET == boundary_item.type:
+                    result += self.__unknown_values[unknown_index] * integral_value
+                    unknown_index += 1
+                elif BoundaryConditionType.NEUMANN == boundary_item.type:
+                    result += boundary_item.value * integral_value
+                elif BoundaryConditionType.ROBIN == boundary_item.type:
+                    raise NotImplementedError("Not implemented")
+                else:
+                    raise AttributeError("Not supported boundary element type")
+
+        assert self.__unknown_count == unknown_index, "Unknown could should match {} and {}".format(
+            self.__unknown_count, unknown_index
+        )
+        return result
 
 
 print("Define boundary conditions...")
@@ -306,10 +389,18 @@ boundary_conditions = [
     TopDirichletCondition(),
 ]
 
+
+def right_hand_side_function(point: np.array):
+    return 2.0
+
+
 # TODO: Debug
 # expression = [SingleLayerBoundaryTerm(), DoubleLayerBoundaryTerm(), SingleLayerVolumeTerm()]
 
-expression = [SingleLayerBoundaryTerm(Laplace2DKernel())]
+expression = [
+    SingleLayerBoundaryTerm(Laplace2DKernel()),
+    SingleLayerVolumeTerm(Laplace2DKernel(), right_hand_side_function),
+]
 
 unknown_count = 10
 
