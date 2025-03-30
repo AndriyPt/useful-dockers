@@ -64,9 +64,11 @@ class Utils:
 
 
 class BoundaryCondition:
-    def __init__(self, border_elements: np.array, type: BoundaryConditionType):
+    def __init__(self, border_elements: np.array, type: BoundaryConditionType, value: Callable):
         assert border_elements is not None
+        assert value is not None
         self.__points = []
+        self.__value_function = value
         for index in range(len(border_elements) - 1):
             item = Point2DInfo()
             item.point = (border_elements[index + 1] + border_elements[index]) / 2.0
@@ -84,7 +86,7 @@ class BoundaryCondition:
             self.__points.append(item)
 
     def value(self, point: np.array):
-        raise NotImplementedError("Call to abstract method")
+        raise self.__value_function(point)
 
     def get_border_elements(self):
         return np.array([item.element[0] for item in self.__points] + [self.__points[-1].element[1]])
@@ -96,44 +98,64 @@ class BoundaryCondition:
         return self.__points
 
 
-class DirichletBoundaryCondition(BoundaryCondition):
-    def __init__(self, border_elements: np.array):
-        super().__init__(border_elements, BoundaryConditionType.DIRICHLET)
+class Domain:
+    def __init__(self):
+        pass
 
-    def value(self, point: np.array):
+    def get_border(self):
+        raise NotImplementedError("Call to abstract method")
+
+    def get_mesh(self):
         raise NotImplementedError("Call to abstract method")
 
 
-class BottomDirichletCondition(DirichletBoundaryCondition):
-    def __init__(self):
-        super().__init__(np.linspace(np.array([0.0, 0.0]), np.array([1.0, 0.0]), BORDER_ELEMENTS_COUNT))
+class SquareDomain2D(Domain):
+    def __init__(
+        self,
+        bottom_left_point: np.array,
+        top_right_point: np.array,
+        conditions: list[BoundaryConditionType],
+        values: list[Callable],
+        side_elements_count: int,
+    ):
+        super().__init__()
 
-    def value(self, point: np.array):
-        return 0.0
+        assert bottom_left_point is not None
+        assert top_right_point is not None
+        assert 4 == len(conditions)
+        assert 4 == len(values)
+        assert side_elements_count > 0
 
+        bottom_right_point = np.array([top_right_point[0], bottom_left_point[1]])
+        top_left_point = np.array([bottom_left_point[0], top_right_point[1]])
 
-class LeftDirichletCondition(DirichletBoundaryCondition):
-    def __init__(self):
-        super().__init__(np.linspace(np.array([0.0, 0.0]), np.array([0.0, 1.0]), BORDER_ELEMENTS_COUNT))
+        bottom_points = np.linspace(bottom_left_point, bottom_right_point, side_elements_count)
+        left_points = np.linspace(top_left_point, bottom_left_point, side_elements_count)
 
-    def value(self, point: np.array):
-        return 2.0 * point[1]
+        self.__border = [
+            BoundaryCondition(bottom_points, conditions[0], values[0]),
+            BoundaryCondition(
+                np.linspace(bottom_right_point, top_right_point, side_elements_count), conditions[1], values[1]
+            ),
+            BoundaryCondition(
+                np.linspace(top_right_point, top_left_point, side_elements_count), conditions[2], values[2]
+            ),
+            BoundaryCondition(left_points, conditions[3], values[3]),
+        ]
 
+        bottom_points, left_points = np.meshgrid(bottom_points, np.flip(left_points))
 
-class RightDirichletCondition(DirichletBoundaryCondition):
-    def __init__(self):
-        super().__init__(np.linspace(np.array([1.0, 0.0]), np.array([1.0, 1.0]), BORDER_ELEMENTS_COUNT))
+        self.__mesh = []
+        for x_index in range(side_elements_count - 1):
+            for y_index in range(side_elements_count - 1):
+                # TODO: Finish !!!
+                square = []
 
-    def value(self, point: np.array):
-        return 2.0 * point[1]
+    def get_border(self):
+        return self.__border
 
-
-class TopDirichletCondition(DirichletBoundaryCondition):
-    def __init__(self):
-        super().__init__(np.linspace(np.array([0.0, 1.0]), np.array([1.0, 1.0]), BORDER_ELEMENTS_COUNT))
-
-    def value(self, point: np.array):
-        return 2.0
+    def get_mesh(self):
+        return self.__mesh
 
 
 class Kernel:
@@ -380,14 +402,25 @@ class SingleLayerVolumeTerm(ExpressionTerm):
         return result
 
 
+print("Define problem...")
+
 print("Define boundary conditions...")
 
-boundary_conditions = [
-    BottomDirichletCondition(),
-    LeftDirichletCondition(),
-    RightDirichletCondition(),
-    TopDirichletCondition(),
-]
+
+def boundary_value(point: np.array):
+    return 2.0 * point[1]
+
+
+domain = SquareDomain2D(
+    np.array([0.0, 0.0]),
+    np.array([1.0, 1.0]),
+    [BoundaryConditionType.DIRICHLET] * 4,
+    [boundary_value] * 4,
+    BORDER_ELEMENTS_COUNT,
+)
+boundary_conditions = domain.get_border()
+
+print("Define right hand side value...")
 
 
 def right_hand_side_function(point: np.array):
