@@ -155,16 +155,16 @@ class SquareDomain2D(Domain2D):
         )
         self.__border = np.array(Domain2D._process_points(left_points, conditions[3], values[3]))
 
-        x_points, y_points = np.meshgrid(bottom_points, np.flip(left_points))
+        x_points, y_points = np.meshgrid(bottom_points[:, 0], np.flip(left_points[:, 1]))
 
         self.__mesh = []
         for x_index in range(side_elements_count - 1):
             for y_index in range(side_elements_count - 1):
                 square = [
-                    np.array(x_points[x_index][y_index], y_points[x_index][y_index]),
-                    np.array(x_points[x_index + 1][y_index], y_points[x_index + 1][y_index]),
-                    np.array(x_points[x_index + 1][y_index + 1], y_points[x_index + 1][y_index + 1]),
-                    np.array(x_points[x_index][y_index + 1], y_points[x_index][y_index + 1]),
+                    np.array([x_points[x_index][y_index], y_points[x_index][y_index]]),
+                    np.array([x_points[x_index][y_index + 1], y_points[x_index][y_index + 1]]),
+                    np.array([x_points[x_index + 1][y_index + 1], y_points[x_index + 1][y_index + 1]]),
+                    np.array([x_points[x_index + 1][y_index], y_points[x_index + 1][y_index]]),
                 ]
                 self.__mesh.append(square)
         self.__mesh = np.array(self.__mesh)
@@ -216,7 +216,7 @@ class Integrator2D(Integrator):
         self.__singular_number_of_points = singularity_count
 
     def _convert_leggauss_to_segment(self, nodes: np.array, begin: np.array, end: np.array):
-        result = [(node - (-1.0)) * (end - begin) / 2.0 + begin for node in nodes]
+        result = np.array([(node - (-1.0)) * (end - begin) / 2.0 + begin for node in nodes])
         return result
 
     def _convert_leggauss_to_square(self, nodes: np.array, weights: np.array, square: np.array):
@@ -227,9 +227,13 @@ class Integrator2D(Integrator):
         y_nodes = y_nodes[:, 1]
 
         x_nodes, y_nodes = np.meshgrid(x_nodes, y_nodes)
-        result_nodes = np.column_stack(x_nodes, y_nodes)
+        x_nodes = np.ndarray.flatten(x_nodes)
+        y_nodes = np.ndarray.flatten(y_nodes)
+        result_nodes = np.column_stack((x_nodes, y_nodes))
 
         x_weights, y_weights = np.meshgrid(weights, weights)
+        x_weights = np.ndarray.flatten(x_weights)
+        y_weights = np.ndarray.flatten(y_weights)
         result_weights = x_weights * y_weights
 
         return (result_nodes, result_weights)
@@ -367,11 +371,16 @@ class SingleLayerVolumeTerm(ExpressionTerm):
         assert point is not None
         assert domain is not None
 
+        integrator = Integrator2D(
+            SingleLayerVolumeTerm.NOMINAL_INTEGRATION_POINTS_PER_AXIS,
+            SingleLayerVolumeTerm.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
+        )
+
         coefficients = np.empty(0)
         right_side_ret = 0.0
 
         for mesh_item in domain.get_mesh():
-            right_side_ret += self.__integrator.calculate_square(self.kernel, self.__value_function, point, mesh_item)
+            right_side_ret += integrator.square(self.kernel(), self.__value_function, point, mesh_item)
 
         return (coefficients, right_side_ret)
 
@@ -383,11 +392,12 @@ class SingleLayerVolumeTerm(ExpressionTerm):
         assert domain is not None
 
         integrator = Integrator2D(
-            SingleLayerVolumeTerm.NOMINAL_INTEGRATION_POINTS, SingleLayerVolumeTerm.SINGULARITY_INTEGRATION_POINTS
+            SingleLayerVolumeTerm.NOMINAL_INTEGRATION_POINTS_PER_AXIS,
+            SingleLayerVolumeTerm.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
         )
         result = 0.0
         for mesh_item in domain.get_mesh():
-            result += integrator.square(self.kernel, self.__value_function, point, mesh_item)
+            result += integrator.square(self.kernel(), self.__value_function, point, mesh_item)
         return result
 
 
@@ -432,7 +442,7 @@ for point_info in domain.get_border():
     right_side_value = 0.0
     matrix_row = np.empty(0)
     for term in expression:
-        coefficients, value = term.calculate_coefficients(point, domain)
+        coefficients, value = term.calculate_coefficients(point_info.point, domain)
         right_side_value += value
         matrix_row = np.hstack((matrix_row, coefficients))
     if matrix is None:
