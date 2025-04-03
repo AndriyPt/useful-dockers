@@ -220,9 +220,19 @@ class Integrator2D(Integrator):
         return result
 
     def _convert_leggauss_to_square(self, nodes: np.array, weights: np.array, square: np.array):
+        assert 4 == len(square)
+        x_nodes = self._convert_leggauss_to_segment(nodes, square[0], square[1])
+        x_nodes = x_nodes[:, 0]
+        y_nodes = self._convert_leggauss_to_segment(nodes, square[0], square[3])
+        y_nodes = y_nodes[:, 1]
 
-        # TODO: Implement
-        return result
+        x_nodes, y_nodes = np.meshgrid(x_nodes, y_nodes)
+        result_nodes = np.column_stack(x_nodes, y_nodes)
+
+        x_weights, y_weights = np.meshgrid(weights, weights)
+        result_weights = x_weights * y_weights
+
+        return (result_nodes, result_weights)
 
     def segment(self, kernel: Kernel, normal: np.array, point: np.array, min_limit: np.array, max_limit: np.array):
         result = 0.0
