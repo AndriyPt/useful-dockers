@@ -187,12 +187,13 @@ class Kernel:
 
 class Laplace2DKernel(Kernel):
     def value(self, point_x: np.array, point_y: np.array, normal: np.array):
-        return 0.25 / np.pi * np.log(Utils.squared_distance(point_x, point_y))
+        return -0.25 / np.pi * np.log(Utils.squared_distance(point_x, point_y))
 
 
 class Laplace2DNormKernel(Kernel):
     def value(self, point_x: np.array, point_y: np.array, normal: np.array):
-        raise NotImplementedError("Implement")
+        result = np.dot(-0.25 / np.pi / Utils.squared_distance(point_x, point_y) * -2.0 * (point_x - point_y), normal)
+        return result
 
 
 class Integrator:
@@ -354,16 +355,71 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
         )
         return result
 
-
+# TODO: Add 1/2u term to value calculation
 class DoubleLayerBoundaryTerm(ExpressionTerm):
+    NOMINAL_INTEGRATION_POINTS = 4
+    SINGULARITY_INTEGRATION_POINTS = 6
+
     def __init__(self, kernel: Kernel):
         super().__init__(kernel)
+        self.__unknown_count = 0
+        self.__unknown_values = np.empty(0)
 
     def calculate_coefficients(self, point: np.array, domain: Domain):
-        pass
+        integrator = Integrator2D(
+            DoubleLayerBoundaryTerm.NOMINAL_INTEGRATION_POINTS, DoubleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS
+        )
+        coefficients = np.empty(0)
+        right_side_ret = 0.0
+
+        for boundary_item in domain.get_border():
+            if BoundaryConditionType.DIRICHLET == boundary_item.type:
+                right_side_ret += integrator.segment(
+                    self.kernel(), boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                )
+            elif BoundaryConditionType.NEUMANN == boundary_item.type:
+                res = integrator.segment(
+                    self.kernel(), boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                )
+                coefficients = np.append(coefficients, [res])
+            elif BoundaryConditionType.ROBIN == boundary_item.type:
+                raise NotImplementedError("Not implemented")
+            else:
+                raise AttributeError("Not supported boundary element type")
+        self.__unknown_count = len(coefficients)
+
+        return (coefficients, right_side_ret)
+
+    def propagate_solution(self, solution: np.array):
+        self.__unknown_values = solution[: self.__unknown_count]
+        return solution[self.__unknown_count :]
 
     def value(self, point: np.array, domain: Domain):
-        return 0.0
+        assert self.__unknown_count == len(self.__unknown_values), "Data should be calculated"
+        integrator = Integrator2D(
+            DoubleLayerBoundaryTerm.NOMINAL_INTEGRATION_POINTS, DoubleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS
+        )
+        result = 0.0
+        unknown_index = 0
+
+        for boundary_item in domain.get_border():
+            integral_value = integrator.segment(
+                self.kernel(), boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+            )
+            if BoundaryConditionType.DIRICHLET == boundary_item.type:
+                result += boundary_item.value * integral_value
+            elif BoundaryConditionType.NEUMANN == boundary_item.type:
+                result += self.__unknown_values[unknown_index] * integral_value
+                unknown_index += 1
+            elif BoundaryConditionType.ROBIN == boundary_item.type:
+                raise NotImplementedError("Not implemented")
+            else:
+                raise AttributeError("Not supported boundary element type")
+
+        assert self.__unknown_count == unknown_index, "Unknown could should match {} and {}".format(
+            self.__unknown_count, unknown_index
+        )
+        return result
 
 
 class SingleLayerVolumeTerm(ExpressionTerm):
@@ -426,11 +482,9 @@ def heat_source_function(point: np.array):
     return 2.0
 
 
-# TODO: Debug
-# expression = [SingleLayerBoundaryTerm(), DoubleLayerBoundaryTerm(), SingleLayerVolumeTerm()]
-
 expression = [
     SingleLayerBoundaryTerm(Laplace2DKernel()),
+    DoubleLayerBoundaryTerm(Laplace2DNormKernel()),
     SingleLayerVolumeTerm(Laplace2DKernel(), heat_source_function),
 ]
 
