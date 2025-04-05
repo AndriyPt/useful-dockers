@@ -247,6 +247,7 @@ class Integrator2D(Integrator):
     def segment(self, kernel: Kernel, normal: np.array, point: np.array, min_limit: np.array, max_limit: np.array):
         result = 0.0
         count = self.__nominal_number_of_points
+        # TODO: Implement logic which will increase points count in case if one point is too close
         if Utils.is_point_within_segment(point, min_limit, max_limit, Integrator2D.epsilon):
             count = self.__singular_number_of_points
         nodes, weights = np.polynomial.legendre.leggauss(count)
@@ -368,7 +369,7 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
 class SingleLayerVolumeTerm(ExpressionTerm):
 
     NOMINAL_INTEGRATION_POINTS_PER_AXIS = 2
-    SINGULARITY_INTEGRATION_POINTS_PER_AXIS = 3
+    SINGULARITY_INTEGRATION_POINTS_PER_AXIS = 4
 
     def __init__(self, kernel: Kernel, value_function: Callable):
         super().__init__(kernel)
