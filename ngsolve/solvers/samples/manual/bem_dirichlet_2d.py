@@ -134,32 +134,36 @@ class SquareDomain2D(Domain2D):
         assert 4 == len(values)
         assert side_elements_count > 0
 
+        side_points_count = side_elements_count + 1
+
         bottom_right_point = np.array([top_right_point[0], bottom_left_point[1]])
         top_left_point = np.array([bottom_left_point[0], top_right_point[1]])
 
-        bottom_points = np.linspace(bottom_left_point, bottom_right_point, side_elements_count)
-        left_points = np.linspace(top_left_point, bottom_left_point, side_elements_count)
+        bottom_points = np.linspace(bottom_left_point, bottom_right_point, side_points_count)
+        left_points = np.linspace(top_left_point, bottom_left_point, side_points_count)
 
         self.__border = np.array(Domain2D._process_points(bottom_points, conditions[0], values[0]))
         self.__border = np.append(
             self.__border,
             Domain2D._process_points(
-                np.linspace(bottom_right_point, top_right_point, side_elements_count), conditions[1], values[1]
+                np.linspace(bottom_right_point, top_right_point, side_points_count), conditions[1], values[1]
             ),
         )
         self.__border = np.append(
             self.__border,
             Domain2D._process_points(
-                np.linspace(top_right_point, top_left_point, side_elements_count), conditions[2], values[2]
+                np.linspace(top_right_point, top_left_point, side_points_count), conditions[2], values[2]
             ),
         )
-        self.__border = np.array(Domain2D._process_points(left_points, conditions[3], values[3]))
+        self.__border = np.append(
+            self.__border, np.array(Domain2D._process_points(left_points, conditions[3], values[3]))
+        )
 
         x_points, y_points = np.meshgrid(bottom_points[:, 0], np.flip(left_points[:, 1]))
 
         self.__mesh = []
-        for x_index in range(side_elements_count - 1):
-            for y_index in range(side_elements_count - 1):
+        for x_index in range(side_points_count - 1):
+            for y_index in range(side_points_count - 1):
                 square = [
                     np.array([x_points[x_index][y_index], y_points[x_index][y_index]]),
                     np.array([x_points[x_index][y_index + 1], y_points[x_index][y_index + 1]]),
@@ -181,12 +185,12 @@ class Kernel:
         raise NotImplementedError("Call to abstract method")
 
 
-class Laplace2DKernel:
+class Laplace2DKernel(Kernel):
     def value(self, point_x: np.array, point_y: np.array, normal: np.array):
         return 0.25 / np.pi * np.log(Utils.squared_distance(point_x, point_y))
 
 
-class Laplace2DNormKernel:
+class Laplace2DNormKernel(Kernel):
     def value(self, point_x: np.array, point_y: np.array, normal: np.array):
         raise NotImplementedError("Implement")
 
@@ -215,15 +219,17 @@ class Integrator2D(Integrator):
         self.__nominal_number_of_points = nominal_count
         self.__singular_number_of_points = singularity_count
 
-    def _convert_leggauss_to_segment(self, nodes: np.array, begin: np.array, end: np.array):
-        result = np.array([(node - (-1.0)) * (end - begin) / 2.0 + begin for node in nodes])
-        return result
+    def _convert_leggauss_to_segment(self, nodes: np.array, weights: np.array, begin: np.array, end: np.array):
+        result_nodes = np.array([(node - (-1.0)) * (end - begin) / 2.0 + begin for node in nodes])
+        weights_adjustment = Utils.distance(begin, end) / 2.0
+        result_weights = weights_adjustment * weights
+        return (result_nodes, result_weights)
 
     def _convert_leggauss_to_square(self, nodes: np.array, weights: np.array, square: np.array):
         assert 4 == len(square)
-        x_nodes = self._convert_leggauss_to_segment(nodes, square[0], square[1])
+        x_nodes, x_weights = self._convert_leggauss_to_segment(nodes, weights, square[0], square[1])
         x_nodes = x_nodes[:, 0]
-        y_nodes = self._convert_leggauss_to_segment(nodes, square[0], square[3])
+        y_nodes, y_weights = self._convert_leggauss_to_segment(nodes, weights, square[0], square[3])
         y_nodes = y_nodes[:, 1]
 
         x_nodes, y_nodes = np.meshgrid(x_nodes, y_nodes)
@@ -231,7 +237,7 @@ class Integrator2D(Integrator):
         y_nodes = np.ndarray.flatten(y_nodes)
         result_nodes = np.column_stack((x_nodes, y_nodes))
 
-        x_weights, y_weights = np.meshgrid(weights, weights)
+        x_weights, y_weights = np.meshgrid(x_weights, y_weights)
         x_weights = np.ndarray.flatten(x_weights)
         y_weights = np.ndarray.flatten(y_weights)
         result_weights = x_weights * y_weights
@@ -244,9 +250,9 @@ class Integrator2D(Integrator):
         if Utils.is_point_within_segment(point, min_limit, max_limit, Integrator2D.epsilon):
             count = self.__singular_number_of_points
         nodes, weights = np.polynomial.legendre.leggauss(count)
-        real_nodes = self._convert_leggauss_to_segment(nodes, min_limit, max_limit)
+        real_nodes, real_weights = self._convert_leggauss_to_segment(nodes, weights, min_limit, max_limit)
 
-        for real_node, weight in zip(real_nodes, weights):
+        for real_node, weight in zip(real_nodes, real_weights):
             result += weight * kernel.value(point, real_node, normal)
         return result
 
@@ -305,7 +311,9 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
                 )
                 coefficients = np.append(coefficients, [res])
             elif BoundaryConditionType.NEUMANN == boundary_item.type:
-                right_side_ret += integrator.segment(self.kernel(), boundary_item.normal, point, boundary_item.point)
+                right_side_ret += integrator.segment(
+                    self.kernel(), boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                )
             elif BoundaryConditionType.ROBIN == boundary_item.type:
                 raise NotImplementedError("Not implemented")
             else:
@@ -359,8 +367,8 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
 
 class SingleLayerVolumeTerm(ExpressionTerm):
 
-    NOMINAL_INTEGRATION_POINTS_PER_AXIS = 4
-    SINGULARITY_INTEGRATION_POINTS_PER_AXIS = 6
+    NOMINAL_INTEGRATION_POINTS_PER_AXIS = 2
+    SINGULARITY_INTEGRATION_POINTS_PER_AXIS = 3
 
     def __init__(self, kernel: Kernel, value_function: Callable):
         super().__init__(kernel)
@@ -371,16 +379,8 @@ class SingleLayerVolumeTerm(ExpressionTerm):
         assert point is not None
         assert domain is not None
 
-        integrator = Integrator2D(
-            SingleLayerVolumeTerm.NOMINAL_INTEGRATION_POINTS_PER_AXIS,
-            SingleLayerVolumeTerm.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
-        )
-
         coefficients = np.empty(0)
-        right_side_ret = 0.0
-
-        for mesh_item in domain.get_mesh():
-            right_side_ret += integrator.square(self.kernel(), self.__value_function, point, mesh_item)
+        right_side_ret = self.value(point, domain)
 
         return (coefficients, right_side_ret)
 
@@ -418,10 +418,10 @@ domain = SquareDomain2D(
     BORDER_ELEMENTS_COUNT,
 )
 
-print("Define right hand side value...")
+print("Define heat source function...")
 
 
-def right_hand_side_function(point: np.array):
+def heat_source_function(point: np.array):
     return 2.0
 
 
@@ -430,7 +430,7 @@ def right_hand_side_function(point: np.array):
 
 expression = [
     SingleLayerBoundaryTerm(Laplace2DKernel()),
-    SingleLayerVolumeTerm(Laplace2DKernel(), right_hand_side_function),
+    SingleLayerVolumeTerm(Laplace2DKernel(), heat_source_function),
 ]
 
 print("Create SLAE...")

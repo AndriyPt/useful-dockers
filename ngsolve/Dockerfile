@@ -17,6 +17,7 @@ RUN set -x && \
     echo "Install VSCode Extensions" && \
     /usr/local/bin/gosu $MY_USERNAME code --install-extension ms-python.python && \
     /usr/local/bin/gosu $MY_USERNAME code --install-extension ms-python.black-formatter && \
+    /usr/local/bin/gosu $MY_USERNAME code --install-extension ms-python.mypy-type-checker && \
     \
     echo "Installing NGSolve" && \
     apt-get -y install python3-distutils python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake && \
