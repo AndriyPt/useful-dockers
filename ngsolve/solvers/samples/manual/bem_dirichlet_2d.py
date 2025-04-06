@@ -272,15 +272,23 @@ class Integrator2D(Integrator):
 
 
 class ExpressionTerm:
-    def __init__(self, kernel: Kernel):
+    def __init__(self, kernel: Kernel, sign: int):
+        assert kernel is not None
+        assert 1 == sign or -1 == sign
+
         self.__kernel = kernel
-        assert self.__kernel is not None
+        self.__sign = float(sign)
 
     def value(self, point: np.array, domain: Domain):
         raise NotImplementedError("Call to abstract method")
 
+    @property
     def kernel(self):
         return self.__kernel
+
+    @property
+    def sign(self):
+        return self.__sign
 
     def calculate_coefficients(self, point: np.array, domain: Domain):
         raise NotImplementedError("Call to abstract method")
@@ -294,8 +302,8 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
     NOMINAL_INTEGRATION_POINTS = 4
     SINGULARITY_INTEGRATION_POINTS = 6
 
-    def __init__(self, kernel: Kernel):
-        super().__init__(kernel)
+    def __init__(self, kernel: Kernel, sign: int = 1):
+        super().__init__(kernel, sign)
         self.__unknown_count = 0
         self.__unknown_values = np.empty(0)
 
@@ -309,12 +317,12 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
         for boundary_item in domain.get_border():
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
                 res = integrator.segment(
-                    self.kernel(), boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                    self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
                 )
                 coefficients = np.append(coefficients, [res])
             elif BoundaryConditionType.NEUMANN == boundary_item.type:
                 right_side_ret += integrator.segment(
-                    self.kernel(), boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                    self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
                 )
             elif BoundaryConditionType.ROBIN == boundary_item.type:
                 raise NotImplementedError("Not implemented")
@@ -322,7 +330,7 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
                 raise AttributeError("Not supported boundary element type")
         self.__unknown_count = len(coefficients)
 
-        return (coefficients, right_side_ret)
+        return (self.sign * coefficients, self.sign * right_side_ret)
 
     def propagate_solution(self, solution: np.array):
         self.__unknown_values = solution[: self.__unknown_count]
@@ -338,7 +346,7 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
 
         for boundary_item in domain.get_border():
             integral_value = integrator.segment(
-                self.kernel(), boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
             )
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
                 result += self.__unknown_values[unknown_index] * integral_value
@@ -353,15 +361,17 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
         assert self.__unknown_count == unknown_index, "Unknown could should match {} and {}".format(
             self.__unknown_count, unknown_index
         )
+        result *= self.sign
         return result
+
 
 # TODO: Add 1/2u term to value calculation
 class DoubleLayerBoundaryTerm(ExpressionTerm):
     NOMINAL_INTEGRATION_POINTS = 4
     SINGULARITY_INTEGRATION_POINTS = 6
 
-    def __init__(self, kernel: Kernel):
-        super().__init__(kernel)
+    def __init__(self, kernel: Kernel, sign: int = 1):
+        super().__init__(kernel, sign)
         self.__unknown_count = 0
         self.__unknown_values = np.empty(0)
 
@@ -375,11 +385,11 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
         for boundary_item in domain.get_border():
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
                 right_side_ret += integrator.segment(
-                    self.kernel(), boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                    self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
                 )
             elif BoundaryConditionType.NEUMANN == boundary_item.type:
                 res = integrator.segment(
-                    self.kernel(), boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                    self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
                 )
                 coefficients = np.append(coefficients, [res])
             elif BoundaryConditionType.ROBIN == boundary_item.type:
@@ -388,7 +398,7 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
                 raise AttributeError("Not supported boundary element type")
         self.__unknown_count = len(coefficients)
 
-        return (coefficients, right_side_ret)
+        return (self.sign * coefficients, self.sign * right_side_ret)
 
     def propagate_solution(self, solution: np.array):
         self.__unknown_values = solution[: self.__unknown_count]
@@ -404,7 +414,7 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
 
         for boundary_item in domain.get_border():
             integral_value = integrator.segment(
-                self.kernel(), boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
             )
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
                 result += boundary_item.value * integral_value
@@ -419,6 +429,7 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
         assert self.__unknown_count == unknown_index, "Unknown could should match {} and {}".format(
             self.__unknown_count, unknown_index
         )
+        result *= self.sign
         return result
 
 
@@ -427,8 +438,8 @@ class SingleLayerVolumeTerm(ExpressionTerm):
     NOMINAL_INTEGRATION_POINTS_PER_AXIS = 2
     SINGULARITY_INTEGRATION_POINTS_PER_AXIS = 4
 
-    def __init__(self, kernel: Kernel, value_function: Callable):
-        super().__init__(kernel)
+    def __init__(self, kernel: Kernel, value_function: Callable, sign: int = 1):
+        super().__init__(kernel, sign)
         assert value_function is not None
         self.__value_function = value_function
 
@@ -454,7 +465,8 @@ class SingleLayerVolumeTerm(ExpressionTerm):
         )
         result = 0.0
         for mesh_item in domain.get_mesh():
-            result += integrator.square(self.kernel(), self.__value_function, point, mesh_item)
+            result += integrator.square(self.kernel, self.__value_function, point, mesh_item)
+        result *= self.sign
         return result
 
 
@@ -483,9 +495,9 @@ def heat_source_function(point: np.array):
 
 
 expression = [
-    SingleLayerBoundaryTerm(Laplace2DKernel()),
     DoubleLayerBoundaryTerm(Laplace2DNormKernel()),
-    SingleLayerVolumeTerm(Laplace2DKernel(), heat_source_function),
+    SingleLayerBoundaryTerm(Laplace2DKernel(), -1),
+    SingleLayerVolumeTerm(Laplace2DKernel(), heat_source_function, -1),
 ]
 
 print("Create SLAE...")
