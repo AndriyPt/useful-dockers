@@ -365,10 +365,10 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
         return result
 
 
-# TODO: Add 1/2u term to value calculation
 class DoubleLayerBoundaryTerm(ExpressionTerm):
     NOMINAL_INTEGRATION_POINTS = 4
     SINGULARITY_INTEGRATION_POINTS = 6
+    EPS = 0.001
 
     def __init__(self, kernel: Kernel, sign: int = 1):
         super().__init__(kernel, sign)
@@ -383,14 +383,22 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
         right_side_ret = 0.0
 
         for boundary_item in domain.get_border():
+
+            mid_point = 0.5 * (boundary_item.element[1] - boundary_item.element[0])
+            is_same_point = Utils.distance(point, mid_point) < DoubleLayerBoundaryTerm.EPS
+
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
                 right_side_ret += integrator.segment(
                     self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
                 )
+                if is_same_point:
+                    right_side_ret += 0.5 * boundary_item.value
             elif BoundaryConditionType.NEUMANN == boundary_item.type:
                 res = integrator.segment(
                     self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
                 )
+                if is_same_point:
+                    res += 0.5
                 coefficients = np.append(coefficients, [res])
             elif BoundaryConditionType.ROBIN == boundary_item.type:
                 raise NotImplementedError("Not implemented")
