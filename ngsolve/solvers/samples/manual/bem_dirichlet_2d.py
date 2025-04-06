@@ -557,7 +557,7 @@ z_data = np.empty([CHART_STEPS, CHART_STEPS])
 for x_index in range(CHART_STEPS):
     for y_index in range(CHART_STEPS):
         point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
-        z_data[x_index][y_index] = sum(term.value(point, domain) for term in expression)
+        z_data[x_index][y_index] = -2.0 * sum(term.value(point, domain) for term in expression)
 
 # TODO: Work on numpy way of data visualization
 # z_data = sum(np.vectorize(term.value)(x_data, y_data) for term in expression)
