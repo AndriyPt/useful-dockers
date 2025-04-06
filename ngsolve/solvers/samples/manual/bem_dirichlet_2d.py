@@ -478,93 +478,92 @@ class SingleLayerVolumeTerm(ExpressionTerm):
         return result
 
 
-print("Define problem...")
+def main():
+    print("Define problem...")
 
-print("Define boundary conditions...")
+    print("Define boundary conditions...")
 
+    def boundary_value(point: np.array):
+        return 2.0 * point[1]
 
-def boundary_value(point: np.array):
-    return 2.0 * point[1]
+    domain = SquareDomain2D(
+        np.array([0.0, 0.0]),
+        np.array([1.0, 1.0]),
+        [BoundaryConditionType.DIRICHLET] * 4,
+        [boundary_value] * 4,
+        BORDER_ELEMENTS_COUNT,
+    )
 
+    print("Define heat source function...")
 
-domain = SquareDomain2D(
-    np.array([0.0, 0.0]),
-    np.array([1.0, 1.0]),
-    [BoundaryConditionType.DIRICHLET] * 4,
-    [boundary_value] * 4,
-    BORDER_ELEMENTS_COUNT,
-)
+    def heat_source_function(point: np.array):
+        return 2.0
 
-print("Define heat source function...")
+    expression = [
+        DoubleLayerBoundaryTerm(Laplace2DNormKernel()),
+        SingleLayerBoundaryTerm(Laplace2DKernel(), -1),
+        SingleLayerVolumeTerm(Laplace2DKernel(), heat_source_function, -1),
+    ]
 
+    print("Create SLAE...")
 
-def heat_source_function(point: np.array):
-    return 2.0
+    matrix = None
+    right_side = None
 
+    for point_info in domain.get_border():
+        right_side_value = 0.0
+        matrix_row = np.empty(0)
+        for term in expression:
+            coefficients, value = term.calculate_coefficients(point_info.point, domain)
+            right_side_value += value
+            matrix_row = np.hstack((matrix_row, coefficients))
+        if matrix is None:
+            matrix = matrix_row
+        else:
+            matrix = np.vstack((matrix, matrix_row))
+        if right_side is None:
+            right_side = np.array([right_side_value])
+        else:
+            right_side = np.append(right_side, [right_side_value])
 
-expression = [
-    DoubleLayerBoundaryTerm(Laplace2DNormKernel()),
-    SingleLayerBoundaryTerm(Laplace2DKernel(), -1),
-    SingleLayerVolumeTerm(Laplace2DKernel(), heat_source_function, -1),
-]
+    print("Solving SLAE...")
 
-print("Create SLAE...")
+    solution = np.linalg.solve(matrix, right_side)
 
-matrix = None
-right_side = None
+    print("Setting data back...")
 
-for point_info in domain.get_border():
-    right_side_value = 0.0
-    matrix_row = np.empty(0)
     for term in expression:
-        coefficients, value = term.calculate_coefficients(point_info.point, domain)
-        right_side_value += value
-        matrix_row = np.hstack((matrix_row, coefficients))
-    if matrix is None:
-        matrix = matrix_row
-    else:
-        matrix = np.vstack((matrix, matrix_row))
-    if right_side is None:
-        right_side = np.array([right_side_value])
-    else:
-        right_side = np.append(right_side, [right_side_value])
+        solution = term.propagate_solution(solution)
+
+    print("Visualizing data...")
+
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+
+    x_min = min(point_info.point[0] for point_info in domain.get_border())
+    y_min = min(point_info.point[1] for point_info in domain.get_border())
+    x_max = max(point_info.point[0] for point_info in domain.get_border())
+    y_max = max(point_info.point[1] for point_info in domain.get_border())
+
+    x_data_linear = np.linspace(x_min, x_max, CHART_STEPS)
+    y_data_linear = np.linspace(y_min, y_max, CHART_STEPS)
+
+    x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
+
+    z_data = np.empty([CHART_STEPS, CHART_STEPS])
+    for x_index in range(CHART_STEPS):
+        for y_index in range(CHART_STEPS):
+            point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
+            z_data[x_index][y_index] = -2.0 * sum(term.value(point, domain) for term in expression)
+
+    # TODO: Work on numpy way of data visualization
+    # z_data = sum(np.vectorize(term.value)(x_data, y_data) for term in expression)
+
+    surf = ax.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0)
+
+    plt.show()
+
+    print("Done!")
 
 
-print("Solving SLAE...")
-
-solution = np.linalg.solve(matrix, right_side)
-
-print("Setting data back...")
-
-for term in expression:
-    solution = term.propagate_solution(solution)
-
-print("Visualizing data...")
-
-fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-
-x_min = min(point_info.point[0] for point_info in domain.get_border())
-y_min = min(point_info.point[1] for point_info in domain.get_border())
-x_max = max(point_info.point[0] for point_info in domain.get_border())
-y_max = max(point_info.point[1] for point_info in domain.get_border())
-
-x_data_linear = np.linspace(x_min, x_max, CHART_STEPS)
-y_data_linear = np.linspace(y_min, y_max, CHART_STEPS)
-
-x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
-
-z_data = np.empty([CHART_STEPS, CHART_STEPS])
-for x_index in range(CHART_STEPS):
-    for y_index in range(CHART_STEPS):
-        point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
-        z_data[x_index][y_index] = -2.0 * sum(term.value(point, domain) for term in expression)
-
-# TODO: Work on numpy way of data visualization
-# z_data = sum(np.vectorize(term.value)(x_data, y_data) for term in expression)
-
-surf = ax.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0)
-
-plt.show()
-
-
-print("Done!")
+if "__main__" == __name__:
+    main()
