@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from enum import Enum
-import itertools
 from collections.abc import Callable
 import numpy as np
 import matplotlib.pyplot as plt
@@ -321,7 +320,7 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
                 )
                 coefficients = np.append(coefficients, [res])
             elif BoundaryConditionType.NEUMANN == boundary_item.type:
-                right_side_ret += integrator.segment(
+                right_side_ret += boundary_item.value * integrator.segment(
                     self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
                 )
             elif BoundaryConditionType.ROBIN == boundary_item.type:
@@ -384,11 +383,11 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
 
         for boundary_item in domain.get_border():
 
-            mid_point = 0.5 * (boundary_item.element[1] - boundary_item.element[0])
+            mid_point = 0.5 * (boundary_item.element[1] + boundary_item.element[0])
             is_same_point = Utils.distance(point, mid_point) < DoubleLayerBoundaryTerm.EPS
 
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
-                right_side_ret += integrator.segment(
+                right_side_ret += boundary_item.value * integrator.segment(
                     self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
                 )
                 if is_same_point:
