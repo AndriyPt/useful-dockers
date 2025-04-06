@@ -8,6 +8,7 @@ from matplotlib import cm
 
 CHART_STEPS = 25
 BORDER_ELEMENTS_COUNT = 10
+PLOT_ERROR = False
 
 
 class ExpressionTerm:
@@ -58,8 +59,14 @@ class Utils:
 
     @staticmethod
     def is_point_within_segment(point: np.array, begin: np.array, end: np.array, eps: float):
-        cross_product = Utils.cross_product(point - begin, end - begin)
-        return np.linalg.norm(cross_product) < eps
+        result = False
+        if Utils.distance(point, begin) < eps or Utils.distance(point, end) < eps:
+            result = True
+        else:
+            cross_product = Utils.cross_product(point - begin, end - begin)
+            if np.linalg.norm(cross_product) < eps:
+                result = True
+        return result
 
     @staticmethod
     def is_point_within_square(point: np.array, mesh: np.array, eps: float):
@@ -82,8 +89,13 @@ class Domain:
     def get_mesh(self):
         raise NotImplementedError("Call to abstract method")
 
+    def is_point_on_border(self, point: np.array):
+        raise NotImplementedError("Call to abstract method")
+
 
 class Domain2D(Domain):
+    POINT_LOCATION_EPSILON = 0.001
+
     def __init__(self):
         pass
 
@@ -114,6 +126,14 @@ class Domain2D(Domain):
 
     def get_mesh(self):
         raise NotImplementedError("Call to abstract method")
+
+    def is_point_on_border(self, point: np.array):
+        for border_point in self.get_border():
+            if Utils.is_point_within_segment(
+                point, border_point.element[0], border_point.element[1], Domain2D.POINT_LOCATION_EPSILON
+            ):
+                return True
+        return False
 
 
 class SquareDomain2D(Domain2D):
@@ -504,6 +524,17 @@ def main():
         SingleLayerVolumeTerm(Laplace2DKernel(), heat_source_function, -1),
     ]
 
+    def solution_value(point: np.array):
+        # TODO: Check this behaviour
+        result = -1.0 * sum(term.value(point, domain) for term in expression)
+        if domain.is_point_on_border(point):
+            result *= 2.0
+        corners = [np.array([0.0, 0.0]), np.array([1.0, 0.0]), np.array([1.0, 1.0]), np.array([0.0, 1.0])]
+        for corner in corners:
+            if Utils.distance(point, corner) < Domain2D.POINT_LOCATION_EPSILON:
+                result *= 2.0
+        return result
+
     print("Create SLAE...")
 
     matrix = None
@@ -527,7 +558,7 @@ def main():
 
     print("Solving SLAE...")
 
-    solution = np.linalg.solve(matrix, right_side)
+    solution = np.linalg.solve(matrix, -1.0 * right_side)
 
     print("Setting data back...")
 
@@ -552,7 +583,10 @@ def main():
     for x_index in range(CHART_STEPS):
         for y_index in range(CHART_STEPS):
             point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
-            z_data[x_index][y_index] = -2.0 * sum(term.value(point, domain) for term in expression)
+            if PLOT_ERROR:
+                z_data[x_index][y_index] = np.abs(solution_value(point) - boundary_value(point))
+            else:
+                z_data[x_index][y_index] = solution_value(point)
 
     # TODO: Work on numpy way of data visualization
     # z_data = sum(np.vectorize(term.value)(x_data, y_data) for term in expression)
