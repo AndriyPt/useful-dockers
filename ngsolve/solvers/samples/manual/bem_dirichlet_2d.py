@@ -498,12 +498,12 @@ class SingleLayerVolumeTerm(ExpressionTerm):
 
 
 def main_poisson_dirichlet():
-    print("Define problem...")
+    print("Define Dirichlet problem for Poisson equation...")
 
     print("Define boundary conditions...")
 
     def analytical_solution(point: np.array):
-        return 2.0 * point[1]
+        return 2 * (point[0] - 0.5) ** 2 + 2 * (point[1] - 0.5) ** 2
 
     def boundary_value(point: np.array):
         return analytical_solution(point)
@@ -519,7 +519,7 @@ def main_poisson_dirichlet():
     print("Define heat source function...")
 
     def heat_source_function(point: np.array):
-        return 0.0
+        return -8.0
 
     expression = [
         DoubleLayerBoundaryTerm(Laplace2DNormKernel()),
@@ -602,7 +602,7 @@ def main_poisson_dirichlet():
 
 
 def main_poisson_neumann():
-    print("Define problem...")
+    print("Define Neumann problem for Poisson equation...")
 
     print("Define boundary conditions...")
 
@@ -616,8 +616,7 @@ def main_poisson_neumann():
         return 4 * point[0] - 2
 
     def neumann_boundary_left_value(point: np.array):
-        # return 2 - 4 * point[0]
-        return 4 * point[0] - 2
+        return 2 - 4 * point[0]
 
     domain = SquareDomain2D(
         np.array([0.0, 0.0]),
@@ -635,111 +634,7 @@ def main_poisson_neumann():
     print("Define heat source function...")
 
     def heat_source_function(point: np.array):
-        return 8.0
-
-    expression = [
-        DoubleLayerBoundaryTerm(Laplace2DNormKernel()),
-        SingleLayerBoundaryTerm(Laplace2DKernel(), -1),
-        SingleLayerVolumeTerm(Laplace2DKernel(), heat_source_function, -1),
-    ]
-
-    def solution_value(point: np.array):
-        # TODO: Check this behaviour
-        result = -1.0 * sum(term.value(point, domain) for term in expression)
-        if domain.is_point_on_border(point):
-            result *= 2.0
-        corners = [np.array([0.0, 0.0]), np.array([1.0, 0.0]), np.array([1.0, 1.0]), np.array([0.0, 1.0])]
-        for corner in corners:
-            if Utils.distance(point, corner) < Domain2D.POINT_LOCATION_EPSILON:
-                result *= 2.0
-        return result
-
-    print("Create SLAE...")
-
-    matrix = None
-    right_side = None
-
-    for point_info in domain.get_border():
-        right_side_value = 0.0
-        matrix_row = np.empty(0)
-        for term in expression:
-            coefficients, value = term.calculate_coefficients(point_info.point, domain)
-            right_side_value += value
-            matrix_row = np.hstack((matrix_row, coefficients))
-        if matrix is None:
-            matrix = matrix_row
-        else:
-            matrix = np.vstack((matrix, matrix_row))
-        if right_side is None:
-            right_side = np.array([right_side_value])
-        else:
-            right_side = np.append(right_side, [right_side_value])
-
-    # print("Solving SLAE...")
-
-    # solution = np.linalg.solve(matrix, -1.0 * right_side)
-
-    # print("Setting data back...")
-
-    # for term in expression:
-    #     solution = term.propagate_solution(solution)
-
-    print("Visualizing data...")
-
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-
-    x_min = min(point_info.point[0] for point_info in domain.get_border())
-    y_min = min(point_info.point[1] for point_info in domain.get_border())
-    x_max = max(point_info.point[0] for point_info in domain.get_border())
-    y_max = max(point_info.point[1] for point_info in domain.get_border())
-
-    x_data_linear = np.linspace(x_min, x_max, CHART_STEPS)
-    y_data_linear = np.linspace(y_min, y_max, CHART_STEPS)
-
-    x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
-
-    z_data = np.empty([CHART_STEPS, CHART_STEPS])
-    for x_index in range(CHART_STEPS):
-        for y_index in range(CHART_STEPS):
-            point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
-            if PLOT_ERROR:
-                z_data[x_index][y_index] = np.abs(solution_value(point) - analytical_solution(point))
-            else:
-                z_data[x_index][y_index] = solution_value(point)
-
-    # TODO: Work on numpy way of data visualization
-    # z_data = sum(np.vectorize(term.value)(x_data, y_data) for term in expression)
-
-    surf = ax.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0)
-
-    plt.show()
-
-    print("Done!")
-
-
-def main_poisson_robin():
-    print("Define problem...")
-
-    print("Define boundary conditions...")
-
-    def dirichlet_boundary_value(point: np.array):
-        return (point[0] - 0.5) ** 2 + (point[1] - 0.5) ** 2
-
-    def neumann_boundary_value(point: np.array):
-        return 0.0
-
-    domain = SquareDomain2D(
-        np.array([0.0, 0.0]),
-        np.array([1.0, 1.0]),
-        [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
-        [dirichlet_boundary_value, neumann_boundary_value] * 2,
-        BORDER_ELEMENTS_COUNT,
-    )
-
-    print("Define heat source function...")
-
-    def heat_source_function(point: np.array):
-        return 2.0
+        return -8.0
 
     expression = [
         DoubleLayerBoundaryTerm(Laplace2DNormKernel()),
@@ -806,7 +701,125 @@ def main_poisson_robin():
     for x_index in range(CHART_STEPS):
         for y_index in range(CHART_STEPS):
             point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
-            z_data[x_index][y_index] = solution_value(point)
+            if PLOT_ERROR:
+                z_data[x_index][y_index] = np.abs(solution_value(point) - analytical_solution(point))
+            else:
+                z_data[x_index][y_index] = solution_value(point)
+
+    # TODO: Work on numpy way of data visualization
+    # z_data = sum(np.vectorize(term.value)(x_data, y_data) for term in expression)
+
+    surf = ax.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0)
+
+    plt.show()
+
+    print("Done!")
+
+
+def main_poisson_robin():
+    print("Define Robin problem for Poisson equation...")
+
+    print("Define boundary conditions...")
+
+    def analytical_solution(point: np.array):
+        return np.exp(point[0])
+
+    def dirichlet_boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    def neumann_boundary_right_value(point: np.array):
+        return np.exp(point[0])
+
+    def neumann_boundary_left_value(point: np.array):
+        return -np.exp(point[0])
+
+    domain = SquareDomain2D(
+        np.array([0.0, 0.0]),
+        np.array([1.0, 1.0]),
+        [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
+        [
+            dirichlet_boundary_value,
+            neumann_boundary_right_value,
+            dirichlet_boundary_value,
+            neumann_boundary_left_value,
+        ],
+        BORDER_ELEMENTS_COUNT,
+    )
+
+    print("Define heat source function...")
+
+    def heat_source_function(point: np.array):
+        return -np.exp(point[0])
+
+    expression = [
+        DoubleLayerBoundaryTerm(Laplace2DNormKernel()),
+        SingleLayerBoundaryTerm(Laplace2DKernel(), -1),
+        SingleLayerVolumeTerm(Laplace2DKernel(), heat_source_function, -1),
+    ]
+
+    def solution_value(point: np.array):
+        # TODO: Check this behaviour
+        result = -1.0 * sum(term.value(point, domain) for term in expression)
+        if domain.is_point_on_border(point):
+            result *= 2.0
+        corners = [np.array([0.0, 0.0]), np.array([1.0, 0.0]), np.array([1.0, 1.0]), np.array([0.0, 1.0])]
+        for corner in corners:
+            if Utils.distance(point, corner) < Domain2D.POINT_LOCATION_EPSILON:
+                result *= 2.0
+        return result
+
+    print("Create SLAE...")
+
+    matrix = None
+    right_side = None
+
+    for point_info in domain.get_border():
+        right_side_value = 0.0
+        matrix_row = np.empty(0)
+        for term in expression:
+            coefficients, value = term.calculate_coefficients(point_info.point, domain)
+            right_side_value += value
+            matrix_row = np.hstack((matrix_row, coefficients))
+        if matrix is None:
+            matrix = matrix_row
+        else:
+            matrix = np.vstack((matrix, matrix_row))
+        if right_side is None:
+            right_side = np.array([right_side_value])
+        else:
+            right_side = np.append(right_side, [right_side_value])
+
+    print("Solving SLAE...")
+
+    solution = np.linalg.solve(matrix, -1.0 * right_side)
+
+    print("Setting data back...")
+
+    for term in expression:
+        solution = term.propagate_solution(solution)
+
+    print("Visualizing data...")
+
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+
+    x_min = min(point_info.point[0] for point_info in domain.get_border())
+    y_min = min(point_info.point[1] for point_info in domain.get_border())
+    x_max = max(point_info.point[0] for point_info in domain.get_border())
+    y_max = max(point_info.point[1] for point_info in domain.get_border())
+
+    x_data_linear = np.linspace(x_min, x_max, CHART_STEPS)
+    y_data_linear = np.linspace(y_min, y_max, CHART_STEPS)
+
+    x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
+
+    z_data = np.empty([CHART_STEPS, CHART_STEPS])
+    for x_index in range(CHART_STEPS):
+        for y_index in range(CHART_STEPS):
+            point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
+            if PLOT_ERROR:
+                z_data[x_index][y_index] = np.abs(solution_value(point) - analytical_solution(point))
+            else:
+                z_data[x_index][y_index] = solution_value(point)
 
     # TODO: Work on numpy way of data visualization
     # z_data = sum(np.vectorize(term.value)(x_data, y_data) for term in expression)
@@ -819,4 +832,4 @@ def main_poisson_robin():
 
 
 if "__main__" == __name__:
-    main_poisson_neumann()
+    main_poisson_robin()
