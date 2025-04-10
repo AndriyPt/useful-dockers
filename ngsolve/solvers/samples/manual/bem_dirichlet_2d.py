@@ -29,6 +29,7 @@ class Point2DInfo:
         self.normal = np.zeros(2)
         self.element = np.empty(0)
         self.value = 0.0
+        self.robin_coeff = 0.0
 
 
 class Utils:
@@ -116,7 +117,10 @@ class Domain2D(Domain):
             # TODO: Check if it is always external normal
             item.normal = np.array([border_vector[1], -border_vector[0]])
             item.element = np.array([border_elements[index], border_elements[index + 1]])
-            item.value = value_function(item.point)
+            if BoundaryConditionType.ROBIN == type:
+                item.robin_coeff, item.value = value_function(item.point)
+            else:
+                item.value = value_function(item.point)
 
             result.append(item)
         return result
@@ -312,6 +316,9 @@ class ExpressionTerm:
     def calculate_coefficients(self, point: np.array, domain: Domain):
         raise NotImplementedError("Call to abstract method")
 
+    def calculate_for_robin(self, point: np.array, domain: Domain):
+        raise NotImplementedError("Call to abstract method")
+
     def propagate_solution(self, solution: np.array):
         raise NotImplementedError("Call to abstract method")
 
@@ -320,6 +327,7 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
 
     NOMINAL_INTEGRATION_POINTS = 4
     SINGULARITY_INTEGRATION_POINTS = 6
+    EPS = 0.001
 
     def __init__(self, kernel: Kernel, sign: int = 1):
         super().__init__(kernel, sign)
@@ -334,7 +342,7 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
         right_side_ret = 0.0
 
         for boundary_item in domain.get_border():
-            if BoundaryConditionType.DIRICHLET == boundary_item.type:
+            if boundary_item.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.ROBIN]:
                 res = integrator.segment(
                     self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
                 )
@@ -343,8 +351,30 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
                 right_side_ret += boundary_item.value * integrator.segment(
                     self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
                 )
+            else:
+                raise AttributeError("Not supported boundary element type")
+        self.__unknown_count = len(coefficients)
+
+        return (self.sign * coefficients, self.sign * right_side_ret)
+
+    def calculate_for_robin(self, point: np.array, domain: Domain):
+        coefficients = np.empty(0)
+        right_side_ret = 0.0
+
+        for boundary_item in domain.get_border():
+            mid_point = 0.5 * (boundary_item.element[1] + boundary_item.element[0])
+            is_same_point = Utils.distance(point, mid_point) < SingleLayerBoundaryTerm.EPS
+
+            if BoundaryConditionType.DIRICHLET == boundary_item.type:
+                coefficients = np.append(coefficients, [0.0])
+            elif BoundaryConditionType.NEUMANN == boundary_item.type:
+                pass
             elif BoundaryConditionType.ROBIN == boundary_item.type:
-                raise NotImplementedError("Not implemented")
+                if is_same_point:
+                    right_side_ret += boundary_item.value
+                    coefficients = np.append(coefficients, [boundary_item.robin_coeff])
+                else:
+                    coefficients = np.append(coefficients, [0.0])
             else:
                 raise AttributeError("Not supported boundary element type")
         self.__unknown_count = len(coefficients)
@@ -367,13 +397,11 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
             integral_value = integrator.segment(
                 self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
             )
-            if BoundaryConditionType.DIRICHLET == boundary_item.type:
+            if boundary_item.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.ROBIN]:
                 result += self.__unknown_values[unknown_index] * integral_value
                 unknown_index += 1
             elif BoundaryConditionType.NEUMANN == boundary_item.type:
                 result += boundary_item.value * integral_value
-            elif BoundaryConditionType.ROBIN == boundary_item.type:
-                raise NotImplementedError("Not implemented")
             else:
                 raise AttributeError("Not supported boundary element type")
 
@@ -412,20 +440,40 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
                 )
                 if is_same_point:
                     right_side_ret += 0.5 * boundary_item.value
-            elif BoundaryConditionType.NEUMANN == boundary_item.type:
+            elif boundary_item.type in [BoundaryConditionType.NEUMANN, BoundaryConditionType.ROBIN]:
                 res = integrator.segment(
                     self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
                 )
                 if is_same_point:
                     res += 0.5
                 coefficients = np.append(coefficients, [res])
-            elif BoundaryConditionType.ROBIN == boundary_item.type:
-                raise NotImplementedError("Not implemented")
             else:
                 raise AttributeError("Not supported boundary element type")
         self.__unknown_count = len(coefficients)
 
         return (self.sign * coefficients, self.sign * right_side_ret)
+
+    def calculate_for_robin(self, point: np.array, domain: Domain):
+        coefficients = np.empty(0)
+
+        for boundary_item in domain.get_border():
+            mid_point = 0.5 * (boundary_item.element[1] + boundary_item.element[0])
+            is_same_point = Utils.distance(point, mid_point) < SingleLayerBoundaryTerm.EPS
+
+            if BoundaryConditionType.DIRICHLET == boundary_item.type:
+                pass
+            elif BoundaryConditionType.NEUMANN == boundary_item.type:
+                coefficients = np.append(coefficients, [0.0])
+            elif BoundaryConditionType.ROBIN == boundary_item.type:
+                if is_same_point:
+                    coefficients = np.append(coefficients, [1.0])
+                else:
+                    coefficients = np.append(coefficients, [0.0])
+            else:
+                raise AttributeError("Not supported boundary element type")
+        self.__unknown_count = len(coefficients)
+
+        return (self.sign * coefficients, 0.0)
 
     def propagate_solution(self, solution: np.array):
         self.__unknown_values = solution[: self.__unknown_count]
@@ -445,11 +493,9 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
             )
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
                 result += boundary_item.value * integral_value
-            elif BoundaryConditionType.NEUMANN == boundary_item.type:
+            elif boundary_item.type in [BoundaryConditionType.NEUMANN, BoundaryConditionType.ROBIN]:
                 result += self.__unknown_values[unknown_index] * integral_value
                 unknown_index += 1
-            elif BoundaryConditionType.ROBIN == boundary_item.type:
-                raise NotImplementedError("Not implemented")
             else:
                 raise AttributeError("Not supported boundary element type")
 
@@ -478,6 +524,10 @@ class SingleLayerVolumeTerm(ExpressionTerm):
         right_side_ret = self.value(point, domain)
 
         return (coefficients, right_side_ret)
+
+    def calculate_for_robin(self, point: np.array, domain: Domain):
+        coefficients = np.empty(0)
+        return (coefficients, 0.0)
 
     def propagate_solution(self, solution: np.array):
         return solution
@@ -727,21 +777,21 @@ def main_poisson_robin():
     def dirichlet_boundary_value(point: np.array):
         return analytical_solution(point)
 
-    def neumann_boundary_right_value(point: np.array):
-        return np.exp(point[0])
+    def robin_boundary_right_value(point: np.array):
+        return (1.0, 0.0)
 
-    def neumann_boundary_left_value(point: np.array):
-        return -np.exp(point[0])
+    def robin_boundary_left_value(point: np.array):
+        return (-1.0, 0.0)
 
     domain = SquareDomain2D(
         np.array([0.0, 0.0]),
         np.array([1.0, 1.0]),
-        [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
+        [BoundaryConditionType.DIRICHLET, BoundaryConditionType.ROBIN] * 2,
         [
             dirichlet_boundary_value,
-            neumann_boundary_right_value,
+            robin_boundary_right_value,
             dirichlet_boundary_value,
-            neumann_boundary_left_value,
+            robin_boundary_left_value,
         ],
         BORDER_ELEMENTS_COUNT,
     )
@@ -787,6 +837,15 @@ def main_poisson_robin():
         if right_side is None:
             right_side = np.array([right_side_value])
         else:
+            right_side = np.append(right_side, [right_side_value])
+        if BoundaryConditionType.ROBIN == point_info.type:
+            right_side_value = 0.0
+            matrix_row = np.empty(0)
+            for term in expression:
+                coefficients, value = term.calculate_for_robin(point_info.point, domain)
+                right_side_value += value
+                matrix_row = np.hstack((matrix_row, coefficients))
+            matrix = np.vstack((matrix, matrix_row))
             right_side = np.append(right_side, [right_side_value])
 
     print("Solving SLAE...")
