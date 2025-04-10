@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 
+import sys
 from enum import Enum
 from collections.abc import Callable
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
-CHART_STEPS = 25
-BORDER_ELEMENTS_COUNT = 10
-PLOT_ERROR = False
+
+class GlobalSettings(object):
+    CHART_STEPS = 25
+    BORDER_ELEMENTS_COUNT = 10
+    PLOT_ERROR = False
+    EXAMPLE_TYPE = 1  # 1 - Dirichlet, 2 - Neumann, 3 - Robin
 
 
 class ExpressionTerm:
@@ -563,7 +567,7 @@ def main_poisson_dirichlet():
         np.array([1.0, 1.0]),
         [BoundaryConditionType.DIRICHLET] * 4,
         [boundary_value] * 4,
-        BORDER_ELEMENTS_COUNT,
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
     )
 
     print("Define heat source function...")
@@ -627,16 +631,16 @@ def main_poisson_dirichlet():
     x_max = max(point_info.point[0] for point_info in domain.get_border())
     y_max = max(point_info.point[1] for point_info in domain.get_border())
 
-    x_data_linear = np.linspace(x_min, x_max, CHART_STEPS)
-    y_data_linear = np.linspace(y_min, y_max, CHART_STEPS)
+    x_data_linear = np.linspace(x_min, x_max, GlobalSettings.CHART_STEPS)
+    y_data_linear = np.linspace(y_min, y_max, GlobalSettings.CHART_STEPS)
 
     x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
 
-    z_data = np.empty([CHART_STEPS, CHART_STEPS])
-    for x_index in range(CHART_STEPS):
-        for y_index in range(CHART_STEPS):
+    z_data = np.empty([GlobalSettings.CHART_STEPS, GlobalSettings.CHART_STEPS])
+    for x_index in range(GlobalSettings.CHART_STEPS):
+        for y_index in range(GlobalSettings.CHART_STEPS):
             point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
-            if PLOT_ERROR:
+            if GlobalSettings.PLOT_ERROR:
                 z_data[x_index][y_index] = np.abs(solution_value(point) - analytical_solution(point))
             else:
                 z_data[x_index][y_index] = solution_value(point)
@@ -678,7 +682,7 @@ def main_poisson_neumann():
             dirichlet_boundary_value,
             neumann_boundary_left_value,
         ],
-        BORDER_ELEMENTS_COUNT,
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
     )
 
     print("Define heat source function...")
@@ -742,16 +746,16 @@ def main_poisson_neumann():
     x_max = max(point_info.point[0] for point_info in domain.get_border())
     y_max = max(point_info.point[1] for point_info in domain.get_border())
 
-    x_data_linear = np.linspace(x_min, x_max, CHART_STEPS)
-    y_data_linear = np.linspace(y_min, y_max, CHART_STEPS)
+    x_data_linear = np.linspace(x_min, x_max, GlobalSettings.CHART_STEPS)
+    y_data_linear = np.linspace(y_min, y_max, GlobalSettings.CHART_STEPS)
 
     x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
 
-    z_data = np.empty([CHART_STEPS, CHART_STEPS])
-    for x_index in range(CHART_STEPS):
-        for y_index in range(CHART_STEPS):
+    z_data = np.empty([GlobalSettings.CHART_STEPS, GlobalSettings.CHART_STEPS])
+    for x_index in range(GlobalSettings.CHART_STEPS):
+        for y_index in range(GlobalSettings.CHART_STEPS):
             point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
-            if PLOT_ERROR:
+            if GlobalSettings.PLOT_ERROR:
                 z_data[x_index][y_index] = np.abs(solution_value(point) - analytical_solution(point))
             else:
                 z_data[x_index][y_index] = solution_value(point)
@@ -793,7 +797,7 @@ def main_poisson_robin():
             dirichlet_boundary_value,
             robin_boundary_left_value,
         ],
-        BORDER_ELEMENTS_COUNT,
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
     )
 
     print("Define heat source function...")
@@ -866,16 +870,16 @@ def main_poisson_robin():
     x_max = max(point_info.point[0] for point_info in domain.get_border())
     y_max = max(point_info.point[1] for point_info in domain.get_border())
 
-    x_data_linear = np.linspace(x_min, x_max, CHART_STEPS)
-    y_data_linear = np.linspace(y_min, y_max, CHART_STEPS)
+    x_data_linear = np.linspace(x_min, x_max, GlobalSettings.CHART_STEPS)
+    y_data_linear = np.linspace(y_min, y_max, GlobalSettings.CHART_STEPS)
 
     x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
 
-    z_data = np.empty([CHART_STEPS, CHART_STEPS])
-    for x_index in range(CHART_STEPS):
-        for y_index in range(CHART_STEPS):
+    z_data = np.empty([GlobalSettings.CHART_STEPS, GlobalSettings.CHART_STEPS])
+    for x_index in range(GlobalSettings.CHART_STEPS):
+        for y_index in range(GlobalSettings.CHART_STEPS):
             point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
-            if PLOT_ERROR:
+            if GlobalSettings.PLOT_ERROR:
                 z_data[x_index][y_index] = np.abs(solution_value(point) - analytical_solution(point))
             else:
                 z_data[x_index][y_index] = solution_value(point)
@@ -891,4 +895,11 @@ def main_poisson_robin():
 
 
 if "__main__" == __name__:
-    main_poisson_robin()
+    if 1 == GlobalSettings.EXAMPLE_TYPE:
+        main_poisson_dirichlet()
+    elif 2 == GlobalSettings.EXAMPLE_TYPE:
+        main_poisson_neumann()
+    elif 3 == GlobalSettings.EXAMPLE_TYPE:
+        main_poisson_robin()
+    else:
+        sys.exit(1)
