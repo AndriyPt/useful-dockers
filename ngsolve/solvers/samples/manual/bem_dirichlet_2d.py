@@ -551,7 +551,100 @@ class SingleLayerVolumeTerm(ExpressionTerm):
         return result
 
 
-def main_poisson_dirichlet():
+class Problem(object):
+    def __init__(self, expression: list[ExpressionTerm], domain: Domain, analytical_solution: Callable = None):
+        assert expression is not None
+        assert domain is not None
+        self.__expression = expression
+        self.__domain = domain
+        self.__analytical_solution = analytical_solution
+
+    def solution_value(self, point: np.array):
+        # TODO: Check this behaviour
+        result = -1.0 * sum(term.value(point, self.__domain) for term in self.__expression)
+        if self.__domain.is_point_on_border(point):
+            result *= 2.0
+        corners = [np.array([0.0, 0.0]), np.array([1.0, 0.0]), np.array([1.0, 1.0]), np.array([0.0, 1.0])]
+        for corner in corners:
+            if Utils.distance(point, corner) < Domain2D.POINT_LOCATION_EPSILON:
+                result *= 2.0
+        return result
+
+    def calculate(self):
+        print("Create SLAE...")
+
+        matrix = None
+        right_side = None
+
+        for point_info in self.__domain.get_border():
+            right_side_value = 0.0
+            matrix_row = np.empty(0)
+            for term in self.__expression:
+                coefficients, value = term.calculate_coefficients(point_info.point, self.__domain)
+                right_side_value += value
+                matrix_row = np.hstack((matrix_row, coefficients))
+            if matrix is None:
+                matrix = matrix_row
+            else:
+                matrix = np.vstack((matrix, matrix_row))
+            if right_side is None:
+                right_side = np.array([right_side_value])
+            else:
+                right_side = np.append(right_side, [right_side_value])
+            if BoundaryConditionType.ROBIN == point_info.type:
+                right_side_value = 0.0
+                matrix_row = np.empty(0)
+                for term in self.__expression:
+                    coefficients, value = term.calculate_for_robin(point_info.point, self.__domain)
+                    right_side_value += value
+                    matrix_row = np.hstack((matrix_row, coefficients))
+                matrix = np.vstack((matrix, matrix_row))
+                right_side = np.append(right_side, [right_side_value])
+
+        print("Solving SLAE...")
+
+        solution = np.linalg.solve(matrix, -1.0 * right_side)
+
+        print("Setting data back...")
+
+        for term in self.__expression:
+            solution = term.propagate_solution(solution)
+
+    def plot(self):
+        print("Visualizing data...")
+
+        fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+
+        x_min = min(point_info.point[0] for point_info in self.__domain.get_border())
+        y_min = min(point_info.point[1] for point_info in self.__domain.get_border())
+        x_max = max(point_info.point[0] for point_info in self.__domain.get_border())
+        y_max = max(point_info.point[1] for point_info in self.__domain.get_border())
+
+        x_data_linear = np.linspace(x_min, x_max, GlobalSettings.CHART_STEPS)
+        y_data_linear = np.linspace(y_min, y_max, GlobalSettings.CHART_STEPS)
+
+        x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
+
+        z_data = np.empty([GlobalSettings.CHART_STEPS, GlobalSettings.CHART_STEPS])
+        for x_index in range(GlobalSettings.CHART_STEPS):
+            for y_index in range(GlobalSettings.CHART_STEPS):
+                point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
+                if GlobalSettings.PLOT_ERROR and self.__analytical_solution is not None:
+                    z_data[x_index][y_index] = np.abs(self.solution_value(point) - self.__analytical_solution(point))
+                else:
+                    z_data[x_index][y_index] = self.solution_value(point)
+
+        # TODO: Work on numpy way of data visualization
+        # z_data = sum(np.vectorize(term.value)(x_data, y_data) for term in expression)
+
+        surf = ax.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0)
+
+        plt.show()
+
+        print("Done!")
+
+
+def init_poisson_dirichlet():
     print("Define Dirichlet problem for Poisson equation...")
 
     print("Define boundary conditions...")
@@ -581,81 +674,11 @@ def main_poisson_dirichlet():
         SingleLayerVolumeTerm(Laplace2DKernel(), heat_source_function, -1),
     ]
 
-    def solution_value(point: np.array):
-        # TODO: Check this behaviour
-        result = -1.0 * sum(term.value(point, domain) for term in expression)
-        if domain.is_point_on_border(point):
-            result *= 2.0
-        corners = [np.array([0.0, 0.0]), np.array([1.0, 0.0]), np.array([1.0, 1.0]), np.array([0.0, 1.0])]
-        for corner in corners:
-            if Utils.distance(point, corner) < Domain2D.POINT_LOCATION_EPSILON:
-                result *= 2.0
-        return result
-
-    print("Create SLAE...")
-
-    matrix = None
-    right_side = None
-
-    for point_info in domain.get_border():
-        right_side_value = 0.0
-        matrix_row = np.empty(0)
-        for term in expression:
-            coefficients, value = term.calculate_coefficients(point_info.point, domain)
-            right_side_value += value
-            matrix_row = np.hstack((matrix_row, coefficients))
-        if matrix is None:
-            matrix = matrix_row
-        else:
-            matrix = np.vstack((matrix, matrix_row))
-        if right_side is None:
-            right_side = np.array([right_side_value])
-        else:
-            right_side = np.append(right_side, [right_side_value])
-
-    print("Solving SLAE...")
-
-    solution = np.linalg.solve(matrix, -1.0 * right_side)
-
-    print("Setting data back...")
-
-    for term in expression:
-        solution = term.propagate_solution(solution)
-
-    print("Visualizing data...")
-
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-
-    x_min = min(point_info.point[0] for point_info in domain.get_border())
-    y_min = min(point_info.point[1] for point_info in domain.get_border())
-    x_max = max(point_info.point[0] for point_info in domain.get_border())
-    y_max = max(point_info.point[1] for point_info in domain.get_border())
-
-    x_data_linear = np.linspace(x_min, x_max, GlobalSettings.CHART_STEPS)
-    y_data_linear = np.linspace(y_min, y_max, GlobalSettings.CHART_STEPS)
-
-    x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
-
-    z_data = np.empty([GlobalSettings.CHART_STEPS, GlobalSettings.CHART_STEPS])
-    for x_index in range(GlobalSettings.CHART_STEPS):
-        for y_index in range(GlobalSettings.CHART_STEPS):
-            point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
-            if GlobalSettings.PLOT_ERROR:
-                z_data[x_index][y_index] = np.abs(solution_value(point) - analytical_solution(point))
-            else:
-                z_data[x_index][y_index] = solution_value(point)
-
-    # TODO: Work on numpy way of data visualization
-    # z_data = sum(np.vectorize(term.value)(x_data, y_data) for term in expression)
-
-    surf = ax.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0)
-
-    plt.show()
-
-    print("Done!")
+    problem = Problem(expression, domain, analytical_solution)
+    return problem
 
 
-def main_poisson_neumann():
+def init_poisson_neumann():
     print("Define Neumann problem for Poisson equation...")
 
     print("Define boundary conditions...")
@@ -696,81 +719,11 @@ def main_poisson_neumann():
         SingleLayerVolumeTerm(Laplace2DKernel(), heat_source_function, -1),
     ]
 
-    def solution_value(point: np.array):
-        # TODO: Check this behaviour
-        result = -1.0 * sum(term.value(point, domain) for term in expression)
-        if domain.is_point_on_border(point):
-            result *= 2.0
-        corners = [np.array([0.0, 0.0]), np.array([1.0, 0.0]), np.array([1.0, 1.0]), np.array([0.0, 1.0])]
-        for corner in corners:
-            if Utils.distance(point, corner) < Domain2D.POINT_LOCATION_EPSILON:
-                result *= 2.0
-        return result
-
-    print("Create SLAE...")
-
-    matrix = None
-    right_side = None
-
-    for point_info in domain.get_border():
-        right_side_value = 0.0
-        matrix_row = np.empty(0)
-        for term in expression:
-            coefficients, value = term.calculate_coefficients(point_info.point, domain)
-            right_side_value += value
-            matrix_row = np.hstack((matrix_row, coefficients))
-        if matrix is None:
-            matrix = matrix_row
-        else:
-            matrix = np.vstack((matrix, matrix_row))
-        if right_side is None:
-            right_side = np.array([right_side_value])
-        else:
-            right_side = np.append(right_side, [right_side_value])
-
-    print("Solving SLAE...")
-
-    solution = np.linalg.solve(matrix, -1.0 * right_side)
-
-    print("Setting data back...")
-
-    for term in expression:
-        solution = term.propagate_solution(solution)
-
-    print("Visualizing data...")
-
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-
-    x_min = min(point_info.point[0] for point_info in domain.get_border())
-    y_min = min(point_info.point[1] for point_info in domain.get_border())
-    x_max = max(point_info.point[0] for point_info in domain.get_border())
-    y_max = max(point_info.point[1] for point_info in domain.get_border())
-
-    x_data_linear = np.linspace(x_min, x_max, GlobalSettings.CHART_STEPS)
-    y_data_linear = np.linspace(y_min, y_max, GlobalSettings.CHART_STEPS)
-
-    x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
-
-    z_data = np.empty([GlobalSettings.CHART_STEPS, GlobalSettings.CHART_STEPS])
-    for x_index in range(GlobalSettings.CHART_STEPS):
-        for y_index in range(GlobalSettings.CHART_STEPS):
-            point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
-            if GlobalSettings.PLOT_ERROR:
-                z_data[x_index][y_index] = np.abs(solution_value(point) - analytical_solution(point))
-            else:
-                z_data[x_index][y_index] = solution_value(point)
-
-    # TODO: Work on numpy way of data visualization
-    # z_data = sum(np.vectorize(term.value)(x_data, y_data) for term in expression)
-
-    surf = ax.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0)
-
-    plt.show()
-
-    print("Done!")
+    problem = Problem(expression, domain, analytical_solution)
+    return problem
 
 
-def main_poisson_robin():
+def init_poisson_robin():
     print("Define Robin problem for Poisson equation...")
 
     print("Define boundary conditions...")
@@ -811,95 +764,20 @@ def main_poisson_robin():
         SingleLayerVolumeTerm(Laplace2DKernel(), heat_source_function, -1),
     ]
 
-    def solution_value(point: np.array):
-        # TODO: Check this behaviour
-        result = -1.0 * sum(term.value(point, domain) for term in expression)
-        if domain.is_point_on_border(point):
-            result *= 2.0
-        corners = [np.array([0.0, 0.0]), np.array([1.0, 0.0]), np.array([1.0, 1.0]), np.array([0.0, 1.0])]
-        for corner in corners:
-            if Utils.distance(point, corner) < Domain2D.POINT_LOCATION_EPSILON:
-                result *= 2.0
-        return result
-
-    print("Create SLAE...")
-
-    matrix = None
-    right_side = None
-
-    for point_info in domain.get_border():
-        right_side_value = 0.0
-        matrix_row = np.empty(0)
-        for term in expression:
-            coefficients, value = term.calculate_coefficients(point_info.point, domain)
-            right_side_value += value
-            matrix_row = np.hstack((matrix_row, coefficients))
-        if matrix is None:
-            matrix = matrix_row
-        else:
-            matrix = np.vstack((matrix, matrix_row))
-        if right_side is None:
-            right_side = np.array([right_side_value])
-        else:
-            right_side = np.append(right_side, [right_side_value])
-        if BoundaryConditionType.ROBIN == point_info.type:
-            right_side_value = 0.0
-            matrix_row = np.empty(0)
-            for term in expression:
-                coefficients, value = term.calculate_for_robin(point_info.point, domain)
-                right_side_value += value
-                matrix_row = np.hstack((matrix_row, coefficients))
-            matrix = np.vstack((matrix, matrix_row))
-            right_side = np.append(right_side, [right_side_value])
-
-    print("Solving SLAE...")
-
-    solution = np.linalg.solve(matrix, -1.0 * right_side)
-
-    print("Setting data back...")
-
-    for term in expression:
-        solution = term.propagate_solution(solution)
-
-    print("Visualizing data...")
-
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-
-    x_min = min(point_info.point[0] for point_info in domain.get_border())
-    y_min = min(point_info.point[1] for point_info in domain.get_border())
-    x_max = max(point_info.point[0] for point_info in domain.get_border())
-    y_max = max(point_info.point[1] for point_info in domain.get_border())
-
-    x_data_linear = np.linspace(x_min, x_max, GlobalSettings.CHART_STEPS)
-    y_data_linear = np.linspace(y_min, y_max, GlobalSettings.CHART_STEPS)
-
-    x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
-
-    z_data = np.empty([GlobalSettings.CHART_STEPS, GlobalSettings.CHART_STEPS])
-    for x_index in range(GlobalSettings.CHART_STEPS):
-        for y_index in range(GlobalSettings.CHART_STEPS):
-            point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
-            if GlobalSettings.PLOT_ERROR:
-                z_data[x_index][y_index] = np.abs(solution_value(point) - analytical_solution(point))
-            else:
-                z_data[x_index][y_index] = solution_value(point)
-
-    # TODO: Work on numpy way of data visualization
-    # z_data = sum(np.vectorize(term.value)(x_data, y_data) for term in expression)
-
-    surf = ax.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0)
-
-    plt.show()
-
-    print("Done!")
+    problem = Problem(expression, domain, analytical_solution)
+    return problem
 
 
 if "__main__" == __name__:
+    problem = None
     if 1 == GlobalSettings.EXAMPLE_TYPE:
-        main_poisson_dirichlet()
+        problem = init_poisson_dirichlet()
     elif 2 == GlobalSettings.EXAMPLE_TYPE:
-        main_poisson_neumann()
+        problem = init_poisson_neumann()
     elif 3 == GlobalSettings.EXAMPLE_TYPE:
-        main_poisson_robin()
-    else:
-        sys.exit(1)
+        problem = init_poisson_robin()
+
+    assert problem is not None
+
+    problem.calculate()
+    problem.plot()
