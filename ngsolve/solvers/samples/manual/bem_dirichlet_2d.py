@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import sys
 from enum import Enum
 from collections.abc import Callable
 import numpy as np
@@ -10,9 +9,9 @@ from matplotlib import cm
 
 class GlobalSettings(object):
     CHART_STEPS = 25
-    BORDER_ELEMENTS_COUNT = 10
+    BORDER_ELEMENTS_COUNT = 1
     PLOT_ERROR = False
-    EXAMPLE_TYPE = 1  # 1 - Dirichlet, 2 - Neumann, 3 - Robin
+    EXAMPLE_TYPE = 3  # 1 - Dirichlet, 2 - Neumann, 3 - Robin
 
 
 class ExpressionTerm:
@@ -729,16 +728,16 @@ def init_poisson_robin():
     print("Define boundary conditions...")
 
     def analytical_solution(point: np.array):
-        return np.exp(point[0])
+        return point[0] + point[1] + 1.0
 
     def dirichlet_boundary_value(point: np.array):
         return analytical_solution(point)
 
     def robin_boundary_right_value(point: np.array):
-        return (1.0, 0.0)
+        return (1.0 / analytical_solution(point), 0.0)
 
     def robin_boundary_left_value(point: np.array):
-        return (-1.0, 0.0)
+        return (-1.0 / analytical_solution(point), 0.0)
 
     domain = SquareDomain2D(
         np.array([0.0, 0.0]),
@@ -756,7 +755,7 @@ def init_poisson_robin():
     print("Define heat source function...")
 
     def heat_source_function(point: np.array):
-        return -np.exp(point[0])
+        return 0.0
 
     expression = [
         DoubleLayerBoundaryTerm(Laplace2DNormKernel()),
