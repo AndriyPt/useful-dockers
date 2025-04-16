@@ -362,7 +362,6 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
 
     def calculate_for_robin(self, point: np.array, domain: Domain):
         coefficients = np.empty(0)
-        right_side_ret = 0.0
 
         for boundary_item in domain.get_border():
             mid_point = 0.5 * (boundary_item.element[1] + boundary_item.element[0])
@@ -374,15 +373,14 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
                 pass
             elif BoundaryConditionType.ROBIN == boundary_item.type:
                 if is_same_point:
-                    right_side_ret += boundary_item.value
-                    coefficients = np.append(coefficients, [boundary_item.robin_coeff])
+                    coefficients = np.append(coefficients, [1.0])
                 else:
                     coefficients = np.append(coefficients, [0.0])
             else:
                 raise AttributeError("Not supported boundary element type")
         self.__unknown_count = len(coefficients)
 
-        return (self.sign * coefficients, self.sign * right_side_ret)
+        return (self.sign * coefficients, 0.0)
 
     def propagate_solution(self, solution: np.array):
         self.__unknown_values = solution[: self.__unknown_count]
@@ -458,6 +456,7 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
 
     def calculate_for_robin(self, point: np.array, domain: Domain):
         coefficients = np.empty(0)
+        right_side_ret = 0.0
 
         for boundary_item in domain.get_border():
             mid_point = 0.5 * (boundary_item.element[1] + boundary_item.element[0])
@@ -469,14 +468,15 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
                 coefficients = np.append(coefficients, [0.0])
             elif BoundaryConditionType.ROBIN == boundary_item.type:
                 if is_same_point:
-                    coefficients = np.append(coefficients, [1.0])
+                    right_side_ret += boundary_item.value
+                    coefficients = np.append(coefficients, [boundary_item.robin_coeff])
                 else:
                     coefficients = np.append(coefficients, [0.0])
             else:
                 raise AttributeError("Not supported boundary element type")
         self.__unknown_count = len(coefficients)
 
-        return (self.sign * coefficients, 0.0)
+        return (self.sign * coefficients, self.sign * right_side_ret)
 
     def propagate_solution(self, solution: np.array):
         self.__unknown_values = solution[: self.__unknown_count]
