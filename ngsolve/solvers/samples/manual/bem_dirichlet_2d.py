@@ -9,7 +9,7 @@ from matplotlib import cm
 
 class GlobalSettings(object):
     CHART_STEPS = 25
-    BORDER_ELEMENTS_COUNT = 1
+    BORDER_ELEMENTS_COUNT = 10
     PLOT_ERROR = False
     EXAMPLE_TYPE = 3  # 1 - Dirichlet, 2 - Neumann, 3 - Robin
 
@@ -298,14 +298,16 @@ class Integrator2D(Integrator):
 
 
 class ExpressionTerm:
-    def __init__(self, kernel: Kernel, sign: int):
+    def __init__(self, kernel: Kernel, domain: Domain, sign: int):
         assert kernel is not None
+        assert domain is not None
         assert 1 == sign or -1 == sign
 
         self.__kernel = kernel
+        self.__domain = domain
         self.__sign = float(sign)
 
-    def value(self, point: np.array, domain: Domain):
+    def value(self, point: np.array):
         raise NotImplementedError("Call to abstract method")
 
     @property
@@ -313,13 +315,17 @@ class ExpressionTerm:
         return self.__kernel
 
     @property
+    def domain(self):
+        return self.__domain
+
+    @property
     def sign(self):
         return self.__sign
 
-    def calculate_coefficients(self, point: np.array, domain: Domain):
+    def calculate_coefficients(self, point: np.array):
         raise NotImplementedError("Call to abstract method")
 
-    def calculate_for_robin(self, point: np.array, domain: Domain):
+    def calculate_for_robin(self, point: np.array):
         raise NotImplementedError("Call to abstract method")
 
     def propagate_solution(self, solution: np.array):
@@ -332,19 +338,19 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
     SINGULARITY_INTEGRATION_POINTS = 6
     EPS = 0.001
 
-    def __init__(self, kernel: Kernel, sign: int = 1):
-        super().__init__(kernel, sign)
+    def __init__(self, kernel: Kernel, domain: Domain, sign: int = 1):
+        super().__init__(kernel, domain, sign)
         self.__unknown_count = 0
         self.__unknown_values = np.empty(0)
 
-    def calculate_coefficients(self, point: np.array, domain: Domain):
+    def calculate_coefficients(self, point: np.array):
         integrator = Integrator2D(
             SingleLayerBoundaryTerm.NOMINAL_INTEGRATION_POINTS, SingleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS
         )
         coefficients = np.empty(0)
         right_side_ret = 0.0
 
-        for boundary_item in domain.get_border():
+        for boundary_item in self.domain.get_border():
             if boundary_item.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.ROBIN]:
                 res = integrator.segment(
                     self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
@@ -360,10 +366,10 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
 
         return (self.sign * coefficients, self.sign * right_side_ret)
 
-    def calculate_for_robin(self, point: np.array, domain: Domain):
+    def calculate_for_robin(self, point: np.array):
         coefficients = np.empty(0)
 
-        for boundary_item in domain.get_border():
+        for boundary_item in self.domain.get_border():
             mid_point = 0.5 * (boundary_item.element[1] + boundary_item.element[0])
             is_same_point = Utils.distance(point, mid_point) < SingleLayerBoundaryTerm.EPS
 
@@ -386,7 +392,7 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
         self.__unknown_values = solution[: self.__unknown_count]
         return solution[self.__unknown_count :]
 
-    def value(self, point: np.array, domain: Domain):
+    def value(self, point: np.array):
         assert self.__unknown_count == len(self.__unknown_values), "Data should be calculated"
         integrator = Integrator2D(
             SingleLayerBoundaryTerm.NOMINAL_INTEGRATION_POINTS, SingleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS
@@ -394,7 +400,7 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
         result = 0.0
         unknown_index = 0
 
-        for boundary_item in domain.get_border():
+        for boundary_item in self.domain.get_border():
             integral_value = integrator.segment(
                 self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
             )
@@ -418,19 +424,19 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
     SINGULARITY_INTEGRATION_POINTS = 6
     EPS = 0.001
 
-    def __init__(self, kernel: Kernel, sign: int = 1):
-        super().__init__(kernel, sign)
+    def __init__(self, kernel: Kernel, domain: Domain, sign: int = 1):
+        super().__init__(kernel, domain, sign)
         self.__unknown_count = 0
         self.__unknown_values = np.empty(0)
 
-    def calculate_coefficients(self, point: np.array, domain: Domain):
+    def calculate_coefficients(self, point: np.array):
         integrator = Integrator2D(
             DoubleLayerBoundaryTerm.NOMINAL_INTEGRATION_POINTS, DoubleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS
         )
         coefficients = np.empty(0)
         right_side_ret = 0.0
 
-        for boundary_item in domain.get_border():
+        for boundary_item in self.domain.get_border():
 
             mid_point = 0.5 * (boundary_item.element[1] + boundary_item.element[0])
             is_same_point = Utils.distance(point, mid_point) < DoubleLayerBoundaryTerm.EPS
@@ -454,11 +460,11 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
 
         return (self.sign * coefficients, self.sign * right_side_ret)
 
-    def calculate_for_robin(self, point: np.array, domain: Domain):
+    def calculate_for_robin(self, point: np.array):
         coefficients = np.empty(0)
         right_side_ret = 0.0
 
-        for boundary_item in domain.get_border():
+        for boundary_item in self.domain.get_border():
             mid_point = 0.5 * (boundary_item.element[1] + boundary_item.element[0])
             is_same_point = Utils.distance(point, mid_point) < SingleLayerBoundaryTerm.EPS
 
@@ -482,7 +488,7 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
         self.__unknown_values = solution[: self.__unknown_count]
         return solution[self.__unknown_count :]
 
-    def value(self, point: np.array, domain: Domain):
+    def value(self, point: np.array):
         assert self.__unknown_count == len(self.__unknown_values), "Data should be calculated"
         integrator = Integrator2D(
             DoubleLayerBoundaryTerm.NOMINAL_INTEGRATION_POINTS, DoubleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS
@@ -490,7 +496,7 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
         result = 0.0
         unknown_index = 0
 
-        for boundary_item in domain.get_border():
+        for boundary_item in self.domain.get_border():
             integral_value = integrator.segment(
                 self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
             )
@@ -514,37 +520,35 @@ class SingleLayerVolumeTerm(ExpressionTerm):
     NOMINAL_INTEGRATION_POINTS_PER_AXIS = 2
     SINGULARITY_INTEGRATION_POINTS_PER_AXIS = 4
 
-    def __init__(self, kernel: Kernel, value_function: Callable, sign: int = 1):
-        super().__init__(kernel, sign)
+    def __init__(self, kernel: Kernel, domain: Domain, value_function: Callable, sign: int = 1):
+        super().__init__(kernel, domain, sign)
         assert value_function is not None
         self.__value_function = value_function
 
-    def calculate_coefficients(self, point: np.array, domain: Domain):
+    def calculate_coefficients(self, point: np.array):
         assert point is not None
-        assert domain is not None
 
         coefficients = np.empty(0)
-        right_side_ret = self.value(point, domain)
+        right_side_ret = self.value(point)
 
         return (coefficients, right_side_ret)
 
-    def calculate_for_robin(self, point: np.array, domain: Domain):
+    def calculate_for_robin(self, point: np.array):
         coefficients = np.empty(0)
         return (coefficients, 0.0)
 
     def propagate_solution(self, solution: np.array):
         return solution
 
-    def value(self, point: np.array, domain: Domain):
+    def value(self, point: np.array):
         assert point is not None
-        assert domain is not None
 
         integrator = Integrator2D(
             SingleLayerVolumeTerm.NOMINAL_INTEGRATION_POINTS_PER_AXIS,
             SingleLayerVolumeTerm.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
         )
         result = 0.0
-        for mesh_item in domain.get_mesh():
+        for mesh_item in self.domain.get_mesh():
             result += integrator.square(self.kernel, self.__value_function, point, mesh_item)
         result *= self.sign
         return result
@@ -560,7 +564,7 @@ class Problem(object):
 
     def solution_value(self, point: np.array):
         # TODO: Check this behaviour
-        result = -1.0 * sum(term.value(point, self.__domain) for term in self.__expression)
+        result = -1.0 * sum(term.value(point) for term in self.__expression)
         if self.__domain.is_point_on_border(point):
             result *= 2.0
         corners = [np.array([0.0, 0.0]), np.array([1.0, 0.0]), np.array([1.0, 1.0]), np.array([0.0, 1.0])]
@@ -579,7 +583,7 @@ class Problem(object):
             right_side_value = 0.0
             matrix_row = np.empty(0)
             for term in self.__expression:
-                coefficients, value = term.calculate_coefficients(point_info.point, self.__domain)
+                coefficients, value = term.calculate_coefficients(point_info.point)
                 right_side_value += value
                 matrix_row = np.hstack((matrix_row, coefficients))
             if matrix is None:
@@ -594,7 +598,7 @@ class Problem(object):
                 right_side_value = 0.0
                 matrix_row = np.empty(0)
                 for term in self.__expression:
-                    coefficients, value = term.calculate_for_robin(point_info.point, self.__domain)
+                    coefficients, value = term.calculate_for_robin(point_info.point)
                     right_side_value += value
                     matrix_row = np.hstack((matrix_row, coefficients))
                 matrix = np.vstack((matrix, matrix_row))
@@ -668,9 +672,9 @@ def init_poisson_dirichlet():
         return -8.0
 
     expression = [
-        DoubleLayerBoundaryTerm(Laplace2DNormKernel()),
-        SingleLayerBoundaryTerm(Laplace2DKernel(), -1),
-        SingleLayerVolumeTerm(Laplace2DKernel(), heat_source_function, -1),
+        DoubleLayerBoundaryTerm(Laplace2DNormKernel(), domain),
+        SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
+        SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
     ]
 
     problem = Problem(expression, domain, analytical_solution)
@@ -713,9 +717,9 @@ def init_poisson_neumann():
         return -8.0
 
     expression = [
-        DoubleLayerBoundaryTerm(Laplace2DNormKernel()),
-        SingleLayerBoundaryTerm(Laplace2DKernel(), -1),
-        SingleLayerVolumeTerm(Laplace2DKernel(), heat_source_function, -1),
+        DoubleLayerBoundaryTerm(Laplace2DNormKernel(), domain),
+        SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
+        SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
     ]
 
     problem = Problem(expression, domain, analytical_solution)
@@ -758,9 +762,9 @@ def init_poisson_robin():
         return 0.0
 
     expression = [
-        DoubleLayerBoundaryTerm(Laplace2DNormKernel()),
-        SingleLayerBoundaryTerm(Laplace2DKernel(), -1),
-        SingleLayerVolumeTerm(Laplace2DKernel(), heat_source_function, -1),
+        DoubleLayerBoundaryTerm(Laplace2DNormKernel(), domain),
+        SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
+        SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
     ]
 
     problem = Problem(expression, domain, analytical_solution)
