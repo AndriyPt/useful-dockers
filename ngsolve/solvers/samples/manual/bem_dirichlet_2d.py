@@ -11,7 +11,7 @@ class GlobalSettings(object):
     CHART_STEPS = 25
     BORDER_ELEMENTS_COUNT = 10
     PLOT_ERROR = False
-    EXAMPLE_TYPE = 3  # 1 - Dirichlet, 2 - Neumann, 3 - Robin
+    EXAMPLE_TYPE = 4  # 1 - Dirichlet, 2 - Neumann, 3 - Robin, 4 - Single Inclusion Dirichlet
 
 
 class ExpressionTerm:
@@ -19,10 +19,11 @@ class ExpressionTerm:
 
 
 class BoundaryConditionType(Enum):
-    DIRICHLET = 1
-    NEUMANN = 2
-    ROBIN = 3
-    UNKNOWN = 4
+    UNKNOWN = 1
+    DIRICHLET = 2
+    NEUMANN = 3
+    ROBIN = 4
+    VOLUME = 5
 
 
 class Point2DInfo:
@@ -554,6 +555,61 @@ class SingleLayerVolumeTerm(ExpressionTerm):
         return result
 
 
+class SingleLayerInclusionVolumeTerm(ExpressionTerm):
+
+    NOMINAL_INTEGRATION_POINTS_PER_AXIS = 2
+    SINGULARITY_INTEGRATION_POINTS_PER_AXIS = 4
+
+    def __init__(self, kernel: Kernel, domain: Domain, value_function: Callable, sign: int = 1):
+        super().__init__(kernel, domain, sign)
+        assert value_function is not None
+        self.__value_function = value_function
+        self.__unknown_count = 0
+        self.__unknown_values = np.empty(0)
+
+    def calculate_coefficients(self, point: np.array):
+        assert point is not None
+        integrator = Integrator2D(
+            SingleLayerVolumeTerm.NOMINAL_INTEGRATION_POINTS_PER_AXIS,
+            SingleLayerVolumeTerm.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
+        )
+        coefficients = np.empty(0)
+        for mesh_item in self.domain.get_mesh():
+            res = integrator.square(self.kernel, self.__value_function, point, mesh_item)
+            coefficients = np.append(coefficients, [res])
+
+        self.__unknown_count = len(coefficients)
+        return (self.sign * coefficients, 0.0)
+
+    def calculate_for_robin(self, point: np.array):
+        coefficients = np.empty(0)
+        return (coefficients, 0.0)
+
+    def propagate_solution(self, solution: np.array):
+        self.__unknown_values = solution[: self.__unknown_count]
+        return solution[self.__unknown_count :]
+
+    def value(self, point: np.array):
+        assert point is not None
+
+        integrator = Integrator2D(
+            SingleLayerVolumeTerm.NOMINAL_INTEGRATION_POINTS_PER_AXIS,
+            SingleLayerVolumeTerm.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
+        )
+        result = 0.0
+        unknown_index = 0
+        for mesh_item in self.domain.get_mesh():
+            result += self.__unknown_values[unknown_index] * integrator.square(
+                self.kernel, self.__value_function, point, mesh_item
+            )
+            unknown_index += 1
+        assert self.__unknown_count == unknown_index, "Unknown could should match {} and {}".format(
+            self.__unknown_count, unknown_index
+        )
+        result *= self.sign
+        return result
+
+
 class Problem(object):
     def __init__(self, expression: list[ExpressionTerm], domain: Domain, analytical_solution: Callable = None):
         assert expression is not None
@@ -771,6 +827,50 @@ def init_poisson_robin():
     return problem
 
 
+def init_poisson_dirichlet_single_inclusion():
+    print("Define Dirichlet problem for Poisson equation with single inclusion...")
+
+    print("Define boundary conditions...")
+
+    def analytical_solution(point: np.array):
+        return 2 * (point[0] - 0.5) ** 2 + 2 * (point[1] - 0.5) ** 2
+
+    def boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    domain = SquareDomain2D(
+        np.array([0.0, 0.0]),
+        np.array([1.0, 1.0]),
+        [BoundaryConditionType.DIRICHLET] * 4,
+        [boundary_value] * 4,
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
+    )
+
+    inclusion_domain = SquareDomain2D(
+        np.array([0.4, 0.4]),
+        np.array([0.6, 0.6]),
+        [BoundaryConditionType.DIRICHLET] * 4,
+        [boundary_value] * 4,
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
+    )
+
+    print("Define heat source function...")
+
+    def heat_source_function(point: np.array):
+        return -8.0
+
+    expression = [
+        DoubleLayerBoundaryTerm(Laplace2DNormKernel(), domain),
+        SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
+        SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
+        SingleLayerInclusionVolumeTerm(Laplace2DKernel(), inclusion_domain, heat_source_function),
+        SingleLayerBoundaryTerm(Laplace2DKernel(), inclusion_domain, -1),
+    ]
+
+    problem = Problem(expression, domain, analytical_solution)
+    return problem
+
+
 if "__main__" == __name__:
     problem = None
     if 1 == GlobalSettings.EXAMPLE_TYPE:
@@ -779,6 +879,8 @@ if "__main__" == __name__:
         problem = init_poisson_neumann()
     elif 3 == GlobalSettings.EXAMPLE_TYPE:
         problem = init_poisson_robin()
+    elif 4 == GlobalSettings.EXAMPLE_TYPE:
+        problem = init_poisson_dirichlet_single_inclusion()
 
     assert problem is not None
 
