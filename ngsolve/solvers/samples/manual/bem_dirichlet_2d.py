@@ -23,7 +23,7 @@ class BoundaryConditionType(Enum):
     DIRICHLET = 2
     NEUMANN = 3
     ROBIN = 4
-    VOLUME = 5
+    INCLUSION = 5
 
 
 class Point2DInfo:
@@ -199,12 +199,17 @@ class SquareDomain2D(Domain2D):
                 ]
                 self.__mesh.append(square)
         self.__mesh = np.array(self.__mesh)
+        self.__square = np.array([bottom_left_point, bottom_right_point, top_right_point, top_left_point])
 
     def get_border(self):
         return self.__border
 
     def get_mesh(self):
         return self.__mesh
+
+    def is_point_inside_domain(self, point: np.array):
+        result = Utils.is_point_within_square(point, self.__square, Domain2D.POINT_LOCATION_EPSILON)
+        return result
 
 
 class Kernel:
@@ -554,16 +559,20 @@ class SingleLayerVolumeTerm(ExpressionTerm):
         result *= self.sign
         return result
 
-
-class SingleLayerInclusionVolumeTerm(ExpressionTerm):
+# TODO: Implement 
+class SingleLayerInclusionTerm(ExpressionTerm):
 
     NOMINAL_INTEGRATION_POINTS_PER_AXIS = 2
     SINGULARITY_INTEGRATION_POINTS_PER_AXIS = 4
 
-    def __init__(self, kernel: Kernel, domain: Domain, value_function: Callable, sign: int = 1):
+    def __init__(
+        self, kernel: Kernel, domain: Domain, grad_function: Callable, laplacian_function: Callable, sign: int = 1
+    ):
         super().__init__(kernel, domain, sign)
-        assert value_function is not None
-        self.__value_function = value_function
+        assert grad_function is not None
+        assert laplacian_function is not None
+        self.__grad_function = grad_function
+        self.__laplacian_function = laplacian_function
         self.__unknown_count = 0
         self.__unknown_values = np.empty(0)
 
@@ -832,6 +841,13 @@ def init_poisson_dirichlet_single_inclusion():
 
     print("Define boundary conditions...")
 
+    K_TISSUE = 0.19  # W/m/^C
+    K_MAX_TUMOR = 0.495  # W/m/^C
+    INCLUSION_SIZE = 0.2
+    INCLUSION_CENTER_X = 0.5
+    INCLUSION_CENTER_Y = 0.5
+    INCLUSION_RADIUS = INCLUSION_SIZE / 2.0 * np.sqrt(2.0)
+
     def analytical_solution(point: np.array):
         return 2 * (point[0] - 0.5) ** 2 + 2 * (point[1] - 0.5) ** 2
 
@@ -847,23 +863,78 @@ def init_poisson_dirichlet_single_inclusion():
     )
 
     inclusion_domain = SquareDomain2D(
-        np.array([0.4, 0.4]),
-        np.array([0.6, 0.6]),
-        [BoundaryConditionType.DIRICHLET] * 4,
-        [boundary_value] * 4,
+        np.array([INCLUSION_CENTER_X - INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y - INCLUSION_SIZE / 2.0]),
+        np.array([INCLUSION_CENTER_X + INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y + INCLUSION_SIZE / 2.0]),
+        [BoundaryConditionType.INCLUSION] * 4,
+        np.zeros(4),
         GlobalSettings.BORDER_ELEMENTS_COUNT,
     )
 
-    print("Define heat source function...")
+    def thermal_conductivity(point: np.array):
+        result = K_TISSUE
+        if inclusion_domain.is_point_inside_domain(point):
+            result = (K_MAX_TUMOR - K_TISSUE) * np.cos(
+                (0.5 * np.pi / INCLUSION_RADIUS**2)
+                * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+            ) + K_TISSUE
+        return result
 
-    def heat_source_function(point: np.array):
-        return -8.0
+    def thermal_conductivity_gradient(point: np.array):
+        result = np.array([0.0, 0.0])
+        if inclusion_domain.is_point_inside_domain(point):
+            result[0] = (
+                -(K_MAX_TUMOR - K_TISSUE)
+                * np.sin(
+                    (0.5 * np.pi / INCLUSION_RADIUS**2)
+                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+                )
+                * (np.pi / INCLUSION_RADIUS**2)
+                * (point[0] - INCLUSION_CENTER_X)
+            )
+            result[1] = (
+                -(K_MAX_TUMOR - K_TISSUE)
+                * np.sin(
+                    (0.5 * np.pi / INCLUSION_RADIUS**2)
+                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+                )
+                * (np.pi / INCLUSION_RADIUS**2)
+                * (point[1] - INCLUSION_CENTER_Y)
+            )
+        return result
+
+    def thermal_conductivity_laplacian(point: np.array):
+        result = 0.0
+        if inclusion_domain.is_point_inside_domain(point):
+            result = ((K_TISSUE - K_MAX_TUMOR) * np.pi / INCLUSION_RADIUS**2) * (
+                np.cos(
+                    (0.5 * np.pi / INCLUSION_RADIUS**2)
+                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+                )
+                * (np.pi / INCLUSION_RADIUS**2 * (point[0] - INCLUSION_CENTER_X) ** 2)
+                + np.sin(
+                    (0.5 * np.pi / INCLUSION_RADIUS**2)
+                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+                )
+                + np.cos(
+                    (0.5 * np.pi / INCLUSION_RADIUS**2)
+                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+                )
+                * (np.pi / INCLUSION_RADIUS**2 * (point[1] - INCLUSION_CENTER_X) ** 2)
+                + np.sin(
+                    (0.5 * np.pi / INCLUSION_RADIUS**2)
+                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+                )
+            )
+        return result
+
+    print("Define heat source function...")
 
     expression = [
         DoubleLayerBoundaryTerm(Laplace2DNormKernel(), domain),
         SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
-        SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
-        SingleLayerInclusionVolumeTerm(Laplace2DKernel(), inclusion_domain, heat_source_function),
+        SingleLayerInclusionTerm(
+            Laplace2DKernel(), inclusion_domain, thermal_conductivity_gradient, thermal_conductivity_laplacian
+        ),
         SingleLayerBoundaryTerm(Laplace2DKernel(), inclusion_domain, -1),
     ]
 
