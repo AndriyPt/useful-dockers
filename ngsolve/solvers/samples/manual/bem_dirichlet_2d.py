@@ -11,7 +11,7 @@ class GlobalSettings(object):
     CHART_STEPS = 25
     BORDER_ELEMENTS_COUNT = 10
     PLOT_ERROR = False
-    EXAMPLE_TYPE = 4  # 1 - Dirichlet, 2 - Neumann, 3 - Robin, 4 - Single Inclusion Dirichlet
+    EXAMPLE_TYPE = 1  # 1 - Dirichlet, 2 - Neumann, 3 - Robin, 4 - Single Inclusion Dirichlet
 
 
 class ExpressionTerm:
@@ -82,6 +82,20 @@ class Utils:
         if point[0] > min_x and point[0] < max_x and point[1] > min_y and point[1] < max_y:
             return True
         return False
+
+    @staticmethod
+    def constant_one():
+        def result(point: np.array):
+            return 1.0
+
+        return result
+
+    @staticmethod
+    def constant_value(value: np.array):
+        def result(point: np.array):
+            return value
+
+        return result
 
 
 class Domain:
@@ -213,29 +227,41 @@ class SquareDomain2D(Domain2D):
 
 
 class Kernel:
-    def value(self, point_x: np.array, point_y: np.array, normal: np.array):
+    def value(self, point_x: np.array, point_y: np.array):
+        raise NotImplementedError("Call to abstract method")
+
+    def grad(self, point_x: np.array, point_y: np.array):
         raise NotImplementedError("Call to abstract method")
 
 
 class Laplace2DKernel(Kernel):
-    def value(self, point_x: np.array, point_y: np.array, normal: np.array):
+    def value(self, point_x: np.array, point_y: np.array):
         return -0.25 / np.pi * np.log(Utils.squared_distance(point_x, point_y))
 
-
-class Laplace2DNormKernel(Kernel):
-    def value(self, point_x: np.array, point_y: np.array, normal: np.array):
-        result = np.dot(-0.25 / np.pi / Utils.squared_distance(point_x, point_y) * -2.0 * (point_x - point_y), normal)
+    def grad(self, point_x: np.array, point_y: np.array):
+        result = -0.25 / np.pi / Utils.squared_distance(point_x, point_y) * -2.0 * (point_x - point_y)
         return result
 
 
 class Integrator:
-    def __init__(self):
-        pass
+    def __init__(self, kernel: Kernel):
+        assert kernel is not None
+        self.__kernel = kernel
 
-    def segment(self, kernel: Kernel, normal: np.array, point: np.array, min_limit: np.array, max_limit: np.array):
+    @property
+    def kernel(self):
+        return self.__kernel
+
+    def segment(self, function: Callable, point: np.array, min_limit: np.array, max_limit: np.array):
         raise NotImplementedError("Call to abstract method")
 
-    def square(self, kernel: Kernel, function: Callable, point: np.array, square: np.array):
+    def segment_grad(self, function: Callable, point: np.array, min_limit: np.array, max_limit: np.array):
+        raise NotImplementedError("Call to abstract method")
+
+    def square(self, function: Callable, point: np.array, square: np.array):
+        raise NotImplementedError("Call to abstract method")
+
+    def square_grad(self, function: Callable, point: np.array, square: np.array):
         raise NotImplementedError("Call to abstract method")
 
 
@@ -243,8 +269,8 @@ class Integrator2D(Integrator):
 
     epsilon = 0.01
 
-    def __init__(self, nominal_count: int, singularity_count: int):
-        super().__init__()
+    def __init__(self, kernel: Kernel, nominal_count: int, singularity_count: int):
+        super().__init__(kernel)
 
         assert 0 < nominal_count and nominal_count < 10, "Not supported points count"
         assert nominal_count < singularity_count and singularity_count < 10, "Not supported points count"
@@ -277,29 +303,49 @@ class Integrator2D(Integrator):
 
         return (result_nodes, result_weights)
 
-    def segment(self, kernel: Kernel, normal: np.array, point: np.array, min_limit: np.array, max_limit: np.array):
-        result = 0.0
+    def _get_segment_nodes_and_weights(self, point: np.array, min_limit: np.array, max_limit: np.array):
         count = self.__nominal_number_of_points
         # TODO: Implement logic which will increase points count in case if one point is too close
         if Utils.is_point_within_segment(point, min_limit, max_limit, Integrator2D.epsilon):
             count = self.__singular_number_of_points
         nodes, weights = np.polynomial.legendre.leggauss(count)
         real_nodes, real_weights = self._convert_leggauss_to_segment(nodes, weights, min_limit, max_limit)
+        return (real_nodes, real_weights)
 
+    def segment(self, function: Callable, point: np.array, min_limit: np.array, max_limit: np.array):
+        result = 0.0
+        real_nodes, real_weights = self._get_segment_nodes_and_weights(point, min_limit, max_limit)
         for real_node, weight in zip(real_nodes, real_weights):
-            result += weight * kernel.value(point, real_node, normal)
+            result += weight * self.kernel.value(point, real_node) * function(point)
         return result
 
-    def square(self, kernel: Kernel, function: Callable, point: np.array, square: np.array):
+    def segment_grad(self, function: Callable, point: np.array, min_limit: np.array, max_limit: np.array):
         result = 0.0
+        real_nodes, real_weights = self._get_segment_nodes_and_weights(point, min_limit, max_limit)
+        for real_node, weight in zip(real_nodes, real_weights):
+            result += weight * self.kernel.grad(point, real_node) * function(point)
+        return result
+
+    def _get_square_nodes_and_weights(self, point: np.array, square: np.array):
         count = self.__nominal_number_of_points
         if Utils.is_point_within_square(point, square, Integrator2D.epsilon):
             count = self.__singular_number_of_points
         nodes, weights = np.polynomial.legendre.leggauss(count)
         (real_nodes, real_weights) = self._convert_leggauss_to_square(nodes, weights, square)
+        return (real_nodes, real_weights)
 
+    def square(self, function: Callable, point: np.array, square: np.array):
+        result = 0.0
+        real_nodes, real_weights = self._get_square_nodes_and_weights(point, square)
         for real_node, weight in zip(real_nodes, real_weights):
-            result += weight * kernel.value(point, real_node, np.empty(2)) * function(real_node)
+            result += weight * self.kernel.value(point, real_node) * function(real_node)
+        return result
+
+    def square_grad(self, function: Callable, point: np.array, square: np.array):
+        result = 0.0
+        real_nodes, real_weights = self._get_square_nodes_and_weights(point, square)
+        for real_node, weight in zip(real_nodes, real_weights):
+            result += weight * self.kernel.grad(point, real_node) * function(real_node)
         return result
 
 
@@ -348,23 +394,25 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
         super().__init__(kernel, domain, sign)
         self.__unknown_count = 0
         self.__unknown_values = np.empty(0)
+        self.__integrator = Integrator2D(
+            kernel,
+            SingleLayerBoundaryTerm.NOMINAL_INTEGRATION_POINTS,
+            SingleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS,
+        )
 
     def calculate_coefficients(self, point: np.array):
-        integrator = Integrator2D(
-            SingleLayerBoundaryTerm.NOMINAL_INTEGRATION_POINTS, SingleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS
-        )
         coefficients = np.empty(0)
         right_side_ret = 0.0
 
         for boundary_item in self.domain.get_border():
             if boundary_item.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.ROBIN]:
-                res = integrator.segment(
-                    self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                res = self.__integrator.segment(
+                    Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
                 )
                 coefficients = np.append(coefficients, [res])
             elif BoundaryConditionType.NEUMANN == boundary_item.type:
-                right_side_ret += boundary_item.value * integrator.segment(
-                    self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                right_side_ret += boundary_item.value * self.__integrator.segment(
+                    Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
                 )
             else:
                 raise AttributeError("Not supported boundary element type")
@@ -400,15 +448,12 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
 
     def value(self, point: np.array):
         assert self.__unknown_count == len(self.__unknown_values), "Data should be calculated"
-        integrator = Integrator2D(
-            SingleLayerBoundaryTerm.NOMINAL_INTEGRATION_POINTS, SingleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS
-        )
         result = 0.0
         unknown_index = 0
 
         for boundary_item in self.domain.get_border():
-            integral_value = integrator.segment(
-                self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+            integral_value = self.__integrator.segment(
+                Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
             )
             if boundary_item.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.ROBIN]:
                 result += self.__unknown_values[unknown_index] * integral_value
@@ -434,11 +479,13 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
         super().__init__(kernel, domain, sign)
         self.__unknown_count = 0
         self.__unknown_values = np.empty(0)
+        self.__integrator = Integrator2D(
+            kernel,
+            DoubleLayerBoundaryTerm.NOMINAL_INTEGRATION_POINTS,
+            DoubleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS,
+        )
 
     def calculate_coefficients(self, point: np.array):
-        integrator = Integrator2D(
-            DoubleLayerBoundaryTerm.NOMINAL_INTEGRATION_POINTS, DoubleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS
-        )
         coefficients = np.empty(0)
         right_side_ret = 0.0
 
@@ -448,14 +495,20 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
             is_same_point = Utils.distance(point, mid_point) < DoubleLayerBoundaryTerm.EPS
 
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
-                right_side_ret += boundary_item.value * integrator.segment(
-                    self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                right_side_ret += boundary_item.value * self.__integrator.segment_grad(
+                    Utils.constant_value(boundary_item.normal),
+                    point,
+                    boundary_item.element[0],
+                    boundary_item.element[1],
                 )
                 if is_same_point:
                     right_side_ret += 0.5 * boundary_item.value
             elif boundary_item.type in [BoundaryConditionType.NEUMANN, BoundaryConditionType.ROBIN]:
-                res = integrator.segment(
-                    self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+                res = self.__integrator.segment_grad(
+                    Utils.constant_value(boundary_item.normal),
+                    point,
+                    boundary_item.element[0],
+                    boundary_item.element[1],
                 )
                 if is_same_point:
                     res += 0.5
@@ -496,15 +549,12 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
 
     def value(self, point: np.array):
         assert self.__unknown_count == len(self.__unknown_values), "Data should be calculated"
-        integrator = Integrator2D(
-            DoubleLayerBoundaryTerm.NOMINAL_INTEGRATION_POINTS, DoubleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS
-        )
         result = 0.0
         unknown_index = 0
 
         for boundary_item in self.domain.get_border():
-            integral_value = integrator.segment(
-                self.kernel, boundary_item.normal, point, boundary_item.element[0], boundary_item.element[1]
+            integral_value = self.__integrator.segment_grad(
+                Utils.constant_value(boundary_item.normal), point, boundary_item.element[0], boundary_item.element[1]
             )
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
                 result += boundary_item.value * integral_value
@@ -530,13 +580,16 @@ class SingleLayerVolumeTerm(ExpressionTerm):
         super().__init__(kernel, domain, sign)
         assert value_function is not None
         self.__value_function = value_function
+        self.__integrator = Integrator2D(
+            kernel,
+            SingleLayerVolumeTerm.NOMINAL_INTEGRATION_POINTS_PER_AXIS,
+            SingleLayerVolumeTerm.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
+        )
 
     def calculate_coefficients(self, point: np.array):
         assert point is not None
-
         coefficients = np.empty(0)
         right_side_ret = self.value(point)
-
         return (coefficients, right_side_ret)
 
     def calculate_for_robin(self, point: np.array):
@@ -548,18 +601,14 @@ class SingleLayerVolumeTerm(ExpressionTerm):
 
     def value(self, point: np.array):
         assert point is not None
-
-        integrator = Integrator2D(
-            SingleLayerVolumeTerm.NOMINAL_INTEGRATION_POINTS_PER_AXIS,
-            SingleLayerVolumeTerm.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
-        )
         result = 0.0
         for mesh_item in self.domain.get_mesh():
-            result += integrator.square(self.kernel, self.__value_function, point, mesh_item)
+            result += self.__integrator.square(self.__value_function, point, mesh_item)
         result *= self.sign
         return result
 
-# TODO: Implement 
+
+# TODO: Implement
 class SingleLayerInclusionTerm(ExpressionTerm):
 
     NOMINAL_INTEGRATION_POINTS_PER_AXIS = 2
@@ -584,7 +633,8 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         )
         coefficients = np.empty(0)
         for mesh_item in self.domain.get_mesh():
-            res = integrator.square(self.kernel, self.__value_function, point, mesh_item)
+            res = integrator.square(self.kernel, self.__laplacian_function, point, mesh_item)
+            res += integrator.square(self.kernel, self.__laplacian_function, point, mesh_item)
             coefficients = np.append(coefficients, [res])
 
         self.__unknown_count = len(coefficients)
@@ -737,7 +787,7 @@ def init_poisson_dirichlet():
         return -8.0
 
     expression = [
-        DoubleLayerBoundaryTerm(Laplace2DNormKernel(), domain),
+        DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
         SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
         SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
     ]
@@ -782,7 +832,7 @@ def init_poisson_neumann():
         return -8.0
 
     expression = [
-        DoubleLayerBoundaryTerm(Laplace2DNormKernel(), domain),
+        DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
         SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
         SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
     ]
@@ -827,7 +877,7 @@ def init_poisson_robin():
         return 0.0
 
     expression = [
-        DoubleLayerBoundaryTerm(Laplace2DNormKernel(), domain),
+        DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
         SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
         SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
     ]
@@ -930,7 +980,7 @@ def init_poisson_dirichlet_single_inclusion():
     print("Define heat source function...")
 
     expression = [
-        DoubleLayerBoundaryTerm(Laplace2DNormKernel(), domain),
+        DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
         SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
         SingleLayerInclusionTerm(
             Laplace2DKernel(), inclusion_domain, thermal_conductivity_gradient, thermal_conductivity_laplacian
