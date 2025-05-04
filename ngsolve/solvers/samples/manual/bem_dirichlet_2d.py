@@ -11,7 +11,7 @@ class GlobalSettings(object):
     CHART_STEPS = 25
     BORDER_ELEMENTS_COUNT = 10
     PLOT_ERROR = False
-    EXAMPLE_TYPE = 1  # 1 - Dirichlet, 2 - Neumann, 3 - Robin, 4 - Single Inclusion Dirichlet
+    EXAMPLE_TYPE = 4  # 1 - Dirichlet, 2 - Neumann, 3 - Robin, 4 - Single Inclusion Dirichlet
 
 
 class ExpressionTerm:
@@ -323,7 +323,7 @@ class Integrator2D(Integrator):
         result = 0.0
         real_nodes, real_weights = self._get_segment_nodes_and_weights(point, min_limit, max_limit)
         for real_node, weight in zip(real_nodes, real_weights):
-            result += weight * self.kernel.grad(point, real_node) * function(point)
+            result += weight * np.dot(self.kernel.grad(point, real_node), function(point))
         return result
 
     def _get_square_nodes_and_weights(self, point: np.array, square: np.array):
@@ -345,7 +345,7 @@ class Integrator2D(Integrator):
         result = 0.0
         real_nodes, real_weights = self._get_square_nodes_and_weights(point, square)
         for real_node, weight in zip(real_nodes, real_weights):
-            result += weight * self.kernel.grad(point, real_node) * function(real_node)
+            result += weight * np.dot(self.kernel.grad(point, real_node), function(real_node))
         return result
 
 
