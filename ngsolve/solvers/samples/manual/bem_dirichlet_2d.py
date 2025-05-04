@@ -84,6 +84,10 @@ class Utils:
         return False
 
     @staticmethod
+    def is_square_side(boundary_item, mesh_item):
+        raise NotImplementedError("Implement")
+
+    @staticmethod
     def constant_one():
         def result(point: np.array):
             return 1.0
@@ -608,7 +612,6 @@ class SingleLayerVolumeTerm(ExpressionTerm):
         return result
 
 
-# TODO: Implement
 class SingleLayerInclusionTerm(ExpressionTerm):
 
     NOMINAL_INTEGRATION_POINTS_PER_AXIS = 2
@@ -624,25 +627,35 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         self.__laplacian_function = laplacian_function
         self.__unknown_count = 0
         self.__unknown_values = np.empty(0)
+        self.__integrator = Integrator2D(
+            kernel,
+            SingleLayerInclusionTerm.NOMINAL_INTEGRATION_POINTS_PER_AXIS,
+            SingleLayerInclusionTerm.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
+        )
 
     def calculate_coefficients(self, point: np.array):
         assert point is not None
-        integrator = Integrator2D(
-            SingleLayerVolumeTerm.NOMINAL_INTEGRATION_POINTS_PER_AXIS,
-            SingleLayerVolumeTerm.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
-        )
         coefficients = np.empty(0)
         for mesh_item in self.domain.get_mesh():
-            res = integrator.square(self.kernel, self.__laplacian_function, point, mesh_item)
-            res += integrator.square(self.kernel, self.__laplacian_function, point, mesh_item)
+            res = -1.0 * self.__integrator.square(self.__laplacian_function, point, mesh_item)
+            res += self.__integrator.square_grad(self.__grad_function, point, mesh_item)
+            for boundary_item in self.domain.get_border():
+                if Utils.is_square_side(boundary_item, mesh_item):
+
+                    def normal_derivative(position: np.array):
+                        return np.dot(self.__grad_function(position), boundary_item.normal)
+
+                    res += self.__integrator.segment(
+                        normal_derivative, point, boundary_item.element[0], boundary_item.element[1]
+                    )
+
             coefficients = np.append(coefficients, [res])
 
         self.__unknown_count = len(coefficients)
         return (self.sign * coefficients, 0.0)
 
     def calculate_for_robin(self, point: np.array):
-        coefficients = np.empty(0)
-        return (coefficients, 0.0)
+        raise NotImplementedError("Implement")
 
     def propagate_solution(self, solution: np.array):
         self.__unknown_values = solution[: self.__unknown_count]
@@ -650,18 +663,24 @@ class SingleLayerInclusionTerm(ExpressionTerm):
 
     def value(self, point: np.array):
         assert point is not None
-
-        integrator = Integrator2D(
-            SingleLayerVolumeTerm.NOMINAL_INTEGRATION_POINTS_PER_AXIS,
-            SingleLayerVolumeTerm.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
-        )
         result = 0.0
         unknown_index = 0
         for mesh_item in self.domain.get_mesh():
-            result += self.__unknown_values[unknown_index] * integrator.square(
-                self.kernel, self.__value_function, point, mesh_item
-            )
+            result -= self.__integrator.square(self.__laplacian_function, point, mesh_item)
+            result += self.__integrator.square_grad(self.__grad_function, point, mesh_item)
+            for boundary_item in self.domain.get_border():
+                if Utils.is_square_side(boundary_item, mesh_item):
+
+                    def normal_derivative(position: np.array):
+                        return np.dot(self.__grad_function(position), boundary_item.normal)
+
+                    result += self.__integrator.segment(
+                        normal_derivative, point, boundary_item.element[0], boundary_item.element[1]
+                    )
+            result *= self.__unknown_values[unknown_index]
+
             unknown_index += 1
+
         assert self.__unknown_count == unknown_index, "Unknown could should match {} and {}".format(
             self.__unknown_count, unknown_index
         )
@@ -916,7 +935,7 @@ def init_poisson_dirichlet_single_inclusion():
         np.array([INCLUSION_CENTER_X - INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y - INCLUSION_SIZE / 2.0]),
         np.array([INCLUSION_CENTER_X + INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y + INCLUSION_SIZE / 2.0]),
         [BoundaryConditionType.INCLUSION] * 4,
-        np.zeros(4),
+        [Utils.constant_one()] * 4,
         GlobalSettings.BORDER_ELEMENTS_COUNT,
     )
 
