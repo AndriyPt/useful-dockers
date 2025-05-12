@@ -123,8 +123,8 @@ class Utils:
 
 
 class Domain:
-    def __init__(self):
-        pass
+    def __init__(self, subdomains: list = []):
+        self.__subdomains = subdomains
 
     def get_border(self):
         raise NotImplementedError("Call to abstract method")
@@ -135,12 +135,15 @@ class Domain:
     def is_point_on_border(self, point: np.array):
         raise NotImplementedError("Call to abstract method")
 
+    def get_subdomains(self):
+        return self.__subdomains
+
 
 class Domain2D(Domain):
     POINT_LOCATION_EPSILON = 0.001
 
-    def __init__(self):
-        pass
+    def __init__(self, subdomains: list = []):
+        super().__init__(subdomains)
 
     @staticmethod
     def _process_points(border_elements: np.array, type: BoundaryConditionType, value_function: Callable):
@@ -190,8 +193,9 @@ class SquareDomain2D(Domain2D):
         conditions: list[BoundaryConditionType],
         values: list[Callable],
         side_elements_count: int,
+        subdomains: list = [],
     ):
-        super().__init__()
+        super().__init__(subdomains)
 
         assert bottom_left_point is not None
         assert top_right_point is not None
@@ -235,7 +239,20 @@ class SquareDomain2D(Domain2D):
                     np.array([x_points[x_index + 1][y_index + 1], y_points[x_index + 1][y_index + 1]]),
                     np.array([x_points[x_index + 1][y_index], y_points[x_index + 1][y_index]]),
                 ]
-                self.__mesh.append(square)
+                point_info = Point2DInfo()
+                point_info.point = (
+                    np.array(
+                        [
+                            x_points[x_index][y_index] + x_points[x_index + 1][y_index + 1],
+                            y_points[x_index][y_index] + y_points[x_index + 1][y_index + 1],
+                        ]
+                    )
+                    / 2.0
+                )
+                point_info.type = BoundaryConditionType.INCLUSION
+                point_info.value = 0.0
+                point_info.element = np.array(square)
+                self.__mesh.append(point_info)
         self.__mesh = np.array(self.__mesh)
         self.__square = np.array([bottom_left_point, bottom_right_point, top_right_point, top_left_point])
 
@@ -438,8 +455,6 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
                 right_side_ret += boundary_item.value * self.__integrator.segment(
                     Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
                 )
-            elif BoundaryConditionType.INCLUSION == boundary_item.type:
-                raise AttributeError("Not supported boundary element type")
             else:
                 raise AttributeError("Not supported boundary element type")
         self.__unknown_count = len(coefficients)
@@ -516,10 +531,7 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
         right_side_ret = 0.0
 
         for boundary_item in self.domain.get_border():
-
-            mid_point = 0.5 * (boundary_item.element[1] + boundary_item.element[0])
-            is_same_point = Utils.distance(point, mid_point) < DoubleLayerBoundaryTerm.EPS
-
+            is_same_point = Utils.is_the_same_point(point, boundary_item.point, DoubleLayerBoundaryTerm.EPS)
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
                 right_side_ret += boundary_item.value * self.__integrator.segment_grad(
                     Utils.constant_value(boundary_item.normal),
@@ -628,8 +640,8 @@ class SingleLayerVolumeTerm(ExpressionTerm):
     def value(self, point: np.array):
         assert point is not None
         result = 0.0
-        for mesh_item in self.domain.get_mesh():
-            result += self.__integrator.square(self.__value_function, point, mesh_item)
+        for point_info in self.domain.get_mesh():
+            result += self.__integrator.square(self.__value_function, point, point_info.element)
         result *= self.sign
         return result
 
@@ -658,12 +670,19 @@ class SingleLayerInclusionTerm(ExpressionTerm):
     def calculate_coefficients(self, point: np.array):
         assert point is not None
         coefficients = np.empty(0)
-        for mesh_item in self.domain.get_mesh():
-            res = -1.0 * self.__integrator.square(self.__laplacian_function, point, mesh_item)
-            res += self.__integrator.square_grad(self.__grad_function, point, mesh_item)
+        for point_info in self.domain.get_mesh():
+            is_same_point = Utils.is_the_same_point(point, point_info.point, DoubleLayerBoundaryTerm.EPS)
+            res = -1.0 * self.__integrator.square(self.__laplacian_function, point, point_info.element)
+            res += self.__integrator.square_grad(self.__grad_function, point, point_info.element)
+            # TODO: Check sign of the U variable
+            if is_same_point:
+                res += 1.0
             for boundary_item in self.domain.get_border():
                 if Utils.is_square_side(
-                    boundary_item.element[0], boundary_item.element[1], mesh_item, Domain2D.POINT_LOCATION_EPSILON
+                    boundary_item.element[0],
+                    boundary_item.element[1],
+                    point_info.element,
+                    Domain2D.POINT_LOCATION_EPSILON,
                 ):
 
                     def normal_derivative(position: np.array):
@@ -689,11 +708,16 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         assert point is not None
         result = 0.0
         unknown_index = 0
-        for mesh_item in self.domain.get_mesh():
-            result -= self.__integrator.square(self.__laplacian_function, point, mesh_item)
-            result += self.__integrator.square_grad(self.__grad_function, point, mesh_item)
+        for point_info in self.domain.get_mesh():
+            result -= self.__integrator.square(self.__laplacian_function, point, point_info.element)
+            result += self.__integrator.square_grad(self.__grad_function, point, point_info.element)
             for boundary_item in self.domain.get_border():
-                if Utils.is_square_side(boundary_item, mesh_item):
+                if Utils.is_square_side(
+                    boundary_item.element[0],
+                    boundary_item.element[1],
+                    point_info.element,
+                    Domain2D.POINT_LOCATION_EPSILON,
+                ):
 
                     def normal_derivative(position: np.array):
                         return np.dot(self.__grad_function(position), boundary_item.normal)
@@ -737,7 +761,11 @@ class Problem(object):
         matrix = None
         right_side = None
 
-        for point_info in self.__domain.get_border():
+        point_list = self.__domain.get_border()
+        for subdomain in self.__domain.get_subdomains():
+            point_list = np.hstack((point_list, subdomain.get_mesh()))
+
+        for point_info in point_list:
             right_side_value = 0.0
             matrix_row = np.empty(0)
             for term in self.__expression:
@@ -947,20 +975,21 @@ def init_poisson_dirichlet_single_inclusion():
     def boundary_value(point: np.array):
         return analytical_solution(point)
 
-    domain = SquareDomain2D(
-        np.array([0.0, 0.0]),
-        np.array([1.0, 1.0]),
-        [BoundaryConditionType.DIRICHLET] * 4,
-        [boundary_value] * 4,
-        GlobalSettings.BORDER_ELEMENTS_COUNT,
-    )
-
     inclusion_domain = SquareDomain2D(
         np.array([INCLUSION_CENTER_X - INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y - INCLUSION_SIZE / 2.0]),
         np.array([INCLUSION_CENTER_X + INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y + INCLUSION_SIZE / 2.0]),
         [BoundaryConditionType.INCLUSION] * 4,
         [Utils.constant_one()] * 4,
         GlobalSettings.BORDER_ELEMENTS_COUNT,
+    )
+
+    domain = SquareDomain2D(
+        np.array([0.0, 0.0]),
+        np.array([1.0, 1.0]),
+        [BoundaryConditionType.DIRICHLET] * 4,
+        [boundary_value] * 4,
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
+        [inclusion_domain],
     )
 
     def thermal_conductivity(point: np.array):
@@ -1028,7 +1057,6 @@ def init_poisson_dirichlet_single_inclusion():
         SingleLayerInclusionTerm(
             Laplace2DKernel(), inclusion_domain, thermal_conductivity_gradient, thermal_conductivity_laplacian
         ),
-        SingleLayerBoundaryTerm(Laplace2DKernel(), inclusion_domain, -1),
     ]
 
     problem = Problem(expression, domain, analytical_solution)
