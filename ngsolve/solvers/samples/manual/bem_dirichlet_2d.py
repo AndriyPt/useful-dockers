@@ -47,6 +47,11 @@ class Utils:
         return np.dot(temp.T, temp)
 
     @staticmethod
+    def is_the_same_point(point1: np.array, point2: np.array, eps: float):
+        result = Utils.distance(point1, point2) < eps
+        return result
+
+    @staticmethod
     def normalize(vector: np.array):
         norm = np.linalg.norm(vector)
         if 0 == norm:
@@ -65,7 +70,7 @@ class Utils:
     @staticmethod
     def is_point_within_segment(point: np.array, begin: np.array, end: np.array, eps: float):
         result = False
-        if Utils.distance(point, begin) < eps or Utils.distance(point, end) < eps:
+        if Utils.is_the_same_point(point, begin, eps) or Utils.is_the_same_point(point, end, eps):
             result = True
         else:
             cross_product = Utils.cross_product(point - begin, end - begin)
@@ -84,8 +89,23 @@ class Utils:
         return False
 
     @staticmethod
-    def is_square_side(boundary_item, mesh_item):
-        raise NotImplementedError("Implement")
+    def is_square_side(begin: np.array, end: np.array, mesh_item: np.array, eps: float):
+        assert 2 == len(begin)
+        assert 2 == len(end)
+        assert 4 == len(mesh_item)
+
+        result = False
+        for index in range(0, 2):
+            if (
+                Utils.is_the_same_point(begin, mesh_item[index], eps)
+                and Utils.is_the_same_point(end, mesh_item[index + 1], eps)
+            ) or (
+                Utils.is_the_same_point(end, mesh_item[index], eps)
+                and Utils.is_the_same_point(begin, mesh_item[index + 1], eps)
+            ):
+                result = True
+                break
+        return result
 
     @staticmethod
     def constant_one():
@@ -418,6 +438,8 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
                 right_side_ret += boundary_item.value * self.__integrator.segment(
                     Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
                 )
+            elif BoundaryConditionType.INCLUSION == boundary_item.type:
+                raise AttributeError("Not supported boundary element type")
             else:
                 raise AttributeError("Not supported boundary element type")
         self.__unknown_count = len(coefficients)
@@ -640,7 +662,9 @@ class SingleLayerInclusionTerm(ExpressionTerm):
             res = -1.0 * self.__integrator.square(self.__laplacian_function, point, mesh_item)
             res += self.__integrator.square_grad(self.__grad_function, point, mesh_item)
             for boundary_item in self.domain.get_border():
-                if Utils.is_square_side(boundary_item, mesh_item):
+                if Utils.is_square_side(
+                    boundary_item.element[0], boundary_item.element[1], mesh_item, Domain2D.POINT_LOCATION_EPSILON
+                ):
 
                     def normal_derivative(position: np.array):
                         return np.dot(self.__grad_function(position), boundary_item.normal)
