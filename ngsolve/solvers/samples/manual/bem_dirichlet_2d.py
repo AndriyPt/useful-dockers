@@ -11,7 +11,8 @@ class GlobalSettings(object):
     CHART_STEPS = 25
     BORDER_ELEMENTS_COUNT = 10
     PLOT_ERROR = False
-    EXAMPLE_TYPE = 4  # 1 - Dirichlet, 2 - Neumann, 3 - Robin, 4 - Single Inclusion Dirichlet
+    COBORDER_DEPTH = 0.5
+    EXAMPLE_TYPE = 1  # 1 - Dirichlet, 2 - Neumann, 3 - Robin, 4 - Single Inclusion Dirichlet
 
 
 class ExpressionTerm:
@@ -24,6 +25,7 @@ class BoundaryConditionType(Enum):
     NEUMANN = 3
     ROBIN = 4
     INCLUSION = 5
+    COBORDER = 6
 
 
 class Point2DInfo:
@@ -194,6 +196,9 @@ class Domain2D(Domain):
     def get_mesh(self):
         raise NotImplementedError("Call to abstract method")
 
+    def get_coborder(self):
+        raise NotImplementedError("Call to abstract method")
+
     def is_point_on_border(self, point: np.array):
         for border_point in self.get_border():
             if Utils.is_point_within_segment(
@@ -273,12 +278,65 @@ class SquareDomain2D(Domain2D):
                 self.__mesh.append(point_info)
         self.__mesh = np.array(self.__mesh)
         self.__square = np.array([bottom_left_point, bottom_right_point, top_right_point, top_left_point])
+        self._fill_coborder_elements()
+
+    def _fill_coborder_elements(self):
+        assert self.__border is not None
+        assert self.__square is not None
+
+        self.__coborder = []
+        for index in range(len(self.__border)):
+            point_info = self.__border[index]
+            item = Point2DInfo()
+            item.point = point_info.point
+            item.type = BoundaryConditionType.COBORDER
+            item.normal = point_info.normal
+
+            corner_point = None
+            for corner in self.__square:
+                for element in point_info.element:
+                    if Utils.is_the_same_point(element, corner, Domain2D.POINT_LOCATION_EPSILON):
+                        corner_point = element
+                        break
+                if corner_point is not None:
+                    break
+
+            elements = []
+            elements.append(point_info.element[0])
+            elements.append(point_info.element[1])
+
+            if corner_point is not None:
+                if 0 == index:
+                    next_index = len(self.__border) - 1
+                else:
+                    next_index = index + 1
+                    if next_index >= len(self.__border):
+                        next_index = 0
+                corner_grow_vector = self.__border[next_index].normal + point_info.normal
+                if Utils.is_the_same_point(elements[0], element, Domain2D.POINT_LOCATION_EPSILON):
+                    elements.append(point_info.element[0] + corner_grow_vector * GlobalSettings.COBORDER_DEPTH)
+                    elements.append(point_info.element[1] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
+                else:
+                    elements.append(point_info.element[0] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
+                    elements.append(point_info.element[1] + corner_grow_vector * GlobalSettings.COBORDER_DEPTH)
+            else:
+                elements.append(point_info.element[1] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
+                elements.append(point_info.element[0] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
+
+            # TODO: Added elements resorting to fit schema
+            item.element = elements
+            self.__coborder.append(item)
+
+        self.__coborder = np.array(self.__coborder)
 
     def get_border(self):
         return self.__border
 
     def get_mesh(self):
         return self.__mesh
+
+    def get_coborder(self):
+        return self.__coborder
 
     def is_point_inside_domain(self, point: np.array):
         result = Utils.is_point_within_square(point, self.__square, Domain2D.POINT_LOCATION_EPSILON)
