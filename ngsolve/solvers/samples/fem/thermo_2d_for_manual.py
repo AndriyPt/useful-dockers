@@ -1,25 +1,15 @@
+# solve the Laplace equation -div lambda grad u = 0
+# with Dirichlet boundary condition u = 0 and u = 2
+# and Neumann side 0 conditions
+
 from ngsolve import *
 from netgen.occ import *
-from ngsolve import VTKOutput
 import math
 
+BORDER_TOP = "top"
+BORDER_BOTTOM = "bottom"
+BORDER_SIDE = "side"
 
-ROBIN_H = 8.368  # W/m^2/^C
-ROBIN_T_e = 21  # ^C m, Typical OR temperature
-
-K_TISSUE = 0.19  # W/m/^C
-K_MAX_TUMOR = 0.495  # W/m/^C
-K_CO2 = 0.0176  # W/m/^C
-
-THERMAL_Q_m = 418.4  # W/m^3
-THERMAL_T_a = 36.8  # ^C
-DENSITY_B = 1000  # kg/m^3
-THERMAL_C_b = 4181  # J/kg/^C
-THERMAL_omega = 0.0005  # m^3 / s / m^3
-
-THERMAL_W = DENSITY_B * THERMAL_C_b * THERMAL_omega
-
-BORDER_GAMMA = "gamma"
 DOMAIN_TISSUE = "tissue"
 DOMAIN_TUMOR = "tumor"
 
@@ -29,15 +19,22 @@ INCLUSION_CENTER_X = 0.5
 INCLUSION_CENTER_Y = 0.5
 INCLUSION_RADIUS = INCLUSION_SIZE / 2.0 * math.sqrt(2.0)
 
-LARGE_MAXH = 0.005
+K_TISSUE = 0.19  # W/m/^C
+K_MAX_TUMOR = 0.495  # W/m/^C
 
-# generate a triangular mesh
+LARGE_MAXH = 0.05
+
+ngsglobals.msg_level = 1
+
 whole_area = Rectangle(1.0, 1.0).Face()
-whole_area.edges.name = BORDER_GAMMA
+whole_area.edges.Min(X).name = BORDER_SIDE
+whole_area.edges.Min(Y).name = BORDER_BOTTOM
+whole_area.edges.Max(X).name = BORDER_SIDE
+whole_area.edges.Max(Y).name = BORDER_TOP
 
 tumor_cross_section = (
-    Rectangle(INCLUSION_HALF_SIZE, INCLUSION_HALF_SIZE)
-    .Move(INCLUSION_CENTER_X - INCLUSION_HALF_SIZE, INCLUSION_CENTER_Y - INCLUSION_HALF_SIZE)
+    MoveTo(INCLUSION_CENTER_X - INCLUSION_HALF_SIZE, INCLUSION_CENTER_Y - INCLUSION_HALF_SIZE)
+    .Rectangle(INCLUSION_SIZE, INCLUSION_SIZE)
     .Face()
 )
 tumor_cross_section.faces.name = DOMAIN_TUMOR
@@ -53,8 +50,6 @@ mesh = Mesh(geo.GenerateMesh(maxh=LARGE_MAXH)).Curve(3)
 print("Boundaries: ", mesh.GetBoundaries())
 print("Materials: ", mesh.GetMaterials())
 
-Draw(mesh)
-
 thermal_conductivity = mesh.MaterialCF(
     {
         DOMAIN_TISSUE: K_TISSUE,
@@ -67,29 +62,10 @@ thermal_conductivity = mesh.MaterialCF(
 
 Draw(thermal_conductivity, mesh, "Thermal Conductivity")
 
-heat_source = mesh.MaterialCF(
-    {
-        DOMAIN_TISSUE: THERMAL_W * THERMAL_T_a + THERMAL_Q_m,
-        DOMAIN_TUMOR: THERMAL_W * THERMAL_T_a + THERMAL_Q_m * 10,  # According to external article assumption
-    },
-    default=0,
-)
-
-Draw(heat_source, mesh, "Heat Source")
-
-u_coeficient = mesh.MaterialCF(
-    {
-        DOMAIN_TISSUE: THERMAL_W,
-        DOMAIN_TUMOR: THERMAL_W,  # Should be OK for small Tumor
-    },
-    default=0,
-)
-
-Draw(u_coeficient, mesh, "u Coefficient")
-
-
 # H1-conforming finite element space
-fes = H1(mesh, order=3)
+fes = H1(mesh, order=3, dirichlet=BORDER_TOP + "|" + BORDER_BOTTOM)
+dirichlet_condition = GridFunction(fes)
+dirichlet_condition.Set(2.0 * y, BND)
 
 # define trial- and test-functions
 u = fes.TrialFunction()
@@ -97,27 +73,20 @@ v = fes.TestFunction()
 
 # the right hand side
 f = LinearForm(fes)
-f += heat_source * v * dx + ROBIN_H * ROBIN_T_e * v * ds(BORDER_GAMMA)
 
 # the bilinear-form
 a = BilinearForm(fes, symmetric=True)
-a += (thermal_conductivity * grad(u) * grad(v) + u_coeficient * u * v) * dx + ROBIN_H * u * v * ds(BORDER_GAMMA)
+a += thermal_conductivity * grad(u) * grad(v) * dx
 
 a.Assemble()
 f.Assemble()
 
 # the solution field
+res = f.vec.CreateVector()
+res.data = f.vec - a.mat * dirichlet_condition.vec
+
 gfu = GridFunction(fes)
-gfu.vec.data = a.mat.Inverse(fes.FreeDofs(), inverse="sparsecholesky") * f.vec
+gfu.vec.data = dirichlet_condition.vec.data + a.mat.Inverse(fes.FreeDofs(), inverse="sparsecholesky") * res
 
 # plot the solution (netgen-gui only)
 Draw(gfu)
-
-flux = -grad(gfu)
-Draw(flux, mesh, "Flux")
-
-# # VTKOutput object
-# vtk = VTKOutput(
-#     ma=mesh, coefs=[gfu, flux], names=["temperature", "flux"], filename="/tmp/thermo_result", subdivision=3
-# )
-# vtk.Do()
