@@ -969,11 +969,8 @@ def init_poisson_dirichlet_single_inclusion():
     INCLUSION_CENTER_Y = 0.5
     INCLUSION_RADIUS = INCLUSION_SIZE / 2.0 * np.sqrt(2.0)
 
-    def analytical_solution(point: np.array):
-        return 2 * (point[0] - 0.5) ** 2 + 2 * (point[1] - 0.5) ** 2
-
     def boundary_value(point: np.array):
-        return analytical_solution(point)
+        return 2.0 * point[1]
 
     inclusion_domain = SquareDomain2D(
         np.array([INCLUSION_CENTER_X - INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y - INCLUSION_SIZE / 2.0]),
@@ -986,8 +983,8 @@ def init_poisson_dirichlet_single_inclusion():
     domain = SquareDomain2D(
         np.array([0.0, 0.0]),
         np.array([1.0, 1.0]),
-        [BoundaryConditionType.DIRICHLET] * 4,
-        [boundary_value] * 4,
+        [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
+        [boundary_value, Utils.constant_value(0.0)] * 2,
         GlobalSettings.BORDER_ELEMENTS_COUNT,
         [inclusion_domain],
     )
@@ -1059,7 +1056,7 @@ def init_poisson_dirichlet_single_inclusion():
         ),
     ]
 
-    problem = Problem(expression, domain, analytical_solution)
+    problem = Problem(expression, domain)
     return problem
 
 
