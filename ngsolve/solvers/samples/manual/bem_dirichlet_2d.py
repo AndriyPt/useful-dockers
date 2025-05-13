@@ -88,6 +88,11 @@ class Utils:
             return True
         return False
 
+    # TODO: Implement more precise logic
+    @staticmethod
+    def is_point_within_trapezoid(point: np.array, mesh: np.array, eps: float):
+        return Utils.is_point_within_square(point, mesh, eps)
+
     @staticmethod
     def is_square_side(begin: np.array, end: np.array, mesh_item: np.array, eps: float):
         assert 2 == len(begin)
@@ -105,6 +110,19 @@ class Utils:
             ):
                 result = True
                 break
+        return result
+
+    # TODO: Fix a name of a geometrical shape :)
+    @staticmethod
+    def is_rombus(points: np.array, eps: float):
+        assert 4 == len(points)
+
+        distance = Utils.distance(points[0], points[1])
+        distance += Utils.distance(points[1], points[2])
+        distance -= Utils.distance(points[2], points[3])
+        distance -= Utils.distance(points[3], points[0])
+
+        result = np.abs(distance) < eps
         return result
 
     @staticmethod
@@ -308,7 +326,8 @@ class Integrator:
 
 class Integrator2D(Integrator):
 
-    epsilon = 0.01
+    EPSILON = 0.01
+    DIM = 2
 
     def __init__(self, kernel: Kernel, nominal_count: int, singularity_count: int):
         super().__init__(kernel)
@@ -347,7 +366,7 @@ class Integrator2D(Integrator):
     def _get_segment_nodes_and_weights(self, point: np.array, min_limit: np.array, max_limit: np.array):
         count = self.__nominal_number_of_points
         # TODO: Implement logic which will increase points count in case if one point is too close
-        if Utils.is_point_within_segment(point, min_limit, max_limit, Integrator2D.epsilon):
+        if Utils.is_point_within_segment(point, min_limit, max_limit, Integrator2D.EPSILON):
             count = self.__singular_number_of_points
         nodes, weights = np.polynomial.legendre.leggauss(count)
         real_nodes, real_weights = self._convert_leggauss_to_segment(nodes, weights, min_limit, max_limit)
@@ -369,7 +388,7 @@ class Integrator2D(Integrator):
 
     def _get_square_nodes_and_weights(self, point: np.array, square: np.array):
         count = self.__nominal_number_of_points
-        if Utils.is_point_within_square(point, square, Integrator2D.epsilon):
+        if Utils.is_point_within_square(point, square, Integrator2D.EPSILON):
             count = self.__singular_number_of_points
         nodes, weights = np.polynomial.legendre.leggauss(count)
         (real_nodes, real_weights) = self._convert_leggauss_to_square(nodes, weights, square)
@@ -387,6 +406,56 @@ class Integrator2D(Integrator):
         real_nodes, real_weights = self._get_square_nodes_and_weights(point, square)
         for real_node, weight in zip(real_nodes, real_weights):
             result += weight * np.dot(self.kernel.grad(point, real_node), function(real_node))
+        return result
+
+    # Use Jacobian to transform trapezoid to unit square
+    # Find transformation between coordinate systems using representation x' = a*x + b*y + c*x*y + const_x
+    # and y' = d*x + e*y + f*x*y + const_y
+    # Jacobian (a*e - b*d) + (c*e - b*f)*y + (a*f - c*d)*y
+    def trapezoid(self, function: Callable, point: np.array, trapezoid: np.array):
+        assert 4 == len(trapezoid)
+        result = 0.0
+        if Utils.is_rombus(trapezoid, Integrator2D.EPSILON):
+            result = self.square(function, point, trapezoid)
+            return result
+        unit_square = np.array(
+            [np.array([0.0, 0.0]), np.array([1.0, 0.0]), np.array([1.0, 1.0]), np.array([0.0, 1.0])]
+        )
+        matrix = None
+        right_side = np.empty(0)
+        for ideal, actual in zip(unit_square, trapezoid):
+            matrix_row = np.zeros(2 * len(unit_square))
+            matrix_row[0] = 1.0
+            matrix_row[1] = ideal[0]
+            matrix_row[2] = ideal[1]
+            matrix_row[3] = ideal[0] * ideal[1]
+            right_side = np.append(right_side, [actual[0]])
+            if matrix is None:
+                matrix = matrix_row
+            else:
+                matrix = np.vstack((matrix, matrix_row))
+            matrix_row = np.zeros(2 * len(unit_square))
+            shift = len(unit_square)
+            matrix_row[shift + 0] = 1.0
+            matrix_row[shift + 1] = ideal[0]
+            matrix_row[shift + 2] = ideal[1]
+            matrix_row[shift + 3] = ideal[0] * ideal[1]
+            right_side = np.append(right_side, [actual[1]])
+            matrix = np.vstack((matrix, matrix_row))
+
+        coeff = np.linalg.solve(matrix, right_side)
+        if Utils.is_point_within_trapezoid(point, trapezoid, Integrator2D.EPSILON):
+            nodes, weights = self._get_square_nodes_and_weights(np.array([0.5, 0.5]), unit_square)
+        else:
+            nodes, weights = self._get_square_nodes_and_weights(np.array([10.0, 10.0]), unit_square)
+        for node, weight in zip(nodes, weights):
+            real_node = np.zeros(Integrator2D.DIM)
+            a, b, c, d, e, f = (coeff[1], coeff[2], coeff[3], coeff[5], coeff[6], coeff[7])
+            const_x, const_y = (coeff[0], coeff[4])
+            real_node[0] = const_x + a * node[0] + b * node[1] + c * node[0] * node[1]
+            real_node[1] = const_y + d * node[0] + e * node[1] + f * node[0] * node[1]
+            jacobian = (a * e - b * d) + (a * f - c * d) * node[0] + (c * e - b * f) * node[1]
+            result += weight * self.kernel.value(point, real_node) * function(real_node) * jacobian
         return result
 
 
@@ -642,6 +711,92 @@ class SingleLayerVolumeTerm(ExpressionTerm):
         result = 0.0
         for point_info in self.domain.get_mesh():
             result += self.__integrator.square(self.__value_function, point, point_info.element)
+        result *= self.sign
+        return result
+
+
+# TODO: Implement
+class SingleLayerCoBoundaryTerm(ExpressionTerm):
+
+    NOMINAL_INTEGRATION_POINTS = 4
+    EPS = 0.001
+
+    def __init__(self, kernel: Kernel, domain: Domain, sign: int = 1):
+        super().__init__(kernel, domain, sign)
+        self.__unknown_count = 0
+        self.__unknown_values = np.empty(0)
+        self.__integrator = Integrator2D(
+            kernel,
+            SingleLayerCoBoundaryTerm.NOMINAL_INTEGRATION_POINTS,
+            SingleLayerCoBoundaryTerm.NOMINAL_INTEGRATION_POINTS,  # There should not be singularities
+        )
+
+    def calculate_coefficients(self, point: np.array):
+        coefficients = np.empty(0)
+        right_side_ret = 0.0
+
+        for boundary_item in self.domain.get_border():
+            if boundary_item.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.ROBIN]:
+                res = self.__integrator.segment(
+                    Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
+                )
+                coefficients = np.append(coefficients, [res])
+            elif BoundaryConditionType.NEUMANN == boundary_item.type:
+                right_side_ret += boundary_item.value * self.__integrator.segment(
+                    Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
+                )
+            else:
+                raise AttributeError("Not supported boundary element type")
+        self.__unknown_count = len(coefficients)
+
+        return (self.sign * coefficients, self.sign * right_side_ret)
+
+    def calculate_for_robin(self, point: np.array):
+        coefficients = np.empty(0)
+
+        for boundary_item in self.domain.get_border():
+            mid_point = 0.5 * (boundary_item.element[1] + boundary_item.element[0])
+            is_same_point = Utils.distance(point, mid_point) < SingleLayerBoundaryTerm.EPS
+
+            if BoundaryConditionType.DIRICHLET == boundary_item.type:
+                coefficients = np.append(coefficients, [0.0])
+            elif BoundaryConditionType.NEUMANN == boundary_item.type:
+                pass
+            elif BoundaryConditionType.ROBIN == boundary_item.type:
+                if is_same_point:
+                    coefficients = np.append(coefficients, [1.0])
+                else:
+                    coefficients = np.append(coefficients, [0.0])
+            else:
+                raise AttributeError("Not supported boundary element type")
+        self.__unknown_count = len(coefficients)
+
+        return (self.sign * coefficients, 0.0)
+
+    def propagate_solution(self, solution: np.array):
+        self.__unknown_values = solution[: self.__unknown_count]
+        return solution[self.__unknown_count :]
+
+    def value(self, point: np.array):
+        assert self.__unknown_count == len(self.__unknown_values), "Data should be calculated"
+        result = 0.0
+        unknown_index = 0
+
+        for boundary_item in self.domain.get_border():
+            integral_value = self.__integrator.segment(
+                Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
+            )
+            if boundary_item.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.ROBIN]:
+                result += self.__unknown_values[unknown_index] * integral_value
+                unknown_index += 1
+            elif BoundaryConditionType.NEUMANN == boundary_item.type:
+                result += boundary_item.value * integral_value
+            else:
+                raise AttributeError("Not supported boundary element type")
+
+        assert self.__unknown_count == unknown_index, "Unknown could should match {} and {}".format(
+            self.__unknown_count, unknown_index
+        )
         result *= self.sign
         return result
 
