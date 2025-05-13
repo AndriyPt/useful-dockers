@@ -5,6 +5,10 @@
 from ngsolve import *
 from netgen.occ import *
 import math
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import cm
+
 
 BORDER_TOP = "top"
 BORDER_BOTTOM = "bottom"
@@ -90,3 +94,31 @@ gfu.vec.data = dirichlet_condition.vec.data + a.mat.Inverse(fes.FreeDofs(), inve
 
 # plot the solution (netgen-gui only)
 Draw(gfu)
+
+print("Visualizing data...")
+
+CHART_STEPS = 20
+
+fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+
+x_min = 0.0
+y_min = 0.0
+x_max = 1.0
+y_max = 1.0
+
+x_data_linear = np.linspace(x_min, x_max, CHART_STEPS)
+y_data_linear = np.linspace(y_min, y_max, CHART_STEPS)
+
+x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
+
+z_data = np.empty([CHART_STEPS, CHART_STEPS])
+for x_index in range(CHART_STEPS):
+    for y_index in range(CHART_STEPS):
+        point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
+        z_data[x_index][y_index] = gfu(point[0], point[1])
+
+surf = ax.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0)
+
+plt.show()
+
+print("Done!")
