@@ -12,7 +12,8 @@ class GlobalSettings(object):
     BORDER_ELEMENTS_COUNT = 10
     PLOT_ERROR = False
     COBORDER_DEPTH = 0.5
-    EXAMPLE_TYPE = 1  # 1 - Dirichlet, 2 - Neumann, 3 - Robin, 4 - Single Inclusion Dirichlet
+    EXAMPLE_TYPE = 5  # 1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
+    # 5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM
 
 
 class ExpressionTerm:
@@ -1046,8 +1047,8 @@ class Problem(object):
         print("Done!")
 
 
-def init_poisson_dirichlet():
-    print("Define Dirichlet problem for Poisson equation...")
+def init_poisson_dirichlet_bem():
+    print("BEM for Dirichlet problem for Poisson equation...")
 
     print("Define boundary conditions...")
 
@@ -1080,8 +1081,8 @@ def init_poisson_dirichlet():
     return problem
 
 
-def init_poisson_neumann():
-    print("Define Neumann problem for Poisson equation...")
+def init_poisson_neumann_bem():
+    print("BEM for Neumann problem for Poisson equation...")
 
     print("Define boundary conditions...")
 
@@ -1125,8 +1126,8 @@ def init_poisson_neumann():
     return problem
 
 
-def init_poisson_robin():
-    print("Define Robin problem for Poisson equation...")
+def init_poisson_robin_bem():
+    print("BEM for Robin problem for Poisson equation...")
 
     print("Define boundary conditions...")
 
@@ -1170,8 +1171,8 @@ def init_poisson_robin():
     return problem
 
 
-def init_poisson_dirichlet_single_inclusion():
-    print("Define Dirichlet problem for Poisson equation with single inclusion...")
+def init_poisson_dirichlet_single_inclusion_bem():
+    print("BEM for Dirichlet problem for Poisson equation with single inclusion...")
 
     print("Define boundary conditions...")
 
@@ -1273,16 +1274,51 @@ def init_poisson_dirichlet_single_inclusion():
     return problem
 
 
+def init_poisson_dirichlet_cobem():
+    print("CoBEM for Dirichlet problem for Poisson equation...")
+
+    print("Define boundary conditions...")
+
+    def analytical_solution(point: np.array):
+        return 2 * (point[0] - 0.5) ** 2 + 2 * (point[1] - 0.5) ** 2
+
+    def boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    domain = SquareDomain2D(
+        np.array([0.0, 0.0]),
+        np.array([1.0, 1.0]),
+        [BoundaryConditionType.DIRICHLET] * 4,
+        [boundary_value] * 4,
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
+    )
+
+    print("Define heat source function...")
+
+    def heat_source_function(point: np.array):
+        return -8.0
+
+    expression = [
+        SingleLayerCoBoundaryTerm(Laplace2DKernel(), domain),
+        SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
+    ]
+
+    problem = Problem(expression, domain, analytical_solution)
+    return problem
+
+
 if "__main__" == __name__:
     problem = None
     if 1 == GlobalSettings.EXAMPLE_TYPE:
-        problem = init_poisson_dirichlet()
+        problem = init_poisson_dirichlet_bem()
     elif 2 == GlobalSettings.EXAMPLE_TYPE:
-        problem = init_poisson_neumann()
+        problem = init_poisson_neumann_bem()
     elif 3 == GlobalSettings.EXAMPLE_TYPE:
-        problem = init_poisson_robin()
+        problem = init_poisson_robin_bem()
     elif 4 == GlobalSettings.EXAMPLE_TYPE:
-        problem = init_poisson_dirichlet_single_inclusion()
+        problem = init_poisson_dirichlet_single_inclusion_bem()
+    elif 5 == GlobalSettings.EXAMPLE_TYPE:
+        problem = init_poisson_dirichlet_cobem()
 
     assert problem is not None
 
