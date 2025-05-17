@@ -31,6 +31,11 @@ class BoundaryConditionType(Enum):
     INCLUSION = 5
 
 
+class ProblemSolverType(Enum):
+    BEM = 1
+    COBEM = 2
+
+
 class Point2DInfo:
     def __init__(self):
         self.point = np.zeros(2)
@@ -297,6 +302,8 @@ class SquareDomain2D(Domain2D):
             item.point = point_info.point
             item.type = point_info.type
             item.normal = point_info.normal
+            item.value = point_info.value
+            item.robin_coeff = point_info.robin_coeff
 
             corner_points = []
             for corner in self.__square:
@@ -357,6 +364,9 @@ class SquareDomain2D(Domain2D):
 
     def get_coborder(self):
         return self.__coborder
+
+    def get_square(self):
+        return self.__square
 
     def is_point_inside_domain(self, point: np.array):
         result = Utils.is_point_within_square(point, self.__square, Domain2D.POINT_LOCATION_EPSILON)
@@ -813,9 +823,12 @@ class SingleLayerCoBoundaryTerm(ExpressionTerm):
         right_side_ret = 0.0
 
         for boundary_item in self.domain.get_coborder():
+            is_same_point = Utils.is_the_same_point(point, boundary_item.point, SingleLayerCoBoundaryTerm.EPS)
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
                 res = self.__integrator.trapezoid(Utils.constant_one(), point, boundary_item.element)
                 coefficients = np.append(coefficients, [res])
+                if is_same_point:
+                    right_side_ret += boundary_item.value
             else:
                 raise AttributeError("Not supported boundary element type")
         self.__unknown_count = len(coefficients)
@@ -940,22 +953,30 @@ class SingleLayerInclusionTerm(ExpressionTerm):
 
 
 class Problem(object):
-    def __init__(self, expression: list[ExpressionTerm], domain: Domain, analytical_solution: Callable = None):
+    def __init__(
+        self,
+        type: ProblemSolverType,
+        expression: list[ExpressionTerm],
+        domain: Domain,
+        analytical_solution: Callable = None,
+    ):
+        assert type is not None
         assert expression is not None
         assert domain is not None
+        self.__type = type
         self.__expression = expression
         self.__domain = domain
         self.__analytical_solution = analytical_solution
 
     def solution_value(self, point: np.array):
-        # TODO: Check this behaviour
         result = -1.0 * sum(term.value(point) for term in self.__expression)
-        if self.__domain.is_point_on_border(point):
-            result *= 2.0
-        corners = [np.array([0.0, 0.0]), np.array([1.0, 0.0]), np.array([1.0, 1.0]), np.array([0.0, 1.0])]
-        for corner in corners:
-            if Utils.distance(point, corner) < Domain2D.POINT_LOCATION_EPSILON:
+        if ProblemSolverType.BEM == self.__type:
+            # TODO: Check this behaviour
+            if self.__domain.is_point_on_border(point):
                 result *= 2.0
+            for corner in self.__domain.get_square():
+                if Utils.distance(point, corner) < Domain2D.POINT_LOCATION_EPSILON:
+                    result *= 2.0
         return result
 
     def calculate(self):
@@ -1066,7 +1087,7 @@ def init_poisson_dirichlet_bem():
         SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
     ]
 
-    problem = Problem(expression, domain, analytical_solution)
+    problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
     return problem
 
 
@@ -1111,7 +1132,7 @@ def init_poisson_neumann_bem():
         SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
     ]
 
-    problem = Problem(expression, domain, analytical_solution)
+    problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
     return problem
 
 
@@ -1156,7 +1177,7 @@ def init_poisson_robin_bem():
         SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
     ]
 
-    problem = Problem(expression, domain, analytical_solution)
+    problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
     return problem
 
 
@@ -1259,7 +1280,7 @@ def init_poisson_dirichlet_single_inclusion_bem():
         ),
     ]
 
-    problem = Problem(expression, domain)
+    problem = Problem(ProblemSolverType.BEM, expression, domain)
     return problem
 
 
@@ -1292,7 +1313,7 @@ def init_poisson_dirichlet_cobem():
         SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
     ]
 
-    problem = Problem(expression, domain, analytical_solution)
+    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
     return problem
 
 
