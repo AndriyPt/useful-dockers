@@ -298,34 +298,39 @@ class SquareDomain2D(Domain2D):
             item.type = point_info.type
             item.normal = point_info.normal
 
-            corner_point = None
+            corner_points = []
             for corner in self.__square:
                 for element in point_info.element:
                     if Utils.is_the_same_point(element, corner, Domain2D.POINT_LOCATION_EPSILON):
-                        corner_point = element
-                        break
-                if corner_point is not None:
-                    break
+                        corner_points.append(element)
 
             elements = []
             elements.append(point_info.element[0])
             elements.append(point_info.element[1])
 
-            if corner_point is not None:
-                if Utils.is_the_same_point(elements[0], corner_point, Domain2D.POINT_LOCATION_EPSILON):
+            if len(corner_points) > 0:
+                corner_point = corner_points[0]
+                if Utils.is_the_same_point(elements[0], corner_point, Domain2D.POINT_LOCATION_EPSILON) or 2 == len(
+                    corner_points
+                ):
                     prev_index = index - 1
                     if prev_index < 0:
                         prev_index = len(self.__border) - 1
                     corner_grow_vector = self.__border[prev_index].normal + point_info.normal
                     elements.append(point_info.element[0] + corner_grow_vector * GlobalSettings.COBORDER_DEPTH)
-                    elements.append(point_info.element[1] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
-                else:
+                    if 1 == len(corner_points):
+                        elements.append(point_info.element[1] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
+
+                if Utils.is_the_same_point(elements[1], corner_point, Domain2D.POINT_LOCATION_EPSILON) or 2 == len(
+                    corner_points
+                ):
                     next_index = index + 1
                     if next_index >= len(self.__border):
                         next_index = 0
                     corner_grow_vector = self.__border[next_index].normal + point_info.normal
-                    elements.append(point_info.element[0] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
                     elements.append(point_info.element[1] + corner_grow_vector * GlobalSettings.COBORDER_DEPTH)
+                    if 1 == len(corner_points):
+                        elements.append(point_info.element[0] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
             else:
                 elements.append(point_info.element[1] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
                 elements.append(point_info.element[0] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
@@ -351,7 +356,6 @@ class SquareDomain2D(Domain2D):
         return self.__mesh
 
     def get_coborder(self):
-        assert 1 < GlobalSettings.BORDER_ELEMENTS_COUNT, "Should have at least two elements per side"
         return self.__coborder
 
     def is_point_inside_domain(self, point: np.array):

@@ -95,6 +95,13 @@ def test_trapezoid_integration():
     )
     assert_floats_are_equal(5.0, result)
 
+    result = integrator.trapezoid(
+        identity_value,
+        np.array([0.5, 0.5]),
+        np.array([np.array([0.0, 0.0]), np.array([3.0, 0.0]), np.array([2.0, 2.0]), np.array([1.0, 2.0])]),
+    )
+    assert_floats_are_equal(4.0, result)
+
 def main():
     test_segment_integration()
     test_square_integration()
