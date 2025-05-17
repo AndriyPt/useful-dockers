@@ -12,8 +12,11 @@ class GlobalSettings(object):
     BORDER_ELEMENTS_COUNT = 10
     PLOT_ERROR = False
     COBORDER_DEPTH = 0.5
-    EXAMPLE_TYPE = 5  # 1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
-    # 5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM
+    """
+        1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
+        5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM    
+    """
+    EXAMPLE_TYPE = 5
 
 
 class ExpressionTerm:
@@ -26,7 +29,6 @@ class BoundaryConditionType(Enum):
     NEUMANN = 3
     ROBIN = 4
     INCLUSION = 5
-    COBORDER = 6
 
 
 class Point2DInfo:
@@ -151,6 +153,9 @@ class Domain:
         raise NotImplementedError("Call to abstract method")
 
     def get_mesh(self):
+        raise NotImplementedError("Call to abstract method")
+
+    def get_coborder(self):
         raise NotImplementedError("Call to abstract method")
 
     def is_point_on_border(self, point: np.array):
@@ -290,7 +295,7 @@ class SquareDomain2D(Domain2D):
             point_info = self.__border[index]
             item = Point2DInfo()
             item.point = point_info.point
-            item.type = BoundaryConditionType.COBORDER
+            item.type = point_info.type
             item.normal = point_info.normal
 
             corner_point = None
@@ -307,24 +312,33 @@ class SquareDomain2D(Domain2D):
             elements.append(point_info.element[1])
 
             if corner_point is not None:
-                if 0 == index:
-                    next_index = len(self.__border) - 1
+                if Utils.is_the_same_point(elements[0], corner_point, Domain2D.POINT_LOCATION_EPSILON):
+                    prev_index = index - 1
+                    if prev_index < 0:
+                        prev_index = len(self.__border) - 1
+                    corner_grow_vector = self.__border[prev_index].normal + point_info.normal
+                    elements.append(point_info.element[0] + corner_grow_vector * GlobalSettings.COBORDER_DEPTH)
+                    elements.append(point_info.element[1] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
                 else:
                     next_index = index + 1
                     if next_index >= len(self.__border):
                         next_index = 0
-                corner_grow_vector = self.__border[next_index].normal + point_info.normal
-                if Utils.is_the_same_point(elements[0], element, Domain2D.POINT_LOCATION_EPSILON):
-                    elements.append(point_info.element[0] + corner_grow_vector * GlobalSettings.COBORDER_DEPTH)
-                    elements.append(point_info.element[1] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
-                else:
+                    corner_grow_vector = self.__border[next_index].normal + point_info.normal
                     elements.append(point_info.element[0] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
                     elements.append(point_info.element[1] + corner_grow_vector * GlobalSettings.COBORDER_DEPTH)
             else:
                 elements.append(point_info.element[1] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
                 elements.append(point_info.element[0] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
 
-            # TODO: Added elements resorting to fit schema
+            if Utils.is_the_same_point(point_info.normal, np.array([1.0, 0.0]), Domain2D.POINT_LOCATION_EPSILON):
+                elements[1], elements[2], elements[3] = elements[2], elements[3], elements[1]
+            elif Utils.is_the_same_point(point_info.normal, np.array([0.0, 1.0]), Domain2D.POINT_LOCATION_EPSILON):
+                elements[0], elements[1] = elements[1], elements[0]
+            elif Utils.is_the_same_point(point_info.normal, np.array([-1.0, 0.0]), Domain2D.POINT_LOCATION_EPSILON):
+                elements[0], elements[2], elements[3] = elements[3], elements[0], elements[2]
+            else:
+                elements[3], elements[2], elements[0], elements[1] = elements[0], elements[1], elements[2], elements[3]
+
             item.element = elements
             self.__coborder.append(item)
 
@@ -337,6 +351,7 @@ class SquareDomain2D(Domain2D):
         return self.__mesh
 
     def get_coborder(self):
+        assert 1 < GlobalSettings.BORDER_ELEMENTS_COUNT, "Should have at least two elements per side"
         return self.__coborder
 
     def is_point_inside_domain(self, point: np.array):
@@ -774,10 +789,9 @@ class SingleLayerVolumeTerm(ExpressionTerm):
         return result
 
 
-# TODO: Implement
 class SingleLayerCoBoundaryTerm(ExpressionTerm):
-
     NOMINAL_INTEGRATION_POINTS = 4
+    SINGULARITY_INTEGRATION_POINTS = 6
     EPS = 0.001
 
     def __init__(self, kernel: Kernel, domain: Domain, sign: int = 1):
@@ -787,23 +801,17 @@ class SingleLayerCoBoundaryTerm(ExpressionTerm):
         self.__integrator = Integrator2D(
             kernel,
             SingleLayerCoBoundaryTerm.NOMINAL_INTEGRATION_POINTS,
-            SingleLayerCoBoundaryTerm.NOMINAL_INTEGRATION_POINTS,  # There should not be singularities
+            SingleLayerCoBoundaryTerm.SINGULARITY_INTEGRATION_POINTS,  # There should not be singularities
         )
 
     def calculate_coefficients(self, point: np.array):
         coefficients = np.empty(0)
         right_side_ret = 0.0
 
-        for boundary_item in self.domain.get_border():
-            if boundary_item.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.ROBIN]:
-                res = self.__integrator.segment(
-                    Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
-                )
+        for boundary_item in self.domain.get_coborder():
+            if BoundaryConditionType.DIRICHLET == boundary_item.type:
+                res = self.__integrator.trapezoid(Utils.constant_one(), point, boundary_item.element)
                 coefficients = np.append(coefficients, [res])
-            elif BoundaryConditionType.NEUMANN == boundary_item.type:
-                right_side_ret += boundary_item.value * self.__integrator.segment(
-                    Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
-                )
             else:
                 raise AttributeError("Not supported boundary element type")
         self.__unknown_count = len(coefficients)
@@ -811,26 +819,7 @@ class SingleLayerCoBoundaryTerm(ExpressionTerm):
         return (self.sign * coefficients, self.sign * right_side_ret)
 
     def calculate_for_robin(self, point: np.array):
-        coefficients = np.empty(0)
-
-        for boundary_item in self.domain.get_border():
-            mid_point = 0.5 * (boundary_item.element[1] + boundary_item.element[0])
-            is_same_point = Utils.distance(point, mid_point) < SingleLayerBoundaryTerm.EPS
-
-            if BoundaryConditionType.DIRICHLET == boundary_item.type:
-                coefficients = np.append(coefficients, [0.0])
-            elif BoundaryConditionType.NEUMANN == boundary_item.type:
-                pass
-            elif BoundaryConditionType.ROBIN == boundary_item.type:
-                if is_same_point:
-                    coefficients = np.append(coefficients, [1.0])
-                else:
-                    coefficients = np.append(coefficients, [0.0])
-            else:
-                raise AttributeError("Not supported boundary element type")
-        self.__unknown_count = len(coefficients)
-
-        return (self.sign * coefficients, 0.0)
+        raise NotImplementedError("Not implemented yet")
 
     def propagate_solution(self, solution: np.array):
         self.__unknown_values = solution[: self.__unknown_count]
@@ -841,15 +830,11 @@ class SingleLayerCoBoundaryTerm(ExpressionTerm):
         result = 0.0
         unknown_index = 0
 
-        for boundary_item in self.domain.get_border():
-            integral_value = self.__integrator.segment(
-                Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
-            )
-            if boundary_item.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.ROBIN]:
+        for boundary_item in self.domain.get_coborder():
+            integral_value = self.__integrator.trapezoid(Utils.constant_one(), point, boundary_item.element)
+            if BoundaryConditionType.DIRICHLET == boundary_item.type:
                 result += self.__unknown_values[unknown_index] * integral_value
                 unknown_index += 1
-            elif BoundaryConditionType.NEUMANN == boundary_item.type:
-                result += boundary_item.value * integral_value
             else:
                 raise AttributeError("Not supported boundary element type")
 
