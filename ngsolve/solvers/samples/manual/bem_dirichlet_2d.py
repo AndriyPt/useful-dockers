@@ -43,7 +43,7 @@ class Point2DInfo:
         self.normal = np.zeros(2)
         self.element = np.empty(0)
         self.value = 0.0
-        self.robin_coeff = 0.0
+        self.robin_coeff = 0.0  # Robin condition is represented as 1 * q = robin_coeff * u + value
 
 
 class Utils:
@@ -593,10 +593,10 @@ class ExpressionTerm:
     def sign(self):
         return self.__sign
 
-    def calculate_coefficients(self, point: np.array):
+    def calculate_coefficients(self, point_info: Point2DInfo):
         raise NotImplementedError("Call to abstract method")
 
-    def calculate_for_robin(self, point: np.array):
+    def calculate_for_robin(self, point_info: Point2DInfo):
         raise NotImplementedError("Call to abstract method")
 
     def propagate_solution(self, solution: np.array):
@@ -619,19 +619,20 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
             SingleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS,
         )
 
-    def calculate_coefficients(self, point: np.array):
+    def calculate_coefficients(self, point_info: Point2DInfo):
+        assert point_info is not None
         coefficients = np.empty(0)
         right_side_ret = 0.0
 
         for boundary_item in self.domain.get_border():
             if boundary_item.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.ROBIN]:
                 res = self.__integrator.segment(
-                    Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
+                    Utils.constant_one(), point_info.point, boundary_item.element[0], boundary_item.element[1]
                 )
                 coefficients = np.append(coefficients, [res])
             elif BoundaryConditionType.NEUMANN == boundary_item.type:
                 right_side_ret += boundary_item.value * self.__integrator.segment(
-                    Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
+                    Utils.constant_one(), point_info.point, boundary_item.element[0], boundary_item.element[1]
                 )
             else:
                 raise AttributeError("Not supported boundary element type")
@@ -639,12 +640,12 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
 
         return (self.sign * coefficients, self.sign * right_side_ret)
 
-    def calculate_for_robin(self, point: np.array):
+    def calculate_for_robin(self, point_info: Point2DInfo):
+        assert point_info is not None
         coefficients = np.empty(0)
-
         for boundary_item in self.domain.get_border():
             mid_point = 0.5 * (boundary_item.element[1] + boundary_item.element[0])
-            is_same_point = Utils.distance(point, mid_point) < SingleLayerBoundaryTerm.EPS
+            is_same_point = Utils.distance(point_info.point, mid_point) < SingleLayerBoundaryTerm.EPS
 
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
                 coefficients = np.append(coefficients, [0.0])
@@ -704,16 +705,16 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
             DoubleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS,
         )
 
-    def calculate_coefficients(self, point: np.array):
+    def calculate_coefficients(self, point_info: Point2DInfo):
+        assert point_info is not None
         coefficients = np.empty(0)
         right_side_ret = 0.0
-
         for boundary_item in self.domain.get_border():
-            is_same_point = Utils.is_the_same_point(point, boundary_item.point, DoubleLayerBoundaryTerm.EPS)
+            is_same_point = Utils.is_the_same_point(point_info.point, boundary_item.point, DoubleLayerBoundaryTerm.EPS)
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
                 right_side_ret += boundary_item.value * self.__integrator.segment_grad(
                     Utils.constant_value(boundary_item.normal),
-                    point,
+                    point_info.point,
                     boundary_item.element[0],
                     boundary_item.element[1],
                 )
@@ -722,7 +723,7 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
             elif boundary_item.type in [BoundaryConditionType.NEUMANN, BoundaryConditionType.ROBIN]:
                 res = self.__integrator.segment_grad(
                     Utils.constant_value(boundary_item.normal),
-                    point,
+                    point_info.point,
                     boundary_item.element[0],
                     boundary_item.element[1],
                 )
@@ -735,13 +736,13 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
 
         return (self.sign * coefficients, self.sign * right_side_ret)
 
-    def calculate_for_robin(self, point: np.array):
+    def calculate_for_robin(self, point_info: Point2DInfo):
+        assert point_info is not None
         coefficients = np.empty(0)
         right_side_ret = 0.0
-
         for boundary_item in self.domain.get_border():
             mid_point = 0.5 * (boundary_item.element[1] + boundary_item.element[0])
-            is_same_point = Utils.distance(point, mid_point) < SingleLayerBoundaryTerm.EPS
+            is_same_point = Utils.distance(point_info.point, mid_point) < SingleLayerBoundaryTerm.EPS
 
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
                 pass
@@ -808,13 +809,13 @@ class SingleLayerVolumeTerm(ExpressionTerm):
     def _get_value_function(self):
         return self.__value_function
 
-    def calculate_coefficients(self, point: np.array):
-        assert point is not None
+    def calculate_coefficients(self, point_info: Point2DInfo):
+        assert point_info is not None
         coefficients = np.empty(0)
-        right_side_ret = self.value(point)
+        right_side_ret = self.value(point_info.point)
         return (coefficients, right_side_ret)
 
-    def calculate_for_robin(self, point: np.array):
+    def calculate_for_robin(self, point_info: Point2DInfo):
         coefficients = np.empty(0)
         return (coefficients, 0.0)
 
@@ -837,23 +838,13 @@ class SingleLayerVolumeCoBEMTerm(SingleLayerVolumeTerm):
     def __init__(self, kernel: Kernel, domain: Domain, value_function: Callable, sign: int = 1):
         super().__init__(kernel, domain, value_function, sign)
 
-    def calculate_coefficients(self, point: np.array):
-        assert point is not None
+    def calculate_coefficients(self, point_info: Point2DInfo):
+        assert point_info is not None
         coefficients = np.empty(0)
-
-        # TODO: Add input point type to method parameters list
-        input_point_type = BoundaryConditionType.DIRICHLET
-        input_point_normal = np.zeros(2)
-        for boundary_item in self.domain.get_border():
-            if Utils.is_the_same_point(point, boundary_item.point, SingleLayerVolumeCoBEMTerm.EPS):
-                input_point_type = boundary_item.type
-                input_point_normal = boundary_item.normal
-                break
-
-        if BoundaryConditionType.NEUMANN == input_point_type:
-            right_side_ret = self.value_grad(point, input_point_normal)
+        if BoundaryConditionType.NEUMANN == point_info.type:
+            right_side_ret = self.value_grad(point_info.point, point_info.normal)
         else:
-            right_side_ret = super().value(point)
+            right_side_ret = super().value(point_info.point)
         return (coefficients, right_side_ret)
 
     def value_grad(self, point: np.array, norm: np.array):
@@ -885,38 +876,45 @@ class SingleLayerCoBoundaryTerm(ExpressionTerm):
             SingleLayerCoBoundaryTerm.SINGULARITY_INTEGRATION_POINTS,  # There should not be singularities
         )
 
-    def calculate_coefficients(self, point: np.array):
+    def calculate_coefficients(self, point_info: Point2DInfo):
+        assert point_info is not None
         coefficients = np.empty(0)
         right_side_ret = 0.0
-
-        # TODO: Add input point type to method parameters list
-        input_point_type = BoundaryConditionType.DIRICHLET
         for boundary_item in self.domain.get_coborder():
-            if Utils.is_the_same_point(point, boundary_item.point, SingleLayerCoBoundaryTerm.EPS):
-                input_point_type = boundary_item.type
-                break
-
-        for boundary_item in self.domain.get_coborder():
-            is_same_point = Utils.is_the_same_point(point, boundary_item.point, SingleLayerCoBoundaryTerm.EPS)
-            if BoundaryConditionType.DIRICHLET == input_point_type:
-                res = self.__integrator.trapezoid(Utils.constant_one(), point, boundary_item.element)
+            is_same_point = Utils.is_the_same_point(
+                point_info.point, boundary_item.point, SingleLayerCoBoundaryTerm.EPS
+            )
+            if BoundaryConditionType.DIRICHLET == point_info.type:
+                res = self.__integrator.trapezoid(Utils.constant_one(), point_info.point, boundary_item.element)
                 coefficients = np.append(coefficients, [res])
                 if is_same_point:
                     right_side_ret += boundary_item.value
-            elif BoundaryConditionType.NEUMANN == input_point_type:
+            elif BoundaryConditionType.NEUMANN == point_info.type:
                 res = self.__integrator.trapezoid_grad(
-                    Utils.constant_value(boundary_item.normal), point, boundary_item.element
+                    Utils.constant_value(boundary_item.normal), point_info.point, boundary_item.element
                 )
                 coefficients = np.append(coefficients, [res])
                 if is_same_point:
                     right_side_ret += boundary_item.value
+            elif BoundaryConditionType.ROBIN == point_info.type:
+                res = self.__integrator.trapezoid(Utils.constant_one(), point_info.point, boundary_item.element)
+                coefficients = np.append(coefficients, [res])
+                if is_same_point:
+                    right_side_ret += boundary_item.value
+                res = self.__integrator.trapezoid_grad(
+                    Utils.constant_value(boundary_item.normal), point_info.point, boundary_item.element
+                )
+                coefficients = np.append(coefficients, [res])
+                if is_same_point:
+                    right_side_ret += boundary_item.value
+
             else:
                 raise AttributeError("Not supported boundary element type")
         self.__unknown_count = len(coefficients)
 
         return (self.sign * coefficients, self.sign * right_side_ret)
 
-    def calculate_for_robin(self, point: np.array):
+    def calculate_for_robin(self, point_info: Point2DInfo):
         raise NotImplementedError("Not implemented yet")
 
     def propagate_solution(self, solution: np.array):
@@ -964,13 +962,13 @@ class SingleLayerInclusionTerm(ExpressionTerm):
             SingleLayerInclusionTerm.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
         )
 
-    def calculate_coefficients(self, point: np.array):
-        assert point is not None
+    def calculate_coefficients(self, point_info: Point2DInfo):
+        assert point_info is not None
         coefficients = np.empty(0)
         for point_info in self.domain.get_mesh():
-            is_same_point = Utils.is_the_same_point(point, point_info.point, DoubleLayerBoundaryTerm.EPS)
-            res = -1.0 * self.__integrator.square(self.__laplacian_function, point, point_info.element)
-            res += self.__integrator.square_grad(self.__grad_function, point, point_info.element)
+            is_same_point = Utils.is_the_same_point(point_info.point, point_info.point, DoubleLayerBoundaryTerm.EPS)
+            res = -1.0 * self.__integrator.square(self.__laplacian_function, point_info.point, point_info.element)
+            res += self.__integrator.square_grad(self.__grad_function, point_info.point, point_info.element)
             # TODO: Check sign of the U variable
             if is_same_point:
                 res += 1.0
@@ -986,7 +984,7 @@ class SingleLayerInclusionTerm(ExpressionTerm):
                         return np.dot(self.__grad_function(position), boundary_item.normal)
 
                     res += self.__integrator.segment(
-                        normal_derivative, point, boundary_item.element[0], boundary_item.element[1]
+                        normal_derivative, point_info.point, boundary_item.element[0], boundary_item.element[1]
                     )
 
             coefficients = np.append(coefficients, [res])
@@ -994,7 +992,7 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         self.__unknown_count = len(coefficients)
         return (self.sign * coefficients, 0.0)
 
-    def calculate_for_robin(self, point: np.array):
+    def calculate_for_robin(self, point_info: Point2DInfo):
         raise NotImplementedError("Implement")
 
     def propagate_solution(self, solution: np.array):
@@ -1074,7 +1072,7 @@ class Problem(object):
             right_side_value = 0.0
             matrix_row = np.empty(0)
             for term in self.__expression:
-                coefficients, value = term.calculate_coefficients(point_info.point)
+                coefficients, value = term.calculate_coefficients(point_info)
                 right_side_value += value
                 matrix_row = np.hstack((matrix_row, coefficients))
             if matrix is None:
@@ -1085,11 +1083,11 @@ class Problem(object):
                 right_side = np.array([right_side_value])
             else:
                 right_side = np.append(right_side, [right_side_value])
-            if BoundaryConditionType.ROBIN == point_info.type:
+            if BoundaryConditionType.ROBIN == point_info.type and ProblemSolverType.BEM == self.__type:
                 right_side_value = 0.0
                 matrix_row = np.empty(0)
                 for term in self.__expression:
-                    coefficients, value = term.calculate_for_robin(point_info.point)
+                    coefficients, value = term.calculate_for_robin(point_info)
                     right_side_value += value
                     matrix_row = np.hstack((matrix_row, coefficients))
                 matrix = np.vstack((matrix, matrix_row))
