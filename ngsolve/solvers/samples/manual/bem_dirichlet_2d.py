@@ -843,14 +843,21 @@ class SingleLayerCoBoundaryTerm(ExpressionTerm):
         coefficients = np.empty(0)
         right_side_ret = 0.0
 
+        # TODO: Add input point type to method parameters list
+        input_point_type = BoundaryConditionType.DIRICHLET
+        for boundary_item in self.domain.get_coborder():
+            if Utils.is_the_same_point(point, boundary_item.point, SingleLayerCoBoundaryTerm.EPS):
+                input_point_type = boundary_item.type
+                break
+
         for boundary_item in self.domain.get_coborder():
             is_same_point = Utils.is_the_same_point(point, boundary_item.point, SingleLayerCoBoundaryTerm.EPS)
-            if BoundaryConditionType.DIRICHLET == boundary_item.type:
+            if BoundaryConditionType.DIRICHLET == input_point_type:
                 res = self.__integrator.trapezoid(Utils.constant_one(), point, boundary_item.element)
                 coefficients = np.append(coefficients, [res])
                 if is_same_point:
                     right_side_ret += boundary_item.value
-            elif BoundaryConditionType.NEUMANN == boundary_item.type:
+            elif BoundaryConditionType.NEUMANN == input_point_type:
                 res = self.__integrator.trapezoid_grad(
                     Utils.constant_value(boundary_item.normal), point, boundary_item.element
                 )
@@ -1350,26 +1357,17 @@ def init_poisson_neumann_cobem():
 
     print("Define boundary conditions...")
 
-    # def analytical_solution(point: np.array):
-    #     return 2.0 * (point[0] - 0.5) ** 2 + 2.0 * (point[1] - 0.5) ** 2
-
     def analytical_solution(point: np.array):
-        return 2.0 * (point[0] - 0.5) + 2.0 * (point[1] - 0.5)
+        return 2.0 * (point[0] - 0.5) ** 2 + 2.0 * (point[1] - 0.5) ** 2
 
     def dirichlet_boundary_value(point: np.array):
         return analytical_solution(point)
 
-    # def neumann_boundary_right_value(point: np.array):
-    #     return 4.0 * point[0] - 2.0
-
-    # def neumann_boundary_left_value(point: np.array):
-    #     return 2.0 - 4.0 * point[0]
-
     def neumann_boundary_right_value(point: np.array):
-        return 2.0
+        return 4.0 * point[0] - 2.0
 
     def neumann_boundary_left_value(point: np.array):
-        return -2.0
+        return 2.0 - 4.0 * point[0]
 
     domain = SquareDomain2D(
         np.array([0.0, 0.0]),
