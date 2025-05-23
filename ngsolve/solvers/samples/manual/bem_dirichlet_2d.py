@@ -16,7 +16,7 @@ class GlobalSettings(object):
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
         5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM    
     """
-    EXAMPLE_TYPE = 5
+    EXAMPLE_TYPE = 6
 
 
 class ExpressionTerm:
@@ -500,12 +500,7 @@ class Integrator2D(Integrator):
     # Find transformation between coordinate systems using representation x' = a*x + b*y + c*x*y + const_x
     # and y' = d*x + e*y + f*x*y + const_y
     # Jacobian (a*e - b*d) + (c*e - b*f)*y + (a*f - c*d)*y
-    def trapezoid(self, function: Callable, point: np.array, trapezoid: np.array):
-        assert 4 == len(trapezoid)
-        result = 0.0
-        if Utils.is_rombus(trapezoid, Integrator2D.EPSILON):
-            result = self.square(function, point, trapezoid)
-            return result
+    def _get_trapezoid_nodes_weights_and_coeff(self, point: np.array, trapezoid: np.array):
         unit_square = np.array(
             [np.array([0.0, 0.0]), np.array([1.0, 0.0]), np.array([1.0, 1.0]), np.array([0.0, 1.0])]
         )
@@ -536,6 +531,15 @@ class Integrator2D(Integrator):
             nodes, weights = self._get_square_nodes_and_weights(np.array([0.5, 0.5]), unit_square)
         else:
             nodes, weights = self._get_square_nodes_and_weights(np.array([10.0, 10.0]), unit_square)
+        return (nodes, weights, coeff)
+
+    def trapezoid(self, function: Callable, point: np.array, trapezoid: np.array):
+        assert 4 == len(trapezoid)
+        result = 0.0
+        if Utils.is_rombus(trapezoid, Integrator2D.EPSILON):
+            result = self.square(function, point, trapezoid)
+            return result
+        nodes, weights, coeff = self._get_trapezoid_nodes_weights_and_coeff(point, trapezoid)
         for node, weight in zip(nodes, weights):
             real_node = np.zeros(Integrator2D.DIM)
             a, b, c, d, e, f = (coeff[1], coeff[2], coeff[3], coeff[5], coeff[6], coeff[7])
@@ -544,6 +548,23 @@ class Integrator2D(Integrator):
             real_node[1] = const_y + d * node[0] + e * node[1] + f * node[0] * node[1]
             jacobian = (a * e - b * d) + (a * f - c * d) * node[0] + (c * e - b * f) * node[1]
             result += weight * self.kernel.value(point, real_node) * function(real_node) * jacobian
+        return result
+
+    def trapezoid_grad(self, function: Callable, point: np.array, trapezoid: np.array):
+        assert 4 == len(trapezoid)
+        result = 0.0
+        if Utils.is_rombus(trapezoid, Integrator2D.EPSILON):
+            result = self.square_grad(function, point, trapezoid)
+            return result
+        nodes, weights, coeff = self._get_trapezoid_nodes_weights_and_coeff(point, trapezoid)
+        for node, weight in zip(nodes, weights):
+            real_node = np.zeros(Integrator2D.DIM)
+            a, b, c, d, e, f = (coeff[1], coeff[2], coeff[3], coeff[5], coeff[6], coeff[7])
+            const_x, const_y = (coeff[0], coeff[4])
+            real_node[0] = const_x + a * node[0] + b * node[1] + c * node[0] * node[1]
+            real_node[1] = const_y + d * node[0] + e * node[1] + f * node[0] * node[1]
+            jacobian = (a * e - b * d) + (a * f - c * d) * node[0] + (c * e - b * f) * node[1]
+            result += weight * np.dot(self.kernel.grad(point, real_node), function(real_node)) * jacobian
         return result
 
 
@@ -829,6 +850,13 @@ class SingleLayerCoBoundaryTerm(ExpressionTerm):
                 coefficients = np.append(coefficients, [res])
                 if is_same_point:
                     right_side_ret += boundary_item.value
+            elif BoundaryConditionType.NEUMANN == boundary_item.type:
+                res = self.__integrator.trapezoid_grad(
+                    Utils.constant_value(boundary_item.normal), point, boundary_item.element
+                )
+                coefficients = np.append(coefficients, [res])
+                if is_same_point:
+                    right_side_ret += boundary_item.value
             else:
                 raise AttributeError("Not supported boundary element type")
         self.__unknown_count = len(coefficients)
@@ -849,7 +877,7 @@ class SingleLayerCoBoundaryTerm(ExpressionTerm):
 
         for boundary_item in self.domain.get_coborder():
             integral_value = self.__integrator.trapezoid(Utils.constant_one(), point, boundary_item.element)
-            if BoundaryConditionType.DIRICHLET == boundary_item.type:
+            if boundary_item.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN]:
                 result += self.__unknown_values[unknown_index] * integral_value
                 unknown_index += 1
             else:
@@ -1092,7 +1120,7 @@ def init_poisson_dirichlet_bem():
 
 
 def init_poisson_neumann_bem():
-    print("BEM for Neumann problem for Poisson equation...")
+    print("BEM for Neumann and Dirichlet mixed problem for Poisson equation...")
 
     print("Define boundary conditions...")
 
@@ -1317,6 +1345,59 @@ def init_poisson_dirichlet_cobem():
     return problem
 
 
+def init_poisson_neumann_cobem():
+    print("CoBEM for Neumann and Dirichlet mixed problem for Poisson equation...")
+
+    print("Define boundary conditions...")
+
+    # def analytical_solution(point: np.array):
+    #     return 2.0 * (point[0] - 0.5) ** 2 + 2.0 * (point[1] - 0.5) ** 2
+
+    def analytical_solution(point: np.array):
+        return 2.0 * (point[0] - 0.5) + 2.0 * (point[1] - 0.5)
+
+    def dirichlet_boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    # def neumann_boundary_right_value(point: np.array):
+    #     return 4.0 * point[0] - 2.0
+
+    # def neumann_boundary_left_value(point: np.array):
+    #     return 2.0 - 4.0 * point[0]
+
+    def neumann_boundary_right_value(point: np.array):
+        return 2.0
+
+    def neumann_boundary_left_value(point: np.array):
+        return -2.0
+
+    domain = SquareDomain2D(
+        np.array([0.0, 0.0]),
+        np.array([1.0, 1.0]),
+        [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
+        [
+            dirichlet_boundary_value,
+            neumann_boundary_right_value,
+            dirichlet_boundary_value,
+            neumann_boundary_left_value,
+        ],
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
+    )
+
+    print("Define heat source function...")
+
+    def heat_source_function(point: np.array):
+        return -8.0
+
+    expression = [
+        SingleLayerCoBoundaryTerm(Laplace2DKernel(), domain),
+        # SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
+    ]
+
+    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+    return problem
+
+
 if "__main__" == __name__:
     problem = None
     if 1 == GlobalSettings.EXAMPLE_TYPE:
@@ -1329,6 +1410,8 @@ if "__main__" == __name__:
         problem = init_poisson_dirichlet_single_inclusion_bem()
     elif 5 == GlobalSettings.EXAMPLE_TYPE:
         problem = init_poisson_dirichlet_cobem()
+    elif 6 == GlobalSettings.EXAMPLE_TYPE:
+        problem = init_poisson_neumann_cobem()
 
     assert problem is not None
 
