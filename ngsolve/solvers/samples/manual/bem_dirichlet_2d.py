@@ -802,6 +802,12 @@ class SingleLayerVolumeTerm(ExpressionTerm):
             SingleLayerVolumeTerm.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
         )
 
+    def _get_integrator(self):
+        return self.__integrator
+
+    def _get_value_function(self):
+        return self.__value_function
+
     def calculate_coefficients(self, point: np.array):
         assert point is not None
         coefficients = np.empty(0)
@@ -820,6 +826,46 @@ class SingleLayerVolumeTerm(ExpressionTerm):
         result = 0.0
         for point_info in self.domain.get_mesh():
             result += self.__integrator.square(self.__value_function, point, point_info.element)
+        result *= self.sign
+        return result
+
+
+class SingleLayerVolumeCoBEMTerm(SingleLayerVolumeTerm):
+
+    EPS = 0.001
+
+    def __init__(self, kernel: Kernel, domain: Domain, value_function: Callable, sign: int = 1):
+        super().__init__(kernel, domain, value_function, sign)
+
+    def calculate_coefficients(self, point: np.array):
+        assert point is not None
+        coefficients = np.empty(0)
+
+        # TODO: Add input point type to method parameters list
+        input_point_type = BoundaryConditionType.DIRICHLET
+        input_point_normal = np.zeros(2)
+        for boundary_item in self.domain.get_border():
+            if Utils.is_the_same_point(point, boundary_item.point, SingleLayerVolumeCoBEMTerm.EPS):
+                input_point_type = boundary_item.type
+                input_point_normal = boundary_item.normal
+                break
+
+        if BoundaryConditionType.NEUMANN == input_point_type:
+            right_side_ret = self.value_grad(point, input_point_normal)
+        else:
+            right_side_ret = super().value(point)
+        return (coefficients, right_side_ret)
+
+    def value_grad(self, point: np.array, norm: np.array):
+        assert point is not None
+        result = 0.0
+
+        def normal_function(x: np.array):
+            result = self._get_value_function()(x) * norm
+            return result
+
+        for point_info in self.domain.get_mesh():
+            result += self._get_integrator().square_grad(normal_function, point, point_info.element)
         result *= self.sign
         return result
 
@@ -1389,7 +1435,7 @@ def init_poisson_neumann_cobem():
 
     expression = [
         SingleLayerCoBoundaryTerm(Laplace2DKernel(), domain),
-        # SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
+        SingleLayerVolumeCoBEMTerm(Laplace2DKernel(), domain, heat_source_function, -1),
     ]
 
     problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
