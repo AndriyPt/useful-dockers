@@ -16,7 +16,7 @@ class GlobalSettings(object):
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
         5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM    
     """
-    EXAMPLE_TYPE = 6
+    EXAMPLE_TYPE = 4
 
 
 class ExpressionTerm:
@@ -36,11 +36,16 @@ class ProblemSolverType(Enum):
     COBEM = 2
 
 
+class Constants:
+    TWO_DIM = 2
+    PLANE_SQUARE_DIM = 4
+
+
 class Point2DInfo:
     def __init__(self):
-        self.point = np.zeros(2)
+        self.point = np.zeros(Constants.TWO_DIM)
         self.type = BoundaryConditionType.UNKNOWN
-        self.normal = np.zeros(2)
+        self.normal = np.zeros(Constants.TWO_DIM)
         self.element = np.empty(0)
         self.value = 0.0
         self.robin_coeff = 0.0  # Robin condition is represented as 1 * q = robin_coeff * u + value
@@ -70,7 +75,7 @@ class Utils:
 
     @staticmethod
     def cross_product(vector1: np.array, vector2: np.array):
-        if 2 == len(vector1) and 2 == len(vector2):
+        if Constants.TWO_DIM == len(vector1) and Constants.TWO_DIM == len(vector2):
             value = vector1[0] * vector2[1] - vector1[1] * vector2[0]
             result = np.array([0.0, 0.0, value])
         else:
@@ -105,9 +110,9 @@ class Utils:
 
     @staticmethod
     def is_square_side(begin: np.array, end: np.array, mesh_item: np.array, eps: float):
-        assert 2 == len(begin)
-        assert 2 == len(end)
-        assert 4 == len(mesh_item)
+        assert Constants.TWO_DIM == len(begin)
+        assert Constants.TWO_DIM == len(end)
+        assert Constants.PLANE_SQUARE_DIM == len(mesh_item)
 
         result = False
         for index in range(0, 2):
@@ -122,10 +127,9 @@ class Utils:
                 break
         return result
 
-    # TODO: Fix a name of a geometrical shape :)
     @staticmethod
-    def is_rombus(points: np.array, eps: float):
-        assert 4 == len(points)
+    def is_rhombus(points: np.array, eps: float):
+        assert Constants.PLANE_SQUARE_DIM == len(points)
 
         distance = Utils.distance(points[0], points[1])
         distance += Utils.distance(points[1], points[2])
@@ -148,6 +152,30 @@ class Utils:
             return value
 
         return result
+
+    @staticmethod
+    def plot(x_limits: np.array, y_limits: np.array, functions: list):
+        assert Constants.TWO_DIM == len(x_limits)
+        assert Constants.TWO_DIM == len(y_limits)
+        assert len(functions) > 0
+
+        functions_count = len(functions)
+        fig = plt.figure(figsize=plt.figaspect(0.5))
+        x_data_linear = np.linspace(x_limits[0], x_limits[1], GlobalSettings.CHART_STEPS)
+        y_data_linear = np.linspace(y_limits[0], y_limits[1], GlobalSettings.CHART_STEPS)
+        x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
+
+        for index, function in enumerate(functions):
+            axis = fig.add_subplot(1, functions_count, index + 1, projection="3d")
+            z_data = np.empty([GlobalSettings.CHART_STEPS, GlobalSettings.CHART_STEPS])
+            for x_index in range(GlobalSettings.CHART_STEPS):
+                for y_index in range(GlobalSettings.CHART_STEPS):
+                    point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
+                    z_data[x_index][y_index] = function(point)
+            surf = axis.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0, antialiased=False)
+            fig.colorbar(surf, shrink=0.5, aspect=10)
+
+        plt.show()
 
 
 class Domain:
@@ -536,7 +564,7 @@ class Integrator2D(Integrator):
     def trapezoid(self, function: Callable, point: np.array, trapezoid: np.array):
         assert 4 == len(trapezoid)
         result = 0.0
-        if Utils.is_rombus(trapezoid, Integrator2D.EPSILON):
+        if Utils.is_rhombus(trapezoid, Integrator2D.EPSILON):
             result = self.square(function, point, trapezoid)
             return result
         nodes, weights, coeff = self._get_trapezoid_nodes_weights_and_coeff(point, trapezoid)
@@ -553,7 +581,7 @@ class Integrator2D(Integrator):
     def trapezoid_grad(self, function: Callable, point: np.array, trapezoid: np.array):
         assert 4 == len(trapezoid)
         result = 0.0
-        if Utils.is_rombus(trapezoid, Integrator2D.EPSILON):
+        if Utils.is_rhombus(trapezoid, Integrator2D.EPSILON):
             result = self.square_grad(function, point, trapezoid)
             return result
         nodes, weights, coeff = self._get_trapezoid_nodes_weights_and_coeff(point, trapezoid)
@@ -897,10 +925,17 @@ class SingleLayerCoBoundaryTerm(ExpressionTerm):
                 if is_same_point:
                     right_side_ret += boundary_item.value
             elif BoundaryConditionType.ROBIN == point_info.type:
-                res = self.__integrator.trapezoid(Utils.constant_one(), point_info.point, boundary_item.element)
+                res = self.__integrator.trapezoid_grad(
+                    Utils.constant_value(point_info.normal), point_info.point, boundary_item.element
+                )
+                res -= point_info.robin_coeff * self.__integrator.trapezoid(
+                    Utils.constant_one(), point_info.point, boundary_item.element
+                )
                 coefficients = np.append(coefficients, [res])
+
+                # TODO: FInish implementation
                 if is_same_point:
-                    right_side_ret += boundary_item.value
+                    right_side_ret = boundary_item.value
                 res = self.__integrator.trapezoid_grad(
                     Utils.constant_value(boundary_item.normal), point_info.point, boundary_item.element
                 )
@@ -915,7 +950,7 @@ class SingleLayerCoBoundaryTerm(ExpressionTerm):
         return (self.sign * coefficients, self.sign * right_side_ret)
 
     def calculate_for_robin(self, point_info: Point2DInfo):
-        raise NotImplementedError("Not implemented yet")
+        raise NotImplementedError("Should not be called")
 
     def propagate_solution(self, solution: np.array):
         self.__unknown_values = solution[: self.__unknown_count]
@@ -947,13 +982,30 @@ class SingleLayerInclusionTerm(ExpressionTerm):
     SINGULARITY_INTEGRATION_POINTS_PER_AXIS = 4
 
     def __init__(
-        self, kernel: Kernel, domain: Domain, grad_function: Callable, laplacian_function: Callable, sign: int = 1
+        self,
+        kernel: Kernel,
+        domain: Domain,
+        coeff_function: Callable,
+        grad_function: Callable,
+        laplacian_function: Callable,
+        sign: int = 1,
     ):
         super().__init__(kernel, domain, sign)
+        assert coeff_function is not None
         assert grad_function is not None
         assert laplacian_function is not None
-        self.__grad_function = grad_function
-        self.__laplacian_function = laplacian_function
+
+        def adjusted_gradient(point: np.array):
+            result = grad_function(point) / coeff_function(point)
+            return result
+
+        def adjusted_laplacian(point: np.array):
+            gradient = adjusted_gradient(point)
+            result = laplacian_function(point) / coeff_function(point) - np.dot(gradient, gradient)
+            return result
+
+        self.__grad_function = adjusted_gradient
+        self.__laplacian_function = adjusted_laplacian
         self.__unknown_count = 0
         self.__unknown_values = np.empty(0)
         self.__integrator = Integrator2D(
@@ -965,28 +1017,9 @@ class SingleLayerInclusionTerm(ExpressionTerm):
     def calculate_coefficients(self, point_info: Point2DInfo):
         assert point_info is not None
         coefficients = np.empty(0)
-        for point_info in self.domain.get_mesh():
-            is_same_point = Utils.is_the_same_point(point_info.point, point_info.point, DoubleLayerBoundaryTerm.EPS)
-            res = -1.0 * self.__integrator.square(self.__laplacian_function, point_info.point, point_info.element)
-            res += self.__integrator.square_grad(self.__grad_function, point_info.point, point_info.element)
-            # TODO: Check sign of the U variable
-            if is_same_point:
-                res += 1.0
-            for boundary_item in self.domain.get_border():
-                if Utils.is_square_side(
-                    boundary_item.element[0],
-                    boundary_item.element[1],
-                    point_info.element,
-                    Domain2D.POINT_LOCATION_EPSILON,
-                ):
-
-                    def normal_derivative(position: np.array):
-                        return np.dot(self.__grad_function(position), boundary_item.normal)
-
-                    res += self.__integrator.segment(
-                        normal_derivative, point_info.point, boundary_item.element[0], boundary_item.element[1]
-                    )
-
+        for face in self.domain.get_mesh():
+            res = self.__integrator.square(self.__laplacian_function, point_info.point, face.element)
+            res += self.__integrator.square_grad(self.__grad_function, point_info.point, face.element)
             coefficients = np.append(coefficients, [res])
 
         self.__unknown_count = len(coefficients)
@@ -1003,25 +1036,10 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         assert point is not None
         result = 0.0
         unknown_index = 0
-        for point_info in self.domain.get_mesh():
-            result -= self.__integrator.square(self.__laplacian_function, point, point_info.element)
-            result += self.__integrator.square_grad(self.__grad_function, point, point_info.element)
-            for boundary_item in self.domain.get_border():
-                if Utils.is_square_side(
-                    boundary_item.element[0],
-                    boundary_item.element[1],
-                    point_info.element,
-                    Domain2D.POINT_LOCATION_EPSILON,
-                ):
-
-                    def normal_derivative(position: np.array):
-                        return np.dot(self.__grad_function(position), boundary_item.normal)
-
-                    result += self.__integrator.segment(
-                        normal_derivative, point, boundary_item.element[0], boundary_item.element[1]
-                    )
-            result *= self.__unknown_values[unknown_index]
-
+        for face in self.domain.get_mesh():
+            face_value = self.__integrator.square(self.__laplacian_function, point, face.element)
+            face_value += self.__integrator.square_grad(self.__grad_function, point, face.element)
+            face_value *= self.__unknown_values[unknown_index]
             unknown_index += 1
 
         assert self.__unknown_count == unknown_index, "Unknown could should match {} and {}".format(
@@ -1105,33 +1123,26 @@ class Problem(object):
     def plot(self):
         print("Visualizing data...")
 
-        fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-
         x_min = min(point_info.point[0] for point_info in self.__domain.get_border())
         y_min = min(point_info.point[1] for point_info in self.__domain.get_border())
         x_max = max(point_info.point[0] for point_info in self.__domain.get_border())
         y_max = max(point_info.point[1] for point_info in self.__domain.get_border())
 
-        x_data_linear = np.linspace(x_min, x_max, GlobalSettings.CHART_STEPS)
-        y_data_linear = np.linspace(y_min, y_max, GlobalSettings.CHART_STEPS)
-
-        x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
-
-        z_data = np.empty([GlobalSettings.CHART_STEPS, GlobalSettings.CHART_STEPS])
-        for x_index in range(GlobalSettings.CHART_STEPS):
-            for y_index in range(GlobalSettings.CHART_STEPS):
-                point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
-                if GlobalSettings.PLOT_ERROR and self.__analytical_solution is not None:
-                    z_data[x_index][y_index] = np.abs(self.solution_value(point) - self.__analytical_solution(point))
-                else:
-                    z_data[x_index][y_index] = self.solution_value(point)
-
-        # TODO: Work on numpy way of data visualization
-        # z_data = sum(np.vectorize(term.value)(x_data, y_data) for term in expression)
-
-        surf = ax.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0)
-
-        plt.show()
+        # For debugging purposes
+        if True:
+            functions = []
+            for index in range(0, 3):
+                functions.append(lambda point, _index=index: self.__expression[_index].value(point))
+            Utils.plot([x_min, x_max], [y_min, y_max], functions)
+        else:
+            if GlobalSettings.PLOT_ERROR and self.__analytical_solution is not None:
+                Utils.plot(
+                    [x_min, x_max],
+                    [y_min, y_max],
+                    [lambda point: np.abs(self.solution_value(point) - self.__analytical_solution(point))],
+                )
+            else:
+                Utils.plot([x_min, x_max], [y_min, y_max], [self.solution_value])
 
         print("Done!")
 
@@ -1271,6 +1282,8 @@ def init_poisson_dirichlet_single_inclusion_bem():
     INCLUSION_CENTER_X = 0.5
     INCLUSION_CENTER_Y = 0.5
     INCLUSION_RADIUS = INCLUSION_SIZE / 2.0 * np.sqrt(2.0)
+    K_MAX = 100
+    K_MIN = 1
 
     def boundary_value(point: np.array):
         return 2.0 * point[1]
@@ -1280,7 +1293,8 @@ def init_poisson_dirichlet_single_inclusion_bem():
         np.array([INCLUSION_CENTER_X + INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y + INCLUSION_SIZE / 2.0]),
         [BoundaryConditionType.INCLUSION] * 4,
         [Utils.constant_one()] * 4,
-        GlobalSettings.BORDER_ELEMENTS_COUNT,
+        # GlobalSettings.BORDER_ELEMENTS_COUNT,
+        4,
     )
 
     domain = SquareDomain2D(
@@ -1293,69 +1307,98 @@ def init_poisson_dirichlet_single_inclusion_bem():
     )
 
     def thermal_conductivity(point: np.array):
-        result = K_TISSUE
-        if inclusion_domain.is_point_inside_domain(point):
-            result = (K_MAX_TUMOR - K_TISSUE) * np.cos(
-                (0.5 * np.pi / INCLUSION_RADIUS**2)
-                * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-            ) + K_TISSUE
+        result = K_MIN
+        distance_from_center = (
+            (point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2
+        ) / INCLUSION_RADIUS**2
+        if distance_from_center < 1.0:
+            result += K_MAX * (1 - distance_from_center)
+
         return result
 
     def thermal_conductivity_gradient(point: np.array):
         result = np.array([0.0, 0.0])
         if inclusion_domain.is_point_inside_domain(point):
-            result[0] = (
-                -(K_MAX_TUMOR - K_TISSUE)
-                * np.sin(
-                    (0.5 * np.pi / INCLUSION_RADIUS**2)
-                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                )
-                * (np.pi / INCLUSION_RADIUS**2)
-                * (point[0] - INCLUSION_CENTER_X)
-            )
-            result[1] = (
-                -(K_MAX_TUMOR - K_TISSUE)
-                * np.sin(
-                    (0.5 * np.pi / INCLUSION_RADIUS**2)
-                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                )
-                * (np.pi / INCLUSION_RADIUS**2)
-                * (point[1] - INCLUSION_CENTER_Y)
-            )
+            result[0] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[0]) / INCLUSION_RADIUS**2
+            result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[1]) / INCLUSION_RADIUS**2
         return result
 
     def thermal_conductivity_laplacian(point: np.array):
         result = 0.0
         if inclusion_domain.is_point_inside_domain(point):
-            result = ((K_TISSUE - K_MAX_TUMOR) * np.pi / INCLUSION_RADIUS**2) * (
-                np.cos(
-                    (0.5 * np.pi / INCLUSION_RADIUS**2)
-                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                )
-                * (np.pi / INCLUSION_RADIUS**2 * (point[0] - INCLUSION_CENTER_X) ** 2)
-                + np.sin(
-                    (0.5 * np.pi / INCLUSION_RADIUS**2)
-                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                )
-                + np.cos(
-                    (0.5 * np.pi / INCLUSION_RADIUS**2)
-                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                )
-                * (np.pi / INCLUSION_RADIUS**2 * (point[1] - INCLUSION_CENTER_X) ** 2)
-                + np.sin(
-                    (0.5 * np.pi / INCLUSION_RADIUS**2)
-                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                )
-            )
+            result = K_MAX * -2.0 / INCLUSION_RADIUS**2
         return result
+
+    # def thermal_conductivity(point: np.array):
+    #     result = K_TISSUE
+    #     if inclusion_domain.is_point_inside_domain(point):
+    #         result = (K_MAX_TUMOR - K_TISSUE) * np.cos(
+    #             (0.5 * np.pi / INCLUSION_RADIUS**2)
+    #             * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+    #         ) + K_TISSUE
+    #     return result
+
+    # def thermal_conductivity_gradient(point: np.array):
+    #     result = np.array([0.0, 0.0])
+    #     if inclusion_domain.is_point_inside_domain(point):
+    #         result[0] = (
+    #             -(K_MAX_TUMOR - K_TISSUE)
+    #             * np.sin(
+    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
+    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+    #             )
+    #             * (np.pi / INCLUSION_RADIUS**2)
+    #             * (point[0] - INCLUSION_CENTER_X)
+    #         )
+    #         result[1] = (
+    #             -(K_MAX_TUMOR - K_TISSUE)
+    #             * np.sin(
+    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
+    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+    #             )
+    #             * (np.pi / INCLUSION_RADIUS**2)
+    #             * (point[1] - INCLUSION_CENTER_Y)
+    #         )
+    #     return result
+
+    # def thermal_conductivity_laplacian(point: np.array):
+    #     result = 0.0
+    #     if inclusion_domain.is_point_inside_domain(point):
+    #         result = ((K_TISSUE - K_MAX_TUMOR) * np.pi / INCLUSION_RADIUS**2) * (
+    #             np.cos(
+    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
+    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+    #             )
+    #             * (np.pi / INCLUSION_RADIUS**2 * (point[0] - INCLUSION_CENTER_X) ** 2)
+    #             + np.sin(
+    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
+    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+    #             )
+    #             + np.cos(
+    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
+    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+    #             )
+    #             * (np.pi / INCLUSION_RADIUS**2 * (point[1] - INCLUSION_CENTER_X) ** 2)
+    #             + np.sin(
+    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
+    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+    #             )
+    #         )
+    #     return result
 
     print("Define heat source function...")
 
     expression = [
         DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
         SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
+        # TODO: Calculate Inclusion Integral properly
         SingleLayerInclusionTerm(
-            Laplace2DKernel(), inclusion_domain, thermal_conductivity_gradient, thermal_conductivity_laplacian
+            Laplace2DKernel(),
+            inclusion_domain,
+            thermal_conductivity,
+            thermal_conductivity_gradient,
+            thermal_conductivity_laplacian,
+            -1.0,
         ),
     ]
 
