@@ -10,8 +10,9 @@ from matplotlib import cm
 class GlobalSettings(object):
     CHART_STEPS = 25
     BORDER_ELEMENTS_COUNT = 10
+    INCLUSION_ELEMENTS_COUNT = 10
     PLOT_ERROR = False
-    PLOT_DETAILS = True
+    PLOT_DETAILS = False
     COBORDER_DEPTH = 1.0
     """
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
@@ -1020,10 +1021,12 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         assert point_info is not None
         coefficients = np.empty(0)
         for face in self.domain.get_mesh():
-            # Utils.is_point_within_square(point, face.element, SingleLayerInclusionTerm.EPS)
-
             res = self.__integrator.square(self.__laplacian_function, point_info.point, face.element)
             res += self.__integrator.square_grad(self.__grad_function, point_info.point, face.element)
+            # TODO: Check if this is needed
+            if Utils.is_point_within_square(point_info.point, face.element, SingleLayerInclusionTerm.EPS):
+                res += 1.0
+
             coefficients = np.append(coefficients, [res])
 
         self.__unknown_count = len(coefficients)
@@ -1044,6 +1047,7 @@ class SingleLayerInclusionTerm(ExpressionTerm):
             face_value = self.__integrator.square(self.__laplacian_function, point, face.element)
             face_value += self.__integrator.square_grad(self.__grad_function, point, face.element)
             face_value *= self.__unknown_values[unknown_index]
+            result += face_value
             unknown_index += 1
 
         assert self.__unknown_count == unknown_index, "Unknown could should match {} and {}".format(
@@ -1296,8 +1300,7 @@ def init_poisson_dirichlet_single_inclusion_bem():
         np.array([INCLUSION_CENTER_X + INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y + INCLUSION_SIZE / 2.0]),
         [BoundaryConditionType.INCLUSION] * 4,
         [Utils.constant_one()] * 4,
-        # GlobalSettings.BORDER_ELEMENTS_COUNT,
-        1,
+        GlobalSettings.INCLUSION_ELEMENTS_COUNT,
     )
 
     domain = SquareDomain2D(
@@ -1392,8 +1395,6 @@ def init_poisson_dirichlet_single_inclusion_bem():
     print("Define heat source function...")
 
     expression = [
-        DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
-        SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
         # TODO: Calculate Inclusion Integral properly
         SingleLayerInclusionTerm(
             Laplace2DKernel(),
@@ -1403,6 +1404,8 @@ def init_poisson_dirichlet_single_inclusion_bem():
             thermal_conductivity_laplacian,
             -1.0,
         ),
+        DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
+        SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
     ]
 
     problem = Problem(ProblemSolverType.BEM, expression, domain)
