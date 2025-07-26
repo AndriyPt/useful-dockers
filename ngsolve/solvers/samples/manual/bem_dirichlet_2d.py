@@ -11,6 +11,7 @@ class GlobalSettings(object):
     CHART_STEPS = 25
     BORDER_ELEMENTS_COUNT = 10
     PLOT_ERROR = False
+    PLOT_DETAILS = True
     COBORDER_DEPTH = 1.0
     """
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
@@ -980,6 +981,7 @@ class SingleLayerInclusionTerm(ExpressionTerm):
 
     NOMINAL_INTEGRATION_POINTS_PER_AXIS = 2
     SINGULARITY_INTEGRATION_POINTS_PER_AXIS = 4
+    EPS = 0.001
 
     def __init__(
         self,
@@ -1018,6 +1020,8 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         assert point_info is not None
         coefficients = np.empty(0)
         for face in self.domain.get_mesh():
+            # Utils.is_point_within_square(point, face.element, SingleLayerInclusionTerm.EPS)
+
             res = self.__integrator.square(self.__laplacian_function, point_info.point, face.element)
             res += self.__integrator.square_grad(self.__grad_function, point_info.point, face.element)
             coefficients = np.append(coefficients, [res])
@@ -1128,10 +1132,9 @@ class Problem(object):
         x_max = max(point_info.point[0] for point_info in self.__domain.get_border())
         y_max = max(point_info.point[1] for point_info in self.__domain.get_border())
 
-        # For debugging purposes
-        if True:
+        if GlobalSettings.PLOT_DETAILS:
             functions = []
-            for index in range(0, 3):
+            for index in range(0, len(self.__expression)):
                 functions.append(lambda point, _index=index: self.__expression[_index].value(point))
             Utils.plot([x_min, x_max], [y_min, y_max], functions)
         else:
@@ -1294,7 +1297,7 @@ def init_poisson_dirichlet_single_inclusion_bem():
         [BoundaryConditionType.INCLUSION] * 4,
         [Utils.constant_one()] * 4,
         # GlobalSettings.BORDER_ELEMENTS_COUNT,
-        4,
+        1,
     )
 
     domain = SquareDomain2D(
