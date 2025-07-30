@@ -9,16 +9,16 @@ from matplotlib import cm
 
 class GlobalSettings(object):
     CHART_STEPS = 25
-    BORDER_ELEMENTS_COUNT = 10
-    INCLUSION_ELEMENTS_COUNT = 10
+    BORDER_ELEMENTS_COUNT = 1
+    INCLUSION_ELEMENTS_COUNT = 2
     PLOT_ERROR = False
-    PLOT_DETAILS = False
+    PLOT_DETAILS = True
     COBORDER_DEPTH = 1.0
     """
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
         5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM    
     """
-    EXAMPLE_TYPE = 4
+    EXAMPLE_TYPE = 7
 
 
 class ExpressionTerm:
@@ -1025,7 +1025,7 @@ class SingleLayerInclusionTerm(ExpressionTerm):
             res += self.__integrator.square_grad(self.__grad_function, point_info.point, face.element)
             # TODO: Check if this is needed
             if Utils.is_point_within_square(point_info.point, face.element, SingleLayerInclusionTerm.EPS):
-                res += 1.0
+                res -= 1.0
 
             coefficients = np.append(coefficients, [res])
 
@@ -1289,7 +1289,222 @@ def init_poisson_dirichlet_single_inclusion_bem():
     INCLUSION_CENTER_X = 0.5
     INCLUSION_CENTER_Y = 0.5
     INCLUSION_RADIUS = INCLUSION_SIZE / 2.0 * np.sqrt(2.0)
-    K_MAX = 100
+    K_MAX = 10
+    K_MIN = 1
+
+    def boundary_value(point: np.array):
+        return 2.0 * point[1]
+
+    inclusion_domain = SquareDomain2D(
+        np.array([INCLUSION_CENTER_X - INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y - INCLUSION_SIZE / 2.0]),
+        np.array([INCLUSION_CENTER_X + INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y + INCLUSION_SIZE / 2.0]),
+        [BoundaryConditionType.INCLUSION] * 4,
+        [Utils.constant_one()] * 4,
+        GlobalSettings.INCLUSION_ELEMENTS_COUNT,
+    )
+
+    domain = SquareDomain2D(
+        np.array([0.0, 0.0]),
+        np.array([1.0, 1.0]),
+        [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
+        [boundary_value, Utils.constant_value(0.0)] * 2,
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
+        [inclusion_domain],
+    )
+
+    # def thermal_conductivity(point: np.array):
+    #     result = K_MIN
+    #     distance_from_center = (
+    #         (point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2
+    #     ) / INCLUSION_RADIUS**2
+    #     if distance_from_center < 1.0:
+    #         result += K_MAX * (1 - distance_from_center)
+
+    #     return result
+
+    # def thermal_conductivity_gradient(point: np.array):
+    #     result = np.array([0.0, 0.0])
+    #     if inclusion_domain.is_point_inside_domain(point):
+    #         result[0] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[0]) / INCLUSION_RADIUS**2
+    #         result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[1]) / INCLUSION_RADIUS**2
+    #     return result
+
+    # def thermal_conductivity_laplacian(point: np.array):
+    #     result = 0.0
+    #     if inclusion_domain.is_point_inside_domain(point):
+    #         result = K_MAX * -2.0 / INCLUSION_RADIUS**2
+    #     return result
+
+    def thermal_conductivity(point: np.array):
+        result = K_TISSUE
+        if inclusion_domain.is_point_inside_domain(point):
+            result = (K_MAX_TUMOR - K_TISSUE) * np.cos(
+                (0.5 * np.pi / INCLUSION_RADIUS**2)
+                * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+            ) + K_TISSUE
+        return result
+
+    def thermal_conductivity_gradient(point: np.array):
+        result = np.array([0.0, 0.0])
+        if inclusion_domain.is_point_inside_domain(point):
+            result[0] = (
+                -(K_MAX_TUMOR - K_TISSUE)
+                * np.sin(
+                    (0.5 * np.pi / INCLUSION_RADIUS**2)
+                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+                )
+                * (np.pi / INCLUSION_RADIUS**2)
+                * (point[0] - INCLUSION_CENTER_X)
+            )
+            result[1] = (
+                -(K_MAX_TUMOR - K_TISSUE)
+                * np.sin(
+                    (0.5 * np.pi / INCLUSION_RADIUS**2)
+                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+                )
+                * (np.pi / INCLUSION_RADIUS**2)
+                * (point[1] - INCLUSION_CENTER_Y)
+            )
+        return result
+
+    def thermal_conductivity_laplacian(point: np.array):
+        result = 0.0
+        if inclusion_domain.is_point_inside_domain(point):
+            result = ((K_TISSUE - K_MAX_TUMOR) * np.pi / INCLUSION_RADIUS**2) * (
+                np.cos(
+                    (0.5 * np.pi / INCLUSION_RADIUS**2)
+                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+                )
+                * (np.pi / INCLUSION_RADIUS**2 * (point[0] - INCLUSION_CENTER_X) ** 2)
+                + np.sin(
+                    (0.5 * np.pi / INCLUSION_RADIUS**2)
+                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+                )
+                + np.cos(
+                    (0.5 * np.pi / INCLUSION_RADIUS**2)
+                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+                )
+                * (np.pi / INCLUSION_RADIUS**2 * (point[1] - INCLUSION_CENTER_X) ** 2)
+                + np.sin(
+                    (0.5 * np.pi / INCLUSION_RADIUS**2)
+                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+                )
+            )
+        return result
+
+    print("Define heat source function...")
+
+    expression = [
+        # TODO: Calculate Inclusion Integral properly
+        SingleLayerInclusionTerm(
+            Laplace2DKernel(),
+            inclusion_domain,
+            thermal_conductivity,
+            thermal_conductivity_gradient,
+            thermal_conductivity_laplacian,
+            -1.0,
+            # 1.0,
+        ),
+        DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
+        SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
+    ]
+
+    # Utils.plot(np.array([0.0, 1.0]), np.array([0.0, 1.0]), [thermal_conductivity])
+    # import sys
+    # sys.exit(-1)
+    problem = Problem(ProblemSolverType.BEM, expression, domain)
+    return problem
+
+
+def init_poisson_dirichlet_cobem():
+    print("CoBEM for Dirichlet problem for Poisson equation...")
+
+    print("Define boundary conditions...")
+
+    def analytical_solution(point: np.array):
+        return 2 * (point[0] - 0.5) ** 2 + 2 * (point[1] - 0.5) ** 2
+
+    def boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    domain = SquareDomain2D(
+        np.array([0.0, 0.0]),
+        np.array([1.0, 1.0]),
+        [BoundaryConditionType.DIRICHLET] * 4,
+        [boundary_value] * 4,
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
+    )
+
+    print("Define heat source function...")
+
+    def heat_source_function(point: np.array):
+        return -8.0
+
+    expression = [
+        SingleLayerCoBoundaryTerm(Laplace2DKernel(), domain),
+        SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
+    ]
+
+    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+    return problem
+
+
+def init_poisson_neumann_cobem():
+    print("CoBEM for Neumann and Dirichlet mixed problem for Poisson equation...")
+
+    print("Define boundary conditions...")
+
+    def analytical_solution(point: np.array):
+        return 2.0 * (point[0] - 0.5) ** 2 + 2.0 * (point[1] - 0.5) ** 2
+
+    def dirichlet_boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    def neumann_boundary_right_value(point: np.array):
+        return 4.0 * point[0] - 2.0
+
+    def neumann_boundary_left_value(point: np.array):
+        return 2.0 - 4.0 * point[0]
+
+    domain = SquareDomain2D(
+        np.array([0.0, 0.0]),
+        np.array([1.0, 1.0]),
+        [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
+        [
+            dirichlet_boundary_value,
+            neumann_boundary_right_value,
+            dirichlet_boundary_value,
+            neumann_boundary_left_value,
+        ],
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
+    )
+
+    print("Define heat source function...")
+
+    def heat_source_function(point: np.array):
+        return -8.0
+
+    expression = [
+        SingleLayerCoBoundaryTerm(Laplace2DKernel(), domain),
+        SingleLayerVolumeCoBEMTerm(Laplace2DKernel(), domain, heat_source_function, -1),
+    ]
+
+    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+    return problem
+
+
+def test():
+    print("BEM for Dirichlet problem for Poisson equation with single inclusion...")
+
+    print("Define boundary conditions...")
+
+    K_TISSUE = 0.19  # W/m/^C
+    K_MAX_TUMOR = 0.495  # W/m/^C
+    INCLUSION_SIZE = 0.2
+    INCLUSION_CENTER_X = 0.5
+    INCLUSION_CENTER_Y = 0.5
+    INCLUSION_RADIUS = INCLUSION_SIZE / 2.0 * np.sqrt(2.0)
+    K_MAX = 10
     K_MIN = 1
 
     def boundary_value(point: np.array):
@@ -1394,8 +1609,12 @@ def init_poisson_dirichlet_single_inclusion_bem():
 
     print("Define heat source function...")
 
+    def integral_value(point: np.array):
+        result = np.dot(np.array([0.0, 2.0]), thermal_conductivity_gradient(point))
+        result /= thermal_conductivity(point)
+        return result
+
     expression = [
-        # TODO: Calculate Inclusion Integral properly
         SingleLayerInclusionTerm(
             Laplace2DKernel(),
             inclusion_domain,
@@ -1404,89 +1623,24 @@ def init_poisson_dirichlet_single_inclusion_bem():
             thermal_conductivity_laplacian,
             -1.0,
         ),
-        DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
-        SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
+        SingleLayerVolumeTerm(Laplace2DKernel(), inclusion_domain, integral_value),
+        # DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
+        # SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
     ]
 
-    problem = Problem(ProblemSolverType.BEM, expression, domain)
-    return problem
+    solution = []
+    for face in inclusion_domain.get_mesh():
+        expression[0].calculate_coefficients(face)
+        # solution.append(expression[1].value(face.point))
+        solution.append(boundary_value(face.point))
 
+    expression[0].propagate_solution(solution)
 
-def init_poisson_dirichlet_cobem():
-    print("CoBEM for Dirichlet problem for Poisson equation...")
+    Utils.plot(np.array([0.0, 1.0]), np.array([0.0, 1.0]), [expression[0].value, expression[1].value])
 
-    print("Define boundary conditions...")
+    import sys
 
-    def analytical_solution(point: np.array):
-        return 2 * (point[0] - 0.5) ** 2 + 2 * (point[1] - 0.5) ** 2
-
-    def boundary_value(point: np.array):
-        return analytical_solution(point)
-
-    domain = SquareDomain2D(
-        np.array([0.0, 0.0]),
-        np.array([1.0, 1.0]),
-        [BoundaryConditionType.DIRICHLET] * 4,
-        [boundary_value] * 4,
-        GlobalSettings.BORDER_ELEMENTS_COUNT,
-    )
-
-    print("Define heat source function...")
-
-    def heat_source_function(point: np.array):
-        return -8.0
-
-    expression = [
-        SingleLayerCoBoundaryTerm(Laplace2DKernel(), domain),
-        SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
-    ]
-
-    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
-    return problem
-
-
-def init_poisson_neumann_cobem():
-    print("CoBEM for Neumann and Dirichlet mixed problem for Poisson equation...")
-
-    print("Define boundary conditions...")
-
-    def analytical_solution(point: np.array):
-        return 2.0 * (point[0] - 0.5) ** 2 + 2.0 * (point[1] - 0.5) ** 2
-
-    def dirichlet_boundary_value(point: np.array):
-        return analytical_solution(point)
-
-    def neumann_boundary_right_value(point: np.array):
-        return 4.0 * point[0] - 2.0
-
-    def neumann_boundary_left_value(point: np.array):
-        return 2.0 - 4.0 * point[0]
-
-    domain = SquareDomain2D(
-        np.array([0.0, 0.0]),
-        np.array([1.0, 1.0]),
-        [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
-        [
-            dirichlet_boundary_value,
-            neumann_boundary_right_value,
-            dirichlet_boundary_value,
-            neumann_boundary_left_value,
-        ],
-        GlobalSettings.BORDER_ELEMENTS_COUNT,
-    )
-
-    print("Define heat source function...")
-
-    def heat_source_function(point: np.array):
-        return -8.0
-
-    expression = [
-        SingleLayerCoBoundaryTerm(Laplace2DKernel(), domain),
-        SingleLayerVolumeCoBEMTerm(Laplace2DKernel(), domain, heat_source_function, -1),
-    ]
-
-    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
-    return problem
+    sys.exit(-1)
 
 
 if "__main__" == __name__:
@@ -1503,6 +1657,8 @@ if "__main__" == __name__:
         problem = init_poisson_dirichlet_cobem()
     elif 6 == GlobalSettings.EXAMPLE_TYPE:
         problem = init_poisson_neumann_cobem()
+    elif 7 == GlobalSettings.EXAMPLE_TYPE:
+        problem = test()
 
     assert problem is not None
 
