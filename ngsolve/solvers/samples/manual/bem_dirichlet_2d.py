@@ -9,16 +9,16 @@ from matplotlib import cm
 
 class GlobalSettings(object):
     CHART_STEPS = 25
-    BORDER_ELEMENTS_COUNT = 1
-    INCLUSION_ELEMENTS_COUNT = 2
+    BORDER_ELEMENTS_COUNT = 10
+    INCLUSION_ELEMENTS_COUNT = 4
     PLOT_ERROR = False
-    PLOT_DETAILS = True
+    PLOT_DETAILS = False
     COBORDER_DEPTH = 1.0
     """
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
         5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM    
     """
-    EXAMPLE_TYPE = 7
+    EXAMPLE_TYPE = 5
 
 
 class ExpressionTerm:
@@ -30,7 +30,8 @@ class BoundaryConditionType(Enum):
     DIRICHLET = 2
     NEUMANN = 3
     ROBIN = 4
-    INCLUSION = 5
+    INCLUSION_DX = 5
+    INCLUSION_DY = 6
 
 
 class ProblemSolverType(Enum):
@@ -97,10 +98,10 @@ class Utils:
 
     @staticmethod
     def is_point_within_square(point: np.array, mesh: np.array, eps: float):
-        min_x = mesh[0][0]
-        max_x = mesh[1][0]
-        min_y = mesh[0][1]
-        max_y = mesh[2][1]
+        min_x = mesh[0][0] + eps
+        max_x = mesh[1][0] - eps
+        min_y = mesh[0][1] + eps
+        max_y = mesh[2][1] - eps
         if point[0] > min_x and point[0] < max_x and point[1] > min_y and point[1] < max_y:
             return True
         return False
@@ -313,7 +314,7 @@ class SquareDomain2D(Domain2D):
                     )
                     / 2.0
                 )
-                point_info.type = BoundaryConditionType.INCLUSION
+                point_info.type = [BoundaryConditionType.INCLUSION_DX, BoundaryConditionType.INCLUSION_DY]
                 point_info.value = 0.0
                 point_info.element = np.array(square)
                 self.__mesh.append(point_info)
@@ -623,7 +624,7 @@ class ExpressionTerm:
     def sign(self):
         return self.__sign
 
-    def calculate_coefficients(self, point_info: Point2DInfo):
+    def calculate_coefficients(self, point_info: Point2DInfo, condition: BoundaryConditionType):
         raise NotImplementedError("Call to abstract method")
 
     def calculate_for_robin(self, point_info: Point2DInfo):
@@ -649,7 +650,7 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
             SingleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS,
         )
 
-    def calculate_coefficients(self, point_info: Point2DInfo):
+    def calculate_coefficients(self, point_info: Point2DInfo, condition: BoundaryConditionType):
         assert point_info is not None
         coefficients = np.empty(0)
         right_side_ret = 0.0
@@ -735,7 +736,7 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
             DoubleLayerBoundaryTerm.SINGULARITY_INTEGRATION_POINTS,
         )
 
-    def calculate_coefficients(self, point_info: Point2DInfo):
+    def calculate_coefficients(self, point_info: Point2DInfo, condition: BoundaryConditionType):
         assert point_info is not None
         coefficients = np.empty(0)
         right_side_ret = 0.0
@@ -839,7 +840,7 @@ class SingleLayerVolumeTerm(ExpressionTerm):
     def _get_value_function(self):
         return self.__value_function
 
-    def calculate_coefficients(self, point_info: Point2DInfo):
+    def calculate_coefficients(self, point_info: Point2DInfo, condition: BoundaryConditionType):
         assert point_info is not None
         coefficients = np.empty(0)
         right_side_ret = self.value(point_info.point)
@@ -868,7 +869,7 @@ class SingleLayerVolumeCoBEMTerm(SingleLayerVolumeTerm):
     def __init__(self, kernel: Kernel, domain: Domain, value_function: Callable, sign: int = 1):
         super().__init__(kernel, domain, value_function, sign)
 
-    def calculate_coefficients(self, point_info: Point2DInfo):
+    def calculate_coefficients(self, point_info: Point2DInfo, condition: BoundaryConditionType):
         assert point_info is not None
         coefficients = np.empty(0)
         if BoundaryConditionType.NEUMANN == point_info.type:
@@ -906,7 +907,7 @@ class SingleLayerCoBoundaryTerm(ExpressionTerm):
             SingleLayerCoBoundaryTerm.SINGULARITY_INTEGRATION_POINTS,  # There should not be singularities
         )
 
-    def calculate_coefficients(self, point_info: Point2DInfo):
+    def calculate_coefficients(self, point_info: Point2DInfo, condition: BoundaryConditionType):
         assert point_info is not None
         coefficients = np.empty(0)
         right_side_ret = 0.0
@@ -1017,7 +1018,7 @@ class SingleLayerInclusionTerm(ExpressionTerm):
             SingleLayerInclusionTerm.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
         )
 
-    def calculate_coefficients(self, point_info: Point2DInfo):
+    def calculate_coefficients(self, point_info: Point2DInfo, condition: BoundaryConditionType):
         assert point_info is not None
         coefficients = np.empty(0)
         for face in self.domain.get_mesh():
@@ -1095,29 +1096,34 @@ class Problem(object):
             point_list = np.hstack((point_list, subdomain.get_mesh()))
 
         for point_info in point_list:
-            right_side_value = 0.0
-            matrix_row = np.empty(0)
-            for term in self.__expression:
-                coefficients, value = term.calculate_coefficients(point_info)
-                right_side_value += value
-                matrix_row = np.hstack((matrix_row, coefficients))
-            if matrix is None:
-                matrix = matrix_row
+            if isinstance(point_info.type, list):
+                conditions = point_info.type
             else:
-                matrix = np.vstack((matrix, matrix_row))
-            if right_side is None:
-                right_side = np.array([right_side_value])
-            else:
-                right_side = np.append(right_side, [right_side_value])
-            if BoundaryConditionType.ROBIN == point_info.type and ProblemSolverType.BEM == self.__type:
+                conditions = [point_info.type]
+            for condition in conditions:
                 right_side_value = 0.0
                 matrix_row = np.empty(0)
                 for term in self.__expression:
-                    coefficients, value = term.calculate_for_robin(point_info)
+                    coefficients, value = term.calculate_coefficients(point_info, condition)
                     right_side_value += value
                     matrix_row = np.hstack((matrix_row, coefficients))
-                matrix = np.vstack((matrix, matrix_row))
-                right_side = np.append(right_side, [right_side_value])
+                if matrix is None:
+                    matrix = matrix_row
+                else:
+                    matrix = np.vstack((matrix, matrix_row))
+                if right_side is None:
+                    right_side = np.array([right_side_value])
+                else:
+                    right_side = np.append(right_side, [right_side_value])
+                if BoundaryConditionType.ROBIN == point_info.type and ProblemSolverType.BEM == self.__type:
+                    right_side_value = 0.0
+                    matrix_row = np.empty(0)
+                    for term in self.__expression:
+                        coefficients, value = term.calculate_for_robin(point_info)
+                        right_side_value += value
+                        matrix_row = np.hstack((matrix_row, coefficients))
+                    matrix = np.vstack((matrix, matrix_row))
+                    right_side = np.append(right_side, [right_side_value])
 
         print("Solving SLAE...")
 
@@ -1298,7 +1304,7 @@ def init_poisson_dirichlet_single_inclusion_bem():
     inclusion_domain = SquareDomain2D(
         np.array([INCLUSION_CENTER_X - INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y - INCLUSION_SIZE / 2.0]),
         np.array([INCLUSION_CENTER_X + INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y + INCLUSION_SIZE / 2.0]),
-        [BoundaryConditionType.INCLUSION] * 4,
+        [[BoundaryConditionType.INCLUSION_DX, BoundaryConditionType.INCLUSION_DY]] * 4,
         [Utils.constant_one()] * 4,
         GlobalSettings.INCLUSION_ELEMENTS_COUNT,
     )
@@ -1493,209 +1499,6 @@ def init_poisson_neumann_cobem():
     return problem
 
 
-def test():
-    print("BEM for Dirichlet problem for Poisson equation with single inclusion...")
-
-    print("Define boundary conditions...")
-
-    K_TISSUE = 0.19  # W/m/^C
-    K_MAX_TUMOR = 0.495  # W/m/^C
-    INCLUSION_SIZE = 0.2
-    INCLUSION_CENTER_X = 0.5
-    INCLUSION_CENTER_Y = 0.5
-    INCLUSION_RADIUS = INCLUSION_SIZE / 2.0 * np.sqrt(2.0)
-    K_MAX = 10
-    K_MIN = 1
-
-    def boundary_value(point: np.array):
-        return 2.0 * point[1]
-
-    inclusion_domain = SquareDomain2D(
-        np.array([INCLUSION_CENTER_X - INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y - INCLUSION_SIZE / 2.0]),
-        np.array([INCLUSION_CENTER_X + INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y + INCLUSION_SIZE / 2.0]),
-        [BoundaryConditionType.INCLUSION] * 4,
-        [Utils.constant_one()] * 4,
-        GlobalSettings.INCLUSION_ELEMENTS_COUNT,
-    )
-
-    domain = SquareDomain2D(
-        np.array([0.0, 0.0]),
-        np.array([1.0, 1.0]),
-        [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
-        [boundary_value, Utils.constant_value(0.0)] * 2,
-        GlobalSettings.BORDER_ELEMENTS_COUNT,
-        [inclusion_domain],
-    )
-
-    def thermal_conductivity(point: np.array):
-        result = K_MIN
-        distance_from_center = (
-            (point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2
-        ) / INCLUSION_RADIUS**2
-        # if distance_from_center < 1.0:
-        result += K_MAX * (1 - distance_from_center)
-
-        return result
-
-    def thermal_conductivity_gradient(point: np.array):
-        result = np.array([0.0, 0.0])
-        # if inclusion_domain.is_point_inside_domain(point):
-        result[0] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[0]) / INCLUSION_RADIUS**2
-        result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[1]) / INCLUSION_RADIUS**2
-        return result
-
-    def thermal_conductivity_laplacian(point: np.array):
-        result = 0.0
-        # if inclusion_domain.is_point_inside_domain(point):
-        result = K_MAX * -2.0 / INCLUSION_RADIUS**2
-        return result
-
-    # def thermal_conductivity(point: np.array):
-    #     result = K_TISSUE
-    #     if inclusion_domain.is_point_inside_domain(point):
-    #         result = (K_MAX_TUMOR - K_TISSUE) * np.cos(
-    #             (0.5 * np.pi / INCLUSION_RADIUS**2)
-    #             * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-    #         ) + K_TISSUE
-    #     return result
-
-    # def thermal_conductivity_gradient(point: np.array):
-    #     result = np.array([0.0, 0.0])
-    #     if inclusion_domain.is_point_inside_domain(point):
-    #         result[0] = (
-    #             -(K_MAX_TUMOR - K_TISSUE)
-    #             * np.sin(
-    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-    #             )
-    #             * (np.pi / INCLUSION_RADIUS**2)
-    #             * (point[0] - INCLUSION_CENTER_X)
-    #         )
-    #         result[1] = (
-    #             -(K_MAX_TUMOR - K_TISSUE)
-    #             * np.sin(
-    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-    #             )
-    #             * (np.pi / INCLUSION_RADIUS**2)
-    #             * (point[1] - INCLUSION_CENTER_Y)
-    #         )
-    #     return result
-
-    # def thermal_conductivity_laplacian(point: np.array):
-    #     result = 0.0
-    #     if inclusion_domain.is_point_inside_domain(point):
-    #         result = ((K_TISSUE - K_MAX_TUMOR) * np.pi / INCLUSION_RADIUS**2) * (
-    #             np.cos(
-    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-    #             )
-    #             * (np.pi / INCLUSION_RADIUS**2 * (point[0] - INCLUSION_CENTER_X) ** 2)
-    #             + np.sin(
-    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-    #             )
-    #             + np.cos(
-    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-    #             )
-    #             * (np.pi / INCLUSION_RADIUS**2 * (point[1] - INCLUSION_CENTER_X) ** 2)
-    #             + np.sin(
-    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-    #             )
-    #         )
-    #     return result
-
-    print("Define heat source function...")
-
-    class BoundaryIntegral(ExpressionTerm):
-
-        NOMINAL_INTEGRATION_POINTS = 4
-        SINGULARITY_INTEGRATION_POINTS = 6
-        EPS = 0.001
-
-        def __init__(
-            self,
-            kernel: Kernel,
-            domain: Domain,
-            solution: Callable,
-            gradient_thermal: Callable,
-            thermal_func: Callable,
-            sign: int = 1,
-        ):
-            super().__init__(kernel, domain, sign)
-            self.__unknown_count = len(domain.get_border())
-            self.__unknown_values = []
-            for boundary_item in self.domain.get_border():
-                self.__unknown_values.append(
-                    solution(boundary_item.point)
-                    * np.dot(boundary_item.normal, gradient_thermal(boundary_item.point))
-                    / thermal_func(boundary_item.point)
-                )
-            self.__integrator = Integrator2D(
-                kernel,
-                BoundaryIntegral.NOMINAL_INTEGRATION_POINTS,
-                BoundaryIntegral.SINGULARITY_INTEGRATION_POINTS,
-            )
-
-        def value(self, point: np.array):
-            assert self.__unknown_count == len(self.__unknown_values), "Data should be calculated"
-            result = 0.0
-            unknown_index = 0
-
-            for boundary_item in self.domain.get_border():
-                integral_value = self.__integrator.segment(
-                    Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
-                )
-                result += self.__unknown_values[unknown_index] * integral_value
-                unknown_index += 1
-            result *= self.sign
-            return result
-
-    def integral_value(point: np.array):
-        result = np.dot(np.array([0.0, 2.0]), thermal_conductivity_gradient(point))
-        result /= thermal_conductivity(point)
-        return result
-
-    extra_integral = BoundaryIntegral(
-        Laplace2DKernel(), inclusion_domain, boundary_value, thermal_conductivity_gradient, thermal_conductivity, 1.0
-    )
-    expression = [
-        SingleLayerInclusionTerm(
-            Laplace2DKernel(),
-            inclusion_domain,
-            thermal_conductivity,
-            thermal_conductivity_gradient,
-            thermal_conductivity_laplacian,
-            -1.0,
-        ),
-        SingleLayerVolumeTerm(Laplace2DKernel(), inclusion_domain, integral_value),
-        # DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
-        # SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
-    ]
-
-    solution = []
-    for face in inclusion_domain.get_mesh():
-        expression[0].calculate_coefficients(face)
-        # solution.append(expression[1].value(face.point))
-        solution.append(boundary_value(face.point))
-
-    expression[0].propagate_solution(solution)
-
-    def complex_value(point: np.array):
-        # result = extra_integral.value(point) + expression[0].value(point)
-        # result = expression[0].value(point)
-        result = extra_integral.value(point)
-        return result
-
-    Utils.plot(np.array([0.0, 1.0]), np.array([0.0, 1.0]), [expression[0].value, expression[1].value, complex_value])
-
-    import sys
-
-    sys.exit(-1)
-
-
 if "__main__" == __name__:
     problem = None
     if 1 == GlobalSettings.EXAMPLE_TYPE:
@@ -1710,8 +1513,6 @@ if "__main__" == __name__:
         problem = init_poisson_dirichlet_cobem()
     elif 6 == GlobalSettings.EXAMPLE_TYPE:
         problem = init_poisson_neumann_cobem()
-    elif 7 == GlobalSettings.EXAMPLE_TYPE:
-        problem = test()
 
     assert problem is not None
 
