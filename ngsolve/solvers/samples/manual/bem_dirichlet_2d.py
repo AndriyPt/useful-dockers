@@ -180,6 +180,24 @@ class Utils:
 
         plt.show()
 
+    @staticmethod
+    def inclusion_condition_to_scalar_kernel_type(condition: BoundaryConditionType):
+        result = KernelValueType.SCALAR
+        if BoundaryConditionType.INCLUSION_DX == condition:
+            result = KernelValueType.DX
+        elif BoundaryConditionType.INCLUSION_DY == condition:
+            result = KernelValueType.DY
+        return result
+
+    @staticmethod
+    def inclusion_condition_to_gradient_kernel_type(condition: BoundaryConditionType):
+        result = KernelValueType.GRADIENT
+        if BoundaryConditionType.INCLUSION_DX == condition:
+            result = KernelValueType.GRADIENT_DX
+        elif BoundaryConditionType.INCLUSION_DY == condition:
+            result = KernelValueType.GRADIENT_DY
+        return result
+
 
 class Domain:
     def __init__(self, subdomains: list = []):
@@ -404,6 +422,18 @@ class SquareDomain2D(Domain2D):
         return result
 
 
+class KernelValueType(Enum):
+    SCALAR = 1
+    DX = 2
+    DY = 3
+    DXX = 4
+    DXY = 5
+    DYY = 6
+    GRADIENT = 7
+    GRADIENT_DX = 8
+    GRADIENT_DY = 9
+
+
 class Kernel:
     def value(self, point_x: np.array, point_y: np.array):
         raise NotImplementedError("Call to abstract method")
@@ -425,6 +455,35 @@ class Kernel:
 
     def grad(self, point_x: np.array, point_y: np.array):
         return np.array([self.dx(point_x, point_y), self.dy(point_x, point_y)])
+
+    def grad_dx(self, point_x: np.array, point_y: np.array):
+        return np.array([self.dxx(point_x, point_y), self.dxy(point_x, point_y)])
+
+    def grad_dy(self, point_x: np.array, point_y: np.array):
+        return np.array([self.dxy(point_x, point_y), self.dyy(point_x, point_y)])
+
+    def value_of(self, type: KernelValueType, point_x: np.array, point_y: np.array):
+        if KernelValueType.SCALAR == type:
+            result = self.value(point_x, point_y)
+        elif KernelValueType.DX == type:
+            result = self.dx(point_x, point_y)
+        elif KernelValueType.DY == type:
+            result = self.dy(point_x, point_y)
+        elif KernelValueType.DXX == type:
+            result = self.dxx(point_x, point_y)
+        elif KernelValueType.DXY == type:
+            result = self.dxy(point_x, point_y)
+        elif KernelValueType.DYY == type:
+            result = self.dyy(point_x, point_y)
+        elif KernelValueType.GRADIENT == type:
+            result = self.grad(point_x, point_y)
+        elif KernelValueType.GRADIENT_DX == type:
+            result = self.grad_dx(point_x, point_y)
+        elif KernelValueType.GRADIENT_DY == type:
+            result = self.grad_dy(point_x, point_y)
+        else:
+            assert "Unknown kernel value type"
+        return result
 
 
 class Laplace2DKernel(Kernel):
@@ -463,16 +522,31 @@ class Integrator:
     def kernel(self):
         return self.__kernel
 
+    # TODO: Deprecated. Use segment_of instead
     def segment(self, function: Callable, point: np.array, min_limit: np.array, max_limit: np.array):
         raise NotImplementedError("Call to abstract method")
 
+    # TODO: Deprecated. Use segment_of instead
     def segment_grad(self, function: Callable, point: np.array, min_limit: np.array, max_limit: np.array):
         raise NotImplementedError("Call to abstract method")
 
+    def segment_of(
+        self, type: KernelValueType, function: Callable, point: np.array, min_limit: np.array, max_limit: np.array
+    ):
+        raise NotImplementedError("Call to abstract method")
+
+    # TODO: Deprecated. Use square_of instead
     def square(self, function: Callable, point: np.array, square: np.array):
         raise NotImplementedError("Call to abstract method")
 
+    # TODO: Deprecated. Use square_of instead
     def square_grad(self, function: Callable, point: np.array, square: np.array):
+        raise NotImplementedError("Call to abstract method")
+
+    def square_of(self, type: KernelValueType, function: Callable, point: np.array, square: np.array):
+        raise NotImplementedError("Call to abstract method")
+
+    def trapezoid_of(self, type: KernelValueType, function: Callable, point: np.array, trapezoid: np.array):
         raise NotImplementedError("Call to abstract method")
 
 
@@ -524,18 +598,27 @@ class Integrator2D(Integrator):
         real_nodes, real_weights = self._convert_leggauss_to_segment(nodes, weights, min_limit, max_limit)
         return (real_nodes, real_weights)
 
-    def segment(self, function: Callable, point: np.array, min_limit: np.array, max_limit: np.array):
+    def segment_of(
+        self, type: KernelValueType, function: Callable, point: np.array, min_limit: np.array, max_limit: np.array
+    ):
         result = 0.0
         real_nodes, real_weights = self._get_segment_nodes_and_weights(point, min_limit, max_limit)
-        for real_node, weight in zip(real_nodes, real_weights):
-            result += weight * self.kernel.value(point, real_node) * function(point)
+        if type in [KernelValueType.GRADIENT, KernelValueType.GRADIENT_DX, KernelValueType.GRADIENT_DY]:
+            for real_node, weight in zip(real_nodes, real_weights):
+                result += weight * np.dot(self.kernel.grad(point, real_node), function(point))
+        else:
+            for real_node, weight in zip(real_nodes, real_weights):
+                result += weight * self.kernel.value_of(type, point, real_node) * function(point)
         return result
 
+    # TODO: Deprecated. Use segment_of instead
+    def segment(self, function: Callable, point: np.array, min_limit: np.array, max_limit: np.array):
+        result = self.segment_of(KernelValueType.SCALAR, function, point, min_limit, max_limit)
+        return result
+
+    # TODO: Deprecated. Use segment_of instead
     def segment_grad(self, function: Callable, point: np.array, min_limit: np.array, max_limit: np.array):
-        result = 0.0
-        real_nodes, real_weights = self._get_segment_nodes_and_weights(point, min_limit, max_limit)
-        for real_node, weight in zip(real_nodes, real_weights):
-            result += weight * np.dot(self.kernel.grad(point, real_node), function(point))
+        result = self.segment_of(KernelValueType.GRADIENT, function, point, min_limit, max_limit)
         return result
 
     def _get_square_nodes_and_weights(self, point: np.array, square: np.array):
@@ -546,18 +629,25 @@ class Integrator2D(Integrator):
         (real_nodes, real_weights) = self._convert_leggauss_to_square(nodes, weights, square)
         return (real_nodes, real_weights)
 
+    # TODO: Deprecated. Use square_of instead
     def square(self, function: Callable, point: np.array, square: np.array):
-        result = 0.0
-        real_nodes, real_weights = self._get_square_nodes_and_weights(point, square)
-        for real_node, weight in zip(real_nodes, real_weights):
-            result += weight * self.kernel.value(point, real_node) * function(real_node)
+        result = self.square_of(KernelValueType.SCALAR, function, point, square)
         return result
 
+    # TODO: Deprecated. Use square_of instead
     def square_grad(self, function: Callable, point: np.array, square: np.array):
+        result = self.square_of(KernelValueType.GRADIENT, function, point, square)
+        return result
+
+    def square_of(self, type: KernelValueType, function: Callable, point: np.array, square: np.array):
         result = 0.0
         real_nodes, real_weights = self._get_square_nodes_and_weights(point, square)
-        for real_node, weight in zip(real_nodes, real_weights):
-            result += weight * np.dot(self.kernel.grad(point, real_node), function(real_node))
+        if type in [KernelValueType.GRADIENT, KernelValueType.GRADIENT_DX, KernelValueType.GRADIENT_DY]:
+            for real_node, weight in zip(real_nodes, real_weights):
+                result += weight * np.dot(self.kernel.grad(point, real_node), function(point))
+        else:
+            for real_node, weight in zip(real_nodes, real_weights):
+                result += weight * self.kernel.value_of(type, point, real_node) * function(point)
         return result
 
     # Use Jacobian to transform trapezoid to unit square
@@ -597,28 +687,21 @@ class Integrator2D(Integrator):
             nodes, weights = self._get_square_nodes_and_weights(np.array([10.0, 10.0]), unit_square)
         return (nodes, weights, coeff)
 
+    # TODO: Deprecated. Use trapezoid_of instead
     def trapezoid(self, function: Callable, point: np.array, trapezoid: np.array):
-        assert 4 == len(trapezoid)
-        result = 0.0
-        if Utils.is_rhombus(trapezoid, Integrator2D.EPSILON):
-            result = self.square(function, point, trapezoid)
-            return result
-        nodes, weights, coeff = self._get_trapezoid_nodes_weights_and_coeff(point, trapezoid)
-        for node, weight in zip(nodes, weights):
-            real_node = np.zeros(Integrator2D.DIM)
-            a, b, c, d, e, f = (coeff[1], coeff[2], coeff[3], coeff[5], coeff[6], coeff[7])
-            const_x, const_y = (coeff[0], coeff[4])
-            real_node[0] = const_x + a * node[0] + b * node[1] + c * node[0] * node[1]
-            real_node[1] = const_y + d * node[0] + e * node[1] + f * node[0] * node[1]
-            jacobian = (a * e - b * d) + (a * f - c * d) * node[0] + (c * e - b * f) * node[1]
-            result += weight * self.kernel.value(point, real_node) * function(real_node) * jacobian
+        result = self.trapezoid_of(KernelValueType.SCALAR, function, point, trapezoid)
         return result
 
+    # TODO: Deprecated. Use trapezoid_of instead
     def trapezoid_grad(self, function: Callable, point: np.array, trapezoid: np.array):
+        result = self.trapezoid_of(KernelValueType.GRADIENT, function, point, trapezoid)
+        return result
+
+    def trapezoid_of(self, type: KernelValueType, function: Callable, point: np.array, trapezoid: np.array):
         assert 4 == len(trapezoid)
         result = 0.0
         if Utils.is_rhombus(trapezoid, Integrator2D.EPSILON):
-            result = self.square_grad(function, point, trapezoid)
+            result = self.square_of(type, function, point, trapezoid)
             return result
         nodes, weights, coeff = self._get_trapezoid_nodes_weights_and_coeff(point, trapezoid)
         for node, weight in zip(nodes, weights):
@@ -628,7 +711,10 @@ class Integrator2D(Integrator):
             real_node[0] = const_x + a * node[0] + b * node[1] + c * node[0] * node[1]
             real_node[1] = const_y + d * node[0] + e * node[1] + f * node[0] * node[1]
             jacobian = (a * e - b * d) + (a * f - c * d) * node[0] + (c * e - b * f) * node[1]
-            result += weight * np.dot(self.kernel.grad(point, real_node), function(real_node)) * jacobian
+            if type in [KernelValueType.GRADIENT, KernelValueType.GRADIENT_DX, KernelValueType.GRADIENT_DY]:
+                result += weight * np.dot(self.kernel.value_of(type, point, real_node), function(real_node)) * jacobian
+            else:
+                result += weight * self.kernel.value_of(type, point, real_node) * function(real_node) * jacobian
         return result
 
 
@@ -687,19 +773,28 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
         assert point_info is not None
         coefficients = np.empty(0)
         right_side_ret = 0.0
-
+        kernel_type = Utils.inclusion_condition_to_scalar_kernel_type(condition)
         for boundary_item in self.domain.get_border():
             if boundary_item.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.ROBIN]:
-                res = self.__integrator.segment(
-                    Utils.constant_one(), point_info.point, boundary_item.element[0], boundary_item.element[1]
+                res = self.__integrator.segment_of(
+                    kernel_type,
+                    Utils.constant_one(),
+                    point_info.point,
+                    boundary_item.element[0],
+                    boundary_item.element[1],
                 )
                 coefficients = np.append(coefficients, [res])
             elif BoundaryConditionType.NEUMANN == boundary_item.type:
-                right_side_ret += boundary_item.value * self.__integrator.segment(
-                    Utils.constant_one(), point_info.point, boundary_item.element[0], boundary_item.element[1]
+                right_side_ret += boundary_item.value * self.__integrator.segment_of(
+                    kernel_type,
+                    Utils.constant_one(),
+                    point_info.point,
+                    boundary_item.element[0],
+                    boundary_item.element[1],
                 )
             else:
                 raise AttributeError("Not supported boundary element type")
+
         self.__unknown_count = len(coefficients)
 
         return (self.sign * coefficients, self.sign * right_side_ret)
@@ -736,8 +831,8 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
         unknown_index = 0
 
         for boundary_item in self.domain.get_border():
-            integral_value = self.__integrator.segment(
-                Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
+            integral_value = self.__integrator.segment_of(
+                KernelValueType.SCALAR, Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
             )
             if boundary_item.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.ROBIN]:
                 result += self.__unknown_values[unknown_index] * integral_value
@@ -773,10 +868,12 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
         assert point_info is not None
         coefficients = np.empty(0)
         right_side_ret = 0.0
+        kernel_type = Utils.inclusion_condition_to_gradient_kernel_type(condition)
         for boundary_item in self.domain.get_border():
             is_same_point = Utils.is_the_same_point(point_info.point, boundary_item.point, DoubleLayerBoundaryTerm.EPS)
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
-                right_side_ret += boundary_item.value * self.__integrator.segment_grad(
+                right_side_ret += boundary_item.value * self.__integrator.segment_of(
+                    kernel_type,
                     Utils.constant_value(boundary_item.normal),
                     point_info.point,
                     boundary_item.element[0],
@@ -785,7 +882,8 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
                 if is_same_point:
                     right_side_ret += 0.5 * boundary_item.value
             elif boundary_item.type in [BoundaryConditionType.NEUMANN, BoundaryConditionType.ROBIN]:
-                res = self.__integrator.segment_grad(
+                res = self.__integrator.segment_of(
+                    kernel_type,
                     Utils.constant_value(boundary_item.normal),
                     point_info.point,
                     boundary_item.element[0],
@@ -834,8 +932,12 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
         unknown_index = 0
 
         for boundary_item in self.domain.get_border():
-            integral_value = self.__integrator.segment_grad(
-                Utils.constant_value(boundary_item.normal), point, boundary_item.element[0], boundary_item.element[1]
+            integral_value = self.__integrator.segment_of(
+                KernelValueType.GRADIENT,
+                Utils.constant_value(boundary_item.normal),
+                point,
+                boundary_item.element[0],
+                boundary_item.element[1],
             )
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
                 result += boundary_item.value * integral_value
@@ -876,7 +978,8 @@ class SingleLayerVolumeTerm(ExpressionTerm):
     def calculate_coefficients(self, point_info: Point2DInfo, condition: BoundaryConditionType):
         assert point_info is not None
         coefficients = np.empty(0)
-        right_side_ret = self.value(point_info.point)
+        kernel_type = Utils.inclusion_condition_to_scalar_kernel_type(condition)
+        right_side_ret = self.value_of(kernel_type, point_info.point)
         return (coefficients, right_side_ret)
 
     def calculate_for_robin(self, point_info: Point2DInfo):
@@ -886,12 +989,17 @@ class SingleLayerVolumeTerm(ExpressionTerm):
     def propagate_solution(self, solution: np.array):
         return solution
 
-    def value(self, point: np.array):
+    def value_of(self, type: KernelValueType, point: np.array):
         assert point is not None
         result = 0.0
         for point_info in self.domain.get_mesh():
-            result += self.__integrator.square(self.__value_function, point, point_info.element)
+            result += self.__integrator.square_of(type, self.__value_function, point, point_info.element)
         result *= self.sign
+        return result
+
+    def value(self, point: np.array):
+        assert point is not None
+        result = self.value_of(KernelValueType.SCALAR, point)
         return result
 
 
@@ -906,13 +1014,16 @@ class SingleLayerVolumeCoBEMTerm(SingleLayerVolumeTerm):
         assert point_info is not None
         coefficients = np.empty(0)
         if BoundaryConditionType.NEUMANN == point_info.type:
-            right_side_ret = self.value_grad(point_info.point, point_info.normal)
+            kernel_type = Utils.inclusion_condition_to_gradient_kernel_type(condition)
+            right_side_ret = self.value_grad_of(kernel_type, point_info.point, point_info.normal)
         else:
-            right_side_ret = super().value(point_info.point)
+            kernel_type = Utils.inclusion_condition_to_scalar_kernel_type(condition)
+            right_side_ret = super().value_of(kernel_type, point_info.point)
         return (coefficients, right_side_ret)
 
-    def value_grad(self, point: np.array, norm: np.array):
+    def value_grad_of(self, type: KernelValueType, point: np.array, norm: np.array):
         assert point is not None
+        assert type in [KernelValueType.GRADIENT, KernelValueType.GRADIENT_DX, KernelValueType.DY]
         result = 0.0
 
         def normal_function(x: np.array):
@@ -920,12 +1031,12 @@ class SingleLayerVolumeCoBEMTerm(SingleLayerVolumeTerm):
             return result
 
         for point_info in self.domain.get_mesh():
-            result += self._get_integrator().square_grad(normal_function, point, point_info.element)
+            result += self._get_integrator().square_of(type, normal_function, point, point_info.element)
         result *= self.sign
         return result
 
 
-class SingleLayerCoBoundaryTerm(ExpressionTerm):
+class SingleLayerCoBEMTerm(ExpressionTerm):
     NOMINAL_INTEGRATION_POINTS = 4
     SINGULARITY_INTEGRATION_POINTS = 6
     EPS = 0.001
@@ -936,8 +1047,8 @@ class SingleLayerCoBoundaryTerm(ExpressionTerm):
         self.__unknown_values = np.empty(0)
         self.__integrator = Integrator2D(
             kernel,
-            SingleLayerCoBoundaryTerm.NOMINAL_INTEGRATION_POINTS,
-            SingleLayerCoBoundaryTerm.SINGULARITY_INTEGRATION_POINTS,  # There should not be singularities
+            SingleLayerCoBEMTerm.NOMINAL_INTEGRATION_POINTS,
+            SingleLayerCoBEMTerm.SINGULARITY_INTEGRATION_POINTS,  # There should not be singularities
         )
 
     def calculate_coefficients(self, point_info: Point2DInfo, condition: BoundaryConditionType):
@@ -945,24 +1056,27 @@ class SingleLayerCoBoundaryTerm(ExpressionTerm):
         coefficients = np.empty(0)
         right_side_ret = 0.0
         for boundary_item in self.domain.get_coborder():
-            is_same_point = Utils.is_the_same_point(
-                point_info.point, boundary_item.point, SingleLayerCoBoundaryTerm.EPS
-            )
+            is_same_point = Utils.is_the_same_point(point_info.point, boundary_item.point, SingleLayerCoBEMTerm.EPS)
             if BoundaryConditionType.DIRICHLET == point_info.type:
-                res = self.__integrator.trapezoid(Utils.constant_one(), point_info.point, boundary_item.element)
+                kernel_type = Utils.inclusion_condition_to_scalar_kernel_type(condition)
+                res = self.__integrator.trapezoid_of(
+                    kernel_type, Utils.constant_one(), point_info.point, boundary_item.element
+                )
                 coefficients = np.append(coefficients, [res])
                 if is_same_point:
                     right_side_ret += boundary_item.value
             elif BoundaryConditionType.NEUMANN == point_info.type:
-                res = self.__integrator.trapezoid_grad(
-                    Utils.constant_value(boundary_item.normal), point_info.point, boundary_item.element
+                kernel_type = Utils.inclusion_condition_to_gradient_kernel_type(condition)
+                res = self.__integrator.trapezoid_of(
+                    kernel_type, Utils.constant_value(boundary_item.normal), point_info.point, boundary_item.element
                 )
                 coefficients = np.append(coefficients, [res])
                 if is_same_point:
                     right_side_ret += boundary_item.value
             elif BoundaryConditionType.ROBIN == point_info.type:
-                res = self.__integrator.trapezoid_grad(
-                    Utils.constant_value(point_info.normal), point_info.point, boundary_item.element
+                kernel_type = Utils.inclusion_condition_to_gradient_kernel_type(condition)
+                res = self.__integrator.trapezoid_of(
+                    kernel_type, Utils.constant_value(point_info.normal), point_info.point, boundary_item.element
                 )
                 res -= point_info.robin_coeff * self.__integrator.trapezoid(
                     Utils.constant_one(), point_info.point, boundary_item.element
@@ -972,8 +1086,8 @@ class SingleLayerCoBoundaryTerm(ExpressionTerm):
                 # TODO: FInish implementation
                 if is_same_point:
                     right_side_ret = boundary_item.value
-                res = self.__integrator.trapezoid_grad(
-                    Utils.constant_value(boundary_item.normal), point_info.point, boundary_item.element
+                res = self.__integrator.trapezoid_of(
+                    kernel_type, Utils.constant_value(boundary_item.normal), point_info.point, boundary_item.element
                 )
                 coefficients = np.append(coefficients, [res])
                 if is_same_point:
@@ -998,7 +1112,9 @@ class SingleLayerCoBoundaryTerm(ExpressionTerm):
         unknown_index = 0
 
         for boundary_item in self.domain.get_coborder():
-            integral_value = self.__integrator.trapezoid(Utils.constant_one(), point, boundary_item.element)
+            integral_value = self.__integrator.trapezoid_of(
+                KernelValueType.SCALAR, Utils.constant_one(), point, boundary_item.element
+            )
             if boundary_item.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN]:
                 result += self.__unknown_values[unknown_index] * integral_value
                 unknown_index += 1
@@ -1480,8 +1596,8 @@ def init_poisson_dirichlet_cobem():
         return -8.0
 
     expression = [
-        SingleLayerCoBoundaryTerm(Laplace2DKernel(), domain),
-        SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
+        SingleLayerCoBEMTerm(Laplace2DKernel(), domain),
+        SingleLayerVolumeCoBEMTerm(Laplace2DKernel(), domain, heat_source_function, -1),
     ]
 
     problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
@@ -1524,7 +1640,7 @@ def init_poisson_neumann_cobem():
         return -8.0
 
     expression = [
-        SingleLayerCoBoundaryTerm(Laplace2DKernel(), domain),
+        SingleLayerCoBEMTerm(Laplace2DKernel(), domain),
         SingleLayerVolumeCoBEMTerm(Laplace2DKernel(), domain, heat_source_function, -1),
     ]
 
