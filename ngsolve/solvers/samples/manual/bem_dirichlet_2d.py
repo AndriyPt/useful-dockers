@@ -10,15 +10,15 @@ from matplotlib import cm
 class GlobalSettings(object):
     CHART_STEPS = 25
     BORDER_ELEMENTS_COUNT = 10
-    INCLUSION_ELEMENTS_COUNT = 4
+    INCLUSION_ELEMENTS_COUNT = 10
     PLOT_ERROR = False
-    PLOT_DETAILS = False
+    PLOT_DETAILS = True
     COBORDER_DEPTH = 1.0
     """
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
         5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM    
     """
-    EXAMPLE_TYPE = 5
+    EXAMPLE_TYPE = 4
 
 
 class ExpressionTerm:
@@ -1140,25 +1140,22 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         domain: Domain,
         coeff_function: Callable,
         grad_function: Callable,
-        laplacian_function: Callable,
         sign: int = 1,
     ):
         super().__init__(kernel, domain, sign)
         assert coeff_function is not None
         assert grad_function is not None
-        assert laplacian_function is not None
 
-        def adjusted_gradient(point: np.array):
+        def adjusted_gradient_x(point: np.array):
             result = grad_function(point) / coeff_function(point)
-            return result
+            return result[0]
 
-        def adjusted_laplacian(point: np.array):
-            gradient = adjusted_gradient(point)
-            result = laplacian_function(point) / coeff_function(point) - np.dot(gradient, gradient)
-            return result
+        def adjusted_gradient_y(point: np.array):
+            result = grad_function(point) / coeff_function(point)
+            return result[1]
 
-        self.__grad_function = adjusted_gradient
-        self.__laplacian_function = adjusted_laplacian
+        self.__grad_function_x = adjusted_gradient_x
+        self.__grad_function_y = adjusted_gradient_y
         self.__unknown_count = 0
         self.__unknown_values = np.empty(0)
         self.__integrator = Integrator2D(
@@ -1171,14 +1168,42 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         assert point_info is not None
         coefficients = np.empty(0)
         for face in self.domain.get_mesh():
-            res = 2.0 * self.__integrator.square(self.__laplacian_function, point_info.point, face.element)
-            # res += self.__integrator.square_grad(self.__grad_function, point_info.point, face.element)
-            # TODO: Check if this is needed
-            # if Utils.is_point_within_square(point_info.point, face.element, SingleLayerInclusionTerm.EPS):
-            #     res -= 1.0
-
-            coefficients = np.append(coefficients, [res])
-
+            is_same_point = Utils.is_the_same_point(point_info.point, face.point, SingleLayerInclusionTerm.EPS)
+            if condition in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN]:
+                res = self.__integrator.square_of(
+                    KernelValueType.SCALAR, self.__grad_function_x, point_info.point, face.element
+                )
+                coefficients = np.append(coefficients, [res])
+                res = self.__integrator.square_of(
+                    KernelValueType.SCALAR, self.__grad_function_y, point_info.point, face.element
+                )
+                coefficients = np.append(coefficients, [res])
+            elif BoundaryConditionType.ROBIN == condition:
+                raise NotImplementedError("Not implemented yet")
+            elif BoundaryConditionType.INCLUSION_DX == condition:
+                res = self.__integrator.square_of(
+                    KernelValueType.DX, self.__grad_function_x, point_info.point, face.element
+                )
+                if is_same_point:
+                    res -= 1.0
+                coefficients = np.append(coefficients, [res])
+                res = self.__integrator.square_of(
+                    KernelValueType.DX, self.__grad_function_y, point_info.point, face.element
+                )
+                coefficients = np.append(coefficients, [res])
+            elif BoundaryConditionType.INCLUSION_DY == condition:
+                res = self.__integrator.square_of(
+                    KernelValueType.DY, self.__grad_function_x, point_info.point, face.element
+                )
+                coefficients = np.append(coefficients, [res])
+                res = self.__integrator.square_of(
+                    KernelValueType.DY, self.__grad_function_y, point_info.point, face.element
+                )
+                if is_same_point:
+                    res -= 1.0
+                coefficients = np.append(coefficients, [res])
+            else:
+                raise AttributeError("Not supported boundary element type")
         self.__unknown_count = len(coefficients)
         return (self.sign * coefficients, 0.0)
 
@@ -1194,11 +1219,18 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         result = 0.0
         unknown_index = 0
         for face in self.domain.get_mesh():
-            face_value = 2.0 * self.__integrator.square(self.__laplacian_function, point, face.element)
-            # face_value += self.__integrator.square_grad(self.__grad_function, point, face.element)
+            face_value = self.__integrator.square_of(
+                KernelValueType.SCALAR, self.__grad_function_x, point, face.element
+            )
             face_value *= self.__unknown_values[unknown_index]
-            result += face_value
             unknown_index += 1
+            result += face_value
+            face_value = self.__integrator.square_of(
+                KernelValueType.SCALAR, self.__grad_function_y, point, face.element
+            )
+            face_value *= self.__unknown_values[unknown_index]
+            unknown_index += 1
+            result += face_value
 
         assert self.__unknown_count == unknown_index, "Unknown could should match {} and {}".format(
             self.__unknown_count, unknown_index
@@ -1467,85 +1499,79 @@ def init_poisson_dirichlet_single_inclusion_bem():
         [inclusion_domain],
     )
 
-    # def thermal_conductivity(point: np.array):
-    #     result = K_MIN
-    #     distance_from_center = (
-    #         (point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2
-    #     ) / INCLUSION_RADIUS**2
-    #     if distance_from_center < 1.0:
-    #         result += K_MAX * (1 - distance_from_center)
-
-    #     return result
-
-    # def thermal_conductivity_gradient(point: np.array):
-    #     result = np.array([0.0, 0.0])
-    #     if inclusion_domain.is_point_inside_domain(point):
-    #         result[0] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[0]) / INCLUSION_RADIUS**2
-    #         result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[1]) / INCLUSION_RADIUS**2
-    #     return result
-
-    # def thermal_conductivity_laplacian(point: np.array):
-    #     result = 0.0
-    #     if inclusion_domain.is_point_inside_domain(point):
-    #         result = K_MAX * -2.0 / INCLUSION_RADIUS**2
-    #     return result
-
     def thermal_conductivity(point: np.array):
-        result = K_TISSUE
-        if inclusion_domain.is_point_inside_domain(point):
-            result = (K_MAX_TUMOR - K_TISSUE) * np.cos(
-                (0.5 * np.pi / INCLUSION_RADIUS**2)
-                * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-            ) + K_TISSUE
+        result = K_MIN
+        distance_from_center = (
+            (point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2
+        ) / INCLUSION_RADIUS**2
+        if distance_from_center < 1.0:
+            result += K_MAX * (1 - distance_from_center)
+
         return result
 
     def thermal_conductivity_gradient(point: np.array):
         result = np.array([0.0, 0.0])
         if inclusion_domain.is_point_inside_domain(point):
-            result[0] = (
-                -(K_MAX_TUMOR - K_TISSUE)
-                * np.sin(
-                    (0.5 * np.pi / INCLUSION_RADIUS**2)
-                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                )
-                * (np.pi / INCLUSION_RADIUS**2)
-                * (point[0] - INCLUSION_CENTER_X)
-            )
-            result[1] = (
-                -(K_MAX_TUMOR - K_TISSUE)
-                * np.sin(
-                    (0.5 * np.pi / INCLUSION_RADIUS**2)
-                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                )
-                * (np.pi / INCLUSION_RADIUS**2)
-                * (point[1] - INCLUSION_CENTER_Y)
-            )
+            result[0] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[0]) / INCLUSION_RADIUS**2
+            result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[1]) / INCLUSION_RADIUS**2
         return result
 
-    def thermal_conductivity_laplacian(point: np.array):
-        result = 0.0
-        if inclusion_domain.is_point_inside_domain(point):
-            result = ((K_TISSUE - K_MAX_TUMOR) * np.pi / INCLUSION_RADIUS**2) * (
-                np.cos(
-                    (0.5 * np.pi / INCLUSION_RADIUS**2)
-                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                )
-                * (np.pi / INCLUSION_RADIUS**2 * (point[0] - INCLUSION_CENTER_X) ** 2)
-                + np.sin(
-                    (0.5 * np.pi / INCLUSION_RADIUS**2)
-                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                )
-                + np.cos(
-                    (0.5 * np.pi / INCLUSION_RADIUS**2)
-                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                )
-                * (np.pi / INCLUSION_RADIUS**2 * (point[1] - INCLUSION_CENTER_X) ** 2)
-                + np.sin(
-                    (0.5 * np.pi / INCLUSION_RADIUS**2)
-                    * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                )
-            )
-        return result
+    # def thermal_conductivity(point: np.array):
+    #     result = K_TISSUE
+    #     if inclusion_domain.is_point_inside_domain(point):
+    #         result = (K_MAX_TUMOR - K_TISSUE) * np.cos(
+    #             (0.5 * np.pi / INCLUSION_RADIUS**2)
+    #             * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+    #         ) + K_TISSUE
+    #     return result
+
+    # def thermal_conductivity_gradient(point: np.array):
+    #     result = np.array([0.0, 0.0])
+    #     if inclusion_domain.is_point_inside_domain(point):
+    #         result[0] = (
+    #             -(K_MAX_TUMOR - K_TISSUE)
+    #             * np.sin(
+    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
+    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+    #             )
+    #             * (np.pi / INCLUSION_RADIUS**2)
+    #             * (point[0] - INCLUSION_CENTER_X)
+    #         )
+    #         result[1] = (
+    #             -(K_MAX_TUMOR - K_TISSUE)
+    #             * np.sin(
+    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
+    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+    #             )
+    #             * (np.pi / INCLUSION_RADIUS**2)
+    #             * (point[1] - INCLUSION_CENTER_Y)
+    #         )
+    #     return result
+
+    # def thermal_conductivity_laplacian(point: np.array):
+    #     result = 0.0
+    #     if inclusion_domain.is_point_inside_domain(point):
+    #         result = ((K_TISSUE - K_MAX_TUMOR) * np.pi / INCLUSION_RADIUS**2) * (
+    #             np.cos(
+    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
+    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+    #             )
+    #             * (np.pi / INCLUSION_RADIUS**2 * (point[0] - INCLUSION_CENTER_X) ** 2)
+    #             + np.sin(
+    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
+    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+    #             )
+    #             + np.cos(
+    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
+    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+    #             )
+    #             * (np.pi / INCLUSION_RADIUS**2 * (point[1] - INCLUSION_CENTER_X) ** 2)
+    #             + np.sin(
+    #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
+    #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
+    #             )
+    #         )
+    #     return result
 
     print("Define heat source function...")
 
@@ -1556,17 +1582,12 @@ def init_poisson_dirichlet_single_inclusion_bem():
             inclusion_domain,
             thermal_conductivity,
             thermal_conductivity_gradient,
-            thermal_conductivity_laplacian,
             -1.0,
-            # 1.0,
         ),
         DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
         SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
     ]
 
-    # Utils.plot(np.array([0.0, 1.0]), np.array([0.0, 1.0]), [thermal_conductivity])
-    # import sys
-    # sys.exit(-1)
     problem = Problem(ProblemSolverType.BEM, expression, domain)
     return problem
 
