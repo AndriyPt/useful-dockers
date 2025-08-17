@@ -408,16 +408,49 @@ class Kernel:
     def value(self, point_x: np.array, point_y: np.array):
         raise NotImplementedError("Call to abstract method")
 
-    def grad(self, point_x: np.array, point_y: np.array):
+    def dx(self, point_x: np.array, point_y: np.array):
         raise NotImplementedError("Call to abstract method")
+
+    def dy(self, point_x: np.array, point_y: np.array):
+        raise NotImplementedError("Call to abstract method")
+
+    def dxx(self, point_x: np.array, point_y: np.array):
+        raise NotImplementedError("Call to abstract method")
+
+    def dxy(self, point_x: np.array, point_y: np.array):
+        raise NotImplementedError("Call to abstract method")
+
+    def dyy(self, point_x: np.array, point_y: np.array):
+        raise NotImplementedError("Call to abstract method")
+
+    def grad(self, point_x: np.array, point_y: np.array):
+        return np.array([self.dx(point_x, point_y), self.dy(point_x, point_y)])
 
 
 class Laplace2DKernel(Kernel):
     def value(self, point_x: np.array, point_y: np.array):
         return -0.25 / np.pi * np.log(Utils.squared_distance(point_x, point_y))
 
-    def grad(self, point_x: np.array, point_y: np.array):
-        result = -0.25 / np.pi / Utils.squared_distance(point_x, point_y) * -2.0 * (point_x - point_y)
+    def dx(self, point_x: np.array, point_y: np.array):
+        result = -0.25 / np.pi / Utils.squared_distance(point_x, point_y) * -2.0 * (point_x[0] - point_y[0])
+        return result
+
+    def dy(self, point_x: np.array, point_y: np.array):
+        result = -0.25 / np.pi / Utils.squared_distance(point_x, point_y) * -2.0 * (point_x[1] - point_y[1])
+        return result
+
+    def dxx(self, point_x: np.array, point_y: np.array):
+        distance_forth = Utils.squared_distance(point_x, point_y) ** 2
+        result = -0.5 / np.pi / distance_forth * ((point_x[0] - point_y[0]) ** 2 - (point_x[1] - point_y[1]) ** 2)
+        return result
+
+    def dxy(self, point_x: np.array, point_y: np.array):
+        distance_forth = Utils.squared_distance(point_x, point_y) ** 2
+        result = -1.0 / np.pi / distance_forth * (point_x[0] - point_y[0]) * (point_x[1] - point_y[1])
+        return result
+
+    def dyy(self, point_x: np.array, point_y: np.array):
+        result = -1.0 * self.dxx(point_x, point_y)
         return result
 
 
