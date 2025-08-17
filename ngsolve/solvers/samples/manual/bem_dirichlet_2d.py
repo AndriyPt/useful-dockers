@@ -97,10 +97,10 @@ class Utils:
 
     @staticmethod
     def is_point_within_square(point: np.array, mesh: np.array, eps: float):
-        min_x = mesh[0][0] + eps
-        max_x = mesh[1][0] - eps
-        min_y = mesh[0][1] + eps
-        max_y = mesh[2][1] - eps
+        min_x = mesh[0][0]
+        max_x = mesh[1][0]
+        min_y = mesh[0][1]
+        max_y = mesh[2][1]
         if point[0] > min_x and point[0] < max_x and point[1] > min_y and point[1] < max_y:
             return True
         return False
@@ -1021,11 +1021,11 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         assert point_info is not None
         coefficients = np.empty(0)
         for face in self.domain.get_mesh():
-            res = self.__integrator.square(self.__laplacian_function, point_info.point, face.element)
-            res += self.__integrator.square_grad(self.__grad_function, point_info.point, face.element)
+            res = 2.0 * self.__integrator.square(self.__laplacian_function, point_info.point, face.element)
+            # res += self.__integrator.square_grad(self.__grad_function, point_info.point, face.element)
             # TODO: Check if this is needed
-            if Utils.is_point_within_square(point_info.point, face.element, SingleLayerInclusionTerm.EPS):
-                res -= 1.0
+            # if Utils.is_point_within_square(point_info.point, face.element, SingleLayerInclusionTerm.EPS):
+            #     res -= 1.0
 
             coefficients = np.append(coefficients, [res])
 
@@ -1044,8 +1044,8 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         result = 0.0
         unknown_index = 0
         for face in self.domain.get_mesh():
-            face_value = self.__integrator.square(self.__laplacian_function, point, face.element)
-            face_value += self.__integrator.square_grad(self.__grad_function, point, face.element)
+            face_value = 2.0 * self.__integrator.square(self.__laplacian_function, point, face.element)
+            # face_value += self.__integrator.square_grad(self.__grad_function, point, face.element)
             face_value *= self.__unknown_values[unknown_index]
             result += face_value
             unknown_index += 1
@@ -1532,22 +1532,22 @@ def test():
         distance_from_center = (
             (point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2
         ) / INCLUSION_RADIUS**2
-        if distance_from_center < 1.0:
-            result += K_MAX * (1 - distance_from_center)
+        # if distance_from_center < 1.0:
+        result += K_MAX * (1 - distance_from_center)
 
         return result
 
     def thermal_conductivity_gradient(point: np.array):
         result = np.array([0.0, 0.0])
-        if inclusion_domain.is_point_inside_domain(point):
-            result[0] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[0]) / INCLUSION_RADIUS**2
-            result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[1]) / INCLUSION_RADIUS**2
+        # if inclusion_domain.is_point_inside_domain(point):
+        result[0] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[0]) / INCLUSION_RADIUS**2
+        result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[1]) / INCLUSION_RADIUS**2
         return result
 
     def thermal_conductivity_laplacian(point: np.array):
         result = 0.0
-        if inclusion_domain.is_point_inside_domain(point):
-            result = K_MAX * -2.0 / INCLUSION_RADIUS**2
+        # if inclusion_domain.is_point_inside_domain(point):
+        result = K_MAX * -2.0 / INCLUSION_RADIUS**2
         return result
 
     # def thermal_conductivity(point: np.array):
@@ -1609,11 +1609,58 @@ def test():
 
     print("Define heat source function...")
 
+    class BoundaryIntegral(ExpressionTerm):
+
+        NOMINAL_INTEGRATION_POINTS = 4
+        SINGULARITY_INTEGRATION_POINTS = 6
+        EPS = 0.001
+
+        def __init__(
+            self,
+            kernel: Kernel,
+            domain: Domain,
+            solution: Callable,
+            gradient_thermal: Callable,
+            thermal_func: Callable,
+            sign: int = 1,
+        ):
+            super().__init__(kernel, domain, sign)
+            self.__unknown_count = len(domain.get_border())
+            self.__unknown_values = []
+            for boundary_item in self.domain.get_border():
+                self.__unknown_values.append(
+                    solution(boundary_item.point)
+                    * np.dot(boundary_item.normal, gradient_thermal(boundary_item.point))
+                    / thermal_func(boundary_item.point)
+                )
+            self.__integrator = Integrator2D(
+                kernel,
+                BoundaryIntegral.NOMINAL_INTEGRATION_POINTS,
+                BoundaryIntegral.SINGULARITY_INTEGRATION_POINTS,
+            )
+
+        def value(self, point: np.array):
+            assert self.__unknown_count == len(self.__unknown_values), "Data should be calculated"
+            result = 0.0
+            unknown_index = 0
+
+            for boundary_item in self.domain.get_border():
+                integral_value = self.__integrator.segment(
+                    Utils.constant_one(), point, boundary_item.element[0], boundary_item.element[1]
+                )
+                result += self.__unknown_values[unknown_index] * integral_value
+                unknown_index += 1
+            result *= self.sign
+            return result
+
     def integral_value(point: np.array):
         result = np.dot(np.array([0.0, 2.0]), thermal_conductivity_gradient(point))
         result /= thermal_conductivity(point)
         return result
 
+    extra_integral = BoundaryIntegral(
+        Laplace2DKernel(), inclusion_domain, boundary_value, thermal_conductivity_gradient, thermal_conductivity, 1.0
+    )
     expression = [
         SingleLayerInclusionTerm(
             Laplace2DKernel(),
@@ -1636,7 +1683,13 @@ def test():
 
     expression[0].propagate_solution(solution)
 
-    Utils.plot(np.array([0.0, 1.0]), np.array([0.0, 1.0]), [expression[0].value, expression[1].value])
+    def complex_value(point: np.array):
+        # result = extra_integral.value(point) + expression[0].value(point)
+        # result = expression[0].value(point)
+        result = extra_integral.value(point)
+        return result
+
+    Utils.plot(np.array([0.0, 1.0]), np.array([0.0, 1.0]), [expression[0].value, expression[1].value, complex_value])
 
     import sys
 
