@@ -1219,18 +1219,13 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         result = 0.0
         unknown_index = 0
         for face in self.domain.get_mesh():
-            face_value = self.__integrator.square_of(
-                KernelValueType.SCALAR, self.__grad_function_x, point, face.element
-            )
-            face_value *= self.__unknown_values[unknown_index]
-            unknown_index += 1
-            result += face_value
-            face_value = self.__integrator.square_of(
-                KernelValueType.SCALAR, self.__grad_function_y, point, face.element
-            )
-            face_value *= self.__unknown_values[unknown_index]
-            unknown_index += 1
-            result += face_value
+            for func in [self.__grad_function_x, self.__grad_function_y]:
+                face_value = self.__integrator.square_of(
+                    KernelValueType.SCALAR, func, point, face.element
+                )
+                face_value *= self.__unknown_values[unknown_index]
+                unknown_index += 1
+                result += face_value
 
         assert self.__unknown_count == unknown_index, "Unknown could should match {} and {}".format(
             self.__unknown_count, unknown_index
