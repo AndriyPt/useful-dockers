@@ -10,6 +10,7 @@ from matplotlib import cm
 
 class GlobalSettings(object):
     CHART_STEPS = 25
+    CHART_SKIP_BORDER_WIDTH = 0.0
     BORDER_ELEMENTS_COUNT = 10
     INCLUSION_ELEMENTS_COUNT = 10
     PLOT_ERROR = False
@@ -18,9 +19,9 @@ class GlobalSettings(object):
     """
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
         5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM
-        9 - Pennes mixed 
+        9 - Pennes mixed BEM, 11 - Pennes Dirichlet CoBEM, 12 - Pennes Neumann CoBEM  
     """
-    EXAMPLE_TYPE = 9
+    EXAMPLE_TYPE = 11
 
 
 class ExpressionTerm:
@@ -1350,6 +1351,11 @@ class Problem(object):
         x_max = max(point_info.point[0] for point_info in self.__domain.get_border())
         y_max = max(point_info.point[1] for point_info in self.__domain.get_border())
 
+        x_min += GlobalSettings.CHART_SKIP_BORDER_WIDTH
+        y_min += GlobalSettings.CHART_SKIP_BORDER_WIDTH
+        x_max -= GlobalSettings.CHART_SKIP_BORDER_WIDTH
+        y_max -= GlobalSettings.CHART_SKIP_BORDER_WIDTH
+
         if GlobalSettings.PLOT_DETAILS:
             functions = []
             for index in range(0, len(self.__expression)):
@@ -1698,7 +1704,7 @@ def init_poisson_neumann_cobem():
 
 # Article https://pubmed.ncbi.nlm.nih.gov/1522731/
 def init_pennes_dirichlet_neumann_bem():
-    print("BEM for Neumann and Dirichlet mixed problem for Pennes equation...")
+    print("BEM for Dirichlet and Neumann mixed problem for Pennes equation...")
 
     print("Define boundary conditions...")
 
@@ -1740,13 +1746,82 @@ def init_pennes_dirichlet_neumann_bem():
     def heat_source_function(point: np.array):
         return 0.0
 
+    # expression = [
+    #     DoubleLayerBoundaryTerm(Pennes2DKernel(2.0), domain),
+    #     SingleLayerBoundaryTerm(Pennes2DKernel(2.0), domain, -1),
+    #     # SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
+    # ]
+
     expression = [
-        DoubleLayerBoundaryTerm(Pennes2DKernel(2.0), domain),
-        SingleLayerBoundaryTerm(Pennes2DKernel(2.0), domain, -1),
+        SingleLayerCoBEMTerm(Pennes2DKernel(2.0), domain, 1),
         # SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
     ]
 
-    problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
+    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+    return problem
+
+def init_pennes_dirichlet_cobem():
+    print("CoBEM for Dirichlet problem for Pennes equation...")
+
+    print("Define boundary conditions...")
+
+    def analytical_solution(point: np.array):
+        return np.sinh(point[0] + point[1])
+
+    def dirichlet_boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    domain = SquareDomain2D(
+        np.array([0.0, 0.0]),
+        np.array([1.0, 1.0]),
+        [BoundaryConditionType.DIRICHLET] * 4,
+        [dirichlet_boundary_value] * 4,
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
+    )
+
+    expression = [
+        SingleLayerCoBEMTerm(Pennes2DKernel(2.0), domain, 1),
+    ]
+
+    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+    return problem
+
+
+def init_pennes_neumann_cobem():
+    print("CoBEM for Neumann problem for Pennes equation...")
+
+    print("Define boundary conditions...")
+
+    def analytical_solution(point: np.array):
+        return np.sinh(point[0] + point[1])
+
+    def dirichlet_boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    def neumann_boundary_right_value(point: np.array):
+        return np.cosh(point[0] + point[1])
+
+    def neumann_boundary_left_value(point: np.array):
+        return -1.0 * np.cosh(point[0] + point[1])
+
+    domain = SquareDomain2D(
+        np.array([0.0, 0.0]),
+        np.array([1.0, 1.0]),
+        [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
+        [
+            dirichlet_boundary_value,
+            neumann_boundary_right_value,
+            dirichlet_boundary_value,
+            neumann_boundary_left_value,
+        ],
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
+    )
+
+    expression = [
+        SingleLayerCoBEMTerm(Pennes2DKernel(2.0), domain, 1),
+    ]
+
+    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
     return problem
 
 
@@ -1766,6 +1841,10 @@ if "__main__" == __name__:
         problem = init_poisson_neumann_cobem()
     elif 9 == GlobalSettings.EXAMPLE_TYPE:
         problem = init_pennes_dirichlet_neumann_bem()
+    elif 11 == GlobalSettings.EXAMPLE_TYPE:
+        problem = init_pennes_dirichlet_cobem()
+    elif 12 == GlobalSettings.EXAMPLE_TYPE:
+        problem = init_pennes_neumann_cobem()
 
     assert problem is not None
 
