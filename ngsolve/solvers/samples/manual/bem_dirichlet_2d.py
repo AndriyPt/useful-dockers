@@ -3,6 +3,7 @@
 from enum import Enum
 from collections.abc import Callable
 import numpy as np
+import scipy
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
@@ -12,13 +13,14 @@ class GlobalSettings(object):
     BORDER_ELEMENTS_COUNT = 10
     INCLUSION_ELEMENTS_COUNT = 10
     PLOT_ERROR = False
-    PLOT_DETAILS = True
+    PLOT_DETAILS = False
     COBORDER_DEPTH = 1.0
     """
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
-        5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM    
+        5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM
+        9 - Pennes mixed 
     """
-    EXAMPLE_TYPE = 4
+    EXAMPLE_TYPE = 9
 
 
 class ExpressionTerm:
@@ -511,6 +513,38 @@ class Laplace2DKernel(Kernel):
     def dyy(self, point_x: np.array, point_y: np.array):
         result = -1.0 * self.dxx(point_x, point_y)
         return result
+
+
+# https://en.wikipedia.org/wiki/Green%27s_function#Table_of_Green's_functions
+class Pennes2DKernel(Kernel):
+
+    def __init__(self, k_square: float):
+        super().__init__()
+        assert k_square > 0
+        self.__k = np.sqrt(k_square)
+
+    def value(self, point_x: np.array, point_y: np.array):
+        result = -0.5 / np.pi * scipy.special.kn(0, self.__k * Utils.distance(point_x, point_y))
+        return result
+
+    def dx(self, point_x: np.array, point_y: np.array):
+        r = Utils.distance(point_x, point_y)
+        result = -0.5 / np.pi / scipy.special.kvp(0, self.__k * r, 1) * 0.5 / r * -2.0 * (point_x[0] - point_y[0])
+        return result
+
+    def dy(self, point_x: np.array, point_y: np.array):
+        r = Utils.distance(point_x, point_y)
+        result = -0.5 / np.pi / scipy.special.kvp(0, self.__k * r, 1) * 0.5 / r * -2.0 * (point_x[1] - point_y[1])
+        return result
+
+    def dxx(self, point_x: np.array, point_y: np.array):
+        raise NotImplementedError("Implement me")
+
+    def dxy(self, point_x: np.array, point_y: np.array):
+        raise NotImplementedError("Implement me")
+
+    def dyy(self, point_x: np.array, point_y: np.array):
+        raise NotImplementedError("Implement me")
 
 
 class Integrator:
@@ -1220,9 +1254,7 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         unknown_index = 0
         for face in self.domain.get_mesh():
             for func in [self.__grad_function_x, self.__grad_function_y]:
-                face_value = self.__integrator.square_of(
-                    KernelValueType.SCALAR, func, point, face.element
-                )
+                face_value = self.__integrator.square_of(KernelValueType.SCALAR, func, point, face.element)
                 face_value *= self.__unknown_values[unknown_index]
                 unknown_index += 1
                 result += face_value
@@ -1664,6 +1696,60 @@ def init_poisson_neumann_cobem():
     return problem
 
 
+# Article https://pubmed.ncbi.nlm.nih.gov/1522731/
+def init_pennes_dirichlet_neumann_bem():
+    print("BEM for Neumann and Dirichlet mixed problem for Pennes equation...")
+
+    print("Define boundary conditions...")
+
+    def analytical_solution(point: np.array):
+        return np.sinh(point[0] + point[1])
+
+    def dirichlet_boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    def neumann_boundary_right_value(point: np.array):
+        return np.cosh(point[0] + point[1])
+
+    def neumann_boundary_left_value(point: np.array):
+        return -1.0 * np.cosh(point[0] + point[1])
+
+    # domain = SquareDomain2D(
+    #     np.array([0.0, 0.0]),
+    #     np.array([1.0, 1.0]),
+    #     [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
+    #     [
+    #         dirichlet_boundary_value,
+    #         neumann_boundary_right_value,
+    #         dirichlet_boundary_value,
+    #         neumann_boundary_left_value,
+    #     ],
+    #     GlobalSettings.BORDER_ELEMENTS_COUNT,
+    # )
+
+    domain = SquareDomain2D(
+        np.array([0.0, 0.0]),
+        np.array([1.0, 1.0]),
+        [BoundaryConditionType.DIRICHLET] * 4,
+        [dirichlet_boundary_value] * 4,
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
+    )
+
+    print("Define heat source function...")
+
+    def heat_source_function(point: np.array):
+        return 0.0
+
+    expression = [
+        DoubleLayerBoundaryTerm(Pennes2DKernel(2.0), domain),
+        SingleLayerBoundaryTerm(Pennes2DKernel(2.0), domain, -1),
+        # SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
+    ]
+
+    problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
+    return problem
+
+
 if "__main__" == __name__:
     problem = None
     if 1 == GlobalSettings.EXAMPLE_TYPE:
@@ -1678,6 +1764,8 @@ if "__main__" == __name__:
         problem = init_poisson_dirichlet_cobem()
     elif 6 == GlobalSettings.EXAMPLE_TYPE:
         problem = init_poisson_neumann_cobem()
+    elif 9 == GlobalSettings.EXAMPLE_TYPE:
+        problem = init_pennes_dirichlet_neumann_bem()
 
     assert problem is not None
 
