@@ -1,0 +1,189 @@
+% Постановка проблеми.
+% Аналіз останніх досліджень та публікацій.
+% Формулювання цілі статті.
+% Виклад основного матеріалу.
+% Висновки.
+% Список літератури англійською мовою за стандартом APA Style (використання транслітерації при переклад
+
+
+\begin{center}
+    \textbf{Постановка проблеми}
+\end{center}
+
+  Сертифіковані медичні прилади зазвичай вимагають значних фінансових інвестицій. Кожен із ним має відповідний процес
+  вишколювання персоналу. Проте, значну частину знань можна отримати без реального приладу, а у симуляції. Для цього
+  будують симулятори органів людського тіла. Використання такого підходу здешевлює процес навчання і полегшує логістику
+  вишколу. Звісно він не замінить реальні прилади, але суттєво полегшує вишколювання спеціалістів.
+  
+  Моделювання процесів теплообміну у тканинах людського тіла можна описати кількома моделями
+  \cite{kutz-zhu-heat-transfer-biological-systems}:
+  \begin{itemize}
+    \item Рівняння Пеннеса\cite{thermal-process-tissue-pennes} -- у модельованих м'яких тканинах береться усереднений
+          ефект від потоку крові через об'єм.
+    \item Моделювання головних судин, які впливають на температурні процеси органу чи органів, які досліджуються.
+  \end{itemize}
+  Із часом з'являються досконаліші інструменти, які суттєво полегшують створення судинних моделей. Проте вони є
+  складнішими, але дають точніші результати. Модель описана рівнянням Пеннеса є достатньо для багатьох симуляцій.
+  
+  У цій статті кома перед індексом означає похідну по змінній, яка відповідає цьому індексу, тобто ${f_{,j} =
+  \partial}{f/\partial}x_{j}$, ${{f_{,ij} = \partial^{2}}{f/\partial}x_{i}\partial x_{j}}{}$, при цьому використовується
+  німе сумування за індексами, які повторюються.
+  
+  Задачу теплообміну у людських тканинах у заданій області $\Omega$ можна сформулювати у вигляді:
+  
+  \begin{equation}
+    \label{eqn:theory_thermo_pennes_eqn}
+    \nabla \cdot \lambda_\theta \nabla \theta(x) + \omega \rho_b C_b (\theta_c - \theta(x)) + q_m  = 0, x \in \Omega
+  \end{equation}
+  
+  \noindent де $\Gamma = \partial \Omega$ -- межа області $\Omega$, $\lambda_\theta$ -- коефіцієнт теплопровідності,
+  $\theta$ -- шукана температура в області $\Omega$,
+  $\rho_b$ -- густина крові, $\omega$ -- перфузія крові через орган, $C_b$ -- питома теплоємність крові,
+  $\theta_c$ -- внутрішня температура тіла, $q_m$ -- метаболічне тепло у тканині. На межі задамо умови:
+  
+  \begin{equation}
+    \label{eqn:theory_thermo_cond_dirichlet}
+    \theta(x) = \theta_{\Gamma_D}(x), x \in \Gamma_D
+  \end{equation}
+  
+  \begin{equation}
+    \label{eqn:theory_thermo_cond_neumann}
+    q(x) = q_{\Gamma_N}(x), x \in \Gamma_N
+  \end{equation}
+  
+  \begin{equation}
+    \label{eqn:theory_thermo_cond_robin}
+    -\lambda_\theta q(x) = h(\theta(x) - \theta_e), x \in \Gamma_R,
+  \end{equation}
+  
+  \noindent де $q(x) = \frac{\partial \theta(x)}{\partial n}$ -- тепловий потік, $n_i$ -- компоненти вектора зовнішньої
+  нормалі до межі $\Gamma$, $\theta_e$ -- температура середовища, $h$ -- коефіцієнт тепловіддачі. Крайові умови
+  (\ref{eqn:theory_thermo_cond_dirichlet}), (\ref{eqn:theory_thermo_cond_neumann}) і (\ref{eqn:theory_thermo_cond_robin})
+  -- це умови Діріхле, Неймана і Робіна відповідно. Умова Робіна описує тепловий обмін тіла із навколишнім середовищем.
+
+  \begin{center}
+    \textbf{Аналіз останніх досліджень та публікацій}
+  \end{center}
+  
+  \begin{center}
+    \textbf{Формулювання цілі статті}
+  \end{center}
+  
+  Для розв'язування задач типу (\ref{eqn:theory_thermo_pennes_eqn}) (\ref{eqn:theory_thermo_cond_dirichlet})
+  (\ref{eqn:theory_thermo_cond_neumann}) (\ref{eqn:theory_thermo_cond_robin}) використаємо метод приграничних елементів
+  (МПГЕ)\cite{grytsko-cobem}, який належить до сімейства методів граничних елементів (МГЕ)\cite{brebbia-bem}. МГЕ мають
+  кілька переваг у порівнянні із методом скінчених елементів (МСЕ)\cite{bahvalov-et-al}, зокрема:
+  \begin{itemize}
+    \item Розбиття границі області на дискретні елементи, а не цілої область.
+    \item Зменшує розмірність задачі і відповідної кількості лінійних алгебраїчних рівнянь.
+    \item Висока точність розв'язку на границі області.
+  \end{itemize}
+  Такі переваги роблять МГЕ привабливими для використання у симуляторах.
+  
+  МПГЕ дискретизує не саму границю, а приграничну зону. Це дозволяє ввести додатковий ступінь вільності, а саме ширину
+  цієї зони. Він дозволяє покращувати точність стаціонарних задач. Також інтеграли, які обчислюються мають сингулярність
+  на межі, а не всередині області інтегрування. Це дозволяє використовувати звичайні формули інтегрування для обчислення
+  розв'язку. Симулятори можуть базуватися на МПГЕ.
+  
+  Візьмемо фундаментальні розв'язки рівняння Пеннеса (\ref{eqn:theory_thermo_pennes_eqn}) із
+  \cite{pennes-equation-bem-fundamental-solutions} і позначимо їх $\hat{\theta}$ і $\hat{q}$. Розглянемо таку область $B
+    \subset R^n$, що $\Omega \subset B$, $\partial\Omega \cap \partial B = \varnothing$. Позначимо приграничну область $G =
+    B \setminus \Omega$. Інтегральне подання розв'язку для МПГЕ запишемо у вигляді:
+  
+  \begin{equation}
+    \label{eqn:thermo_cobem_pennes_theta}
+    \theta(\xi) = \int \limits_G g(x)\hat{\theta}(x,\xi)dG(x)
+  \end{equation}
+  
+  \begin{equation}
+    \label{eqn:thermo_cobem_pennes_q}
+    q(\xi) = \int \limits_G g(x)\hat{q}(x,\xi)dG(x)
+  \end{equation}
+  
+  \begin{center}
+    \textbf{Виклад основного матеріалу}
+  \end{center}
+  
+  Область $G$ розіб'ємо на приграничні елементи $G_j$, $j=\overline{1,n}$. Кожен із цих елементів містить кусок границі
+  області $\Omega$, $G_j \cap \Gamma \neq \varnothing$. Визначимо область $G$, яка містить область $\Omega$, причому
+  $\partial G \cap \partial \Omega = \varnothing$.
+  
+  Дискретизуємо інтегральне подання \ref{eqn:thermo_cobem_pennes_theta}:
+  
+  \begin{equation}
+    \label{eqn:thermo_cobem_pennes_theta_discrete}
+    \theta(\xi) = g_j \int \limits_{G_j} \hat{\theta}(x,\xi)dG_j(x),
+  \end{equation}
+  
+  \noindent де $g_j$ -- стале значення функції $g(x)$ на усьому пригранич­ному елементі $G_j$. Відповідно у точці
+  колокації $x_i$ отримаємо:
+  
+  \begin{equation*}
+    \theta(x_i) = g_j \int \limits_{G_j} \hat{\theta}(x,x_i)dG_j(x)
+  \end{equation*}
+  
+  \noindent Таке рівняння можна переписати у вигляді $\theta_i = \theta_{\Gamma_D}(x_i) = H_{ij} g_j$, де: 
+  
+  \begin{equation*}
+    H_{ij} = \int \limits_{G_j} \hat{\theta}(x,x_i)dG_j(x)
+  \end{equation*}
+  
+  \noindent Відповідно, $q_i = q_{\Gamma_N}(x_i) = P_{ij} g_j$ -- це дискретне представлення для інтегрального подання
+  (\ref{eqn:thermo_cobem_pennes_q}) і умови (\ref{eqn:theory_thermo_cond_neumann}), де:
+  
+  \begin{equation*}
+    P_{ij} = \int \limits_{G_j} \hat{q}(x,x_i)dG_j(x)
+  \end{equation*}
+  
+  Система лінійних алгебраїчних рівнянь (СЛАР) запишемо у вигляді:
+  
+  \begin{equation*}
+    \begin{bmatrix}
+      H_{11} & ... & H_{1k} & ... & H_{1l} & ...  & H_{1n} \\
+      ... \\
+      H_{k1} & ... & H_{kk} & ... & H_{kl} & ...  & H_{kn} \\
+      ... \\
+      P_{l1} & ... & P_{lk} & ... & P_{ll} & ...  & P_{ln} \\
+      ... \\
+      P_{n1} & ... & P_{nk} & ... & P_{nl} & ...  & P_{nn}
+    \end{bmatrix}
+    \begin{bmatrix}
+      g_1 \\
+      ...   \\
+      g_k \\
+      ... \\
+      g_l \\
+      ... \\
+      g_n
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+      \theta_1 \\
+      ...   \\
+      \theta_k \\
+      ... \\
+      q_l \\
+      ... \\
+      q_n
+    \end{bmatrix}
+  \end{equation*}
+  
+  \noindent Розв'язок СЛАР підставимо у рівняння (\ref{eqn:thermo_cobem_pennes_theta_discrete}). Завдяки цьому ми зможемо
+  обчислити температуру у довільній точці області $\Omega$.
+  
+  \begin{center}
+    \textbf{Висновки}
+  \end{center}
+  
+  Ддя порівняння методів візьмемо область $\Omega$ у вигляді квадратної пластини. Довжина сторони 10 сантиметрів. Візьмемо
+  значення коефіцієнтів із онлайн база даних для фізичних параметрів органів тіла \cite{database-tissue-properties}:
+  $\lambda_{\theta} = 0,19 \frac{\text{Вт}}{\text{м}\cdot\text{К}}$, $\omega = 0,0002715 \frac{1}{c}$, $\rho_b = 1050
+  \frac{\text{кг}}{\text{м}^3}$, $C_b = 3617 \frac{\text{Дж}}{\text{кг}\cdot\text{К}}$, $T_c = {36,8}^\circ C$ і $q_m =
+  1303,2 \frac{\text{Вт}}{\text{м}^3}$ 
+  
+  На двох протилежних сторонах задамо умови Неймана (\ref{eqn:theory_thermo_cond_neumann}), де $q_{\Gamma_N} = 0$, а на
+  інших сторонах умови Діріхле (\ref{eqn:theory_thermo_cond_dirichlet}) зі значеннями $\theta_{\Gamma_{D1}} = 35^\circ C$
+  і $\theta_{\Gamma_{D2}} = 38^\circ C$.
+  
+  Порівняємо результати:
+  
