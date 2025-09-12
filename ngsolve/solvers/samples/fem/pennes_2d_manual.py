@@ -8,7 +8,7 @@ from netgen.occ import *
 BORDER_TOP = "top"
 BORDER_BOTTOM = "bottom"
 BORDER_SIDE = "side"
-LARGE_MAXH = 0.1
+LARGE_MAXH = 0.2
 K_SQUARE = 1.0
 
 ngsglobals.msg_level = 1
