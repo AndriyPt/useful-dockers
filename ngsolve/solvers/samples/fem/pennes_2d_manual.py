@@ -8,7 +8,7 @@ from netgen.occ import *
 BORDER_TOP = "top"
 BORDER_BOTTOM = "bottom"
 BORDER_SIDE = "side"
-LARGE_MAXH = 0.2
+LARGE_MAXH = 0.1
 K_SQUARE = 1.0
 
 ngsglobals.msg_level = 1
@@ -26,7 +26,7 @@ mesh = Mesh(geo.GenerateMesh(maxh=LARGE_MAXH)).Curve(3)
 
 
 # H1-conforming finite element space
-fes = H1(mesh, order=3, dirichlet=BORDER_TOP + "|" + BORDER_BOTTOM+ "|" + BORDER_SIDE)
+fes = H1(mesh, order=3, dirichlet=BORDER_TOP + "|" + BORDER_BOTTOM + "|" + BORDER_SIDE)
 dirichlet_condition = GridFunction(fes)
 dirichlet_condition.Set(sinh(y), BND)
 
@@ -53,4 +53,12 @@ gfu = GridFunction(fes)
 gfu.vec.data = dirichlet_condition.vec.data + a.mat.Inverse(fes.FreeDofs(), inverse="sparsecholesky") * res
 
 # plot the solution (netgen-gui only)
-Draw(gfu)
+# Draw(gfu)
+
+exact = sinh(y)
+
+error = GridFunction(fes)
+error.Set(gfu - exact)
+Draw(error)
+
+print("L2-error:", sqrt(Integrate((gfu - exact) * (gfu - exact), mesh)))
