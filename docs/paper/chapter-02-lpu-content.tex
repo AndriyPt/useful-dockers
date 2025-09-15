@@ -64,6 +64,79 @@
   \begin{center}
     \textbf{Аналіз останніх досліджень та публікацій}
   \end{center}
+
+Рівняння Пеннеса було сформульовано у 1948 році у статті \cite{thermal-process-tissue-pennes}. У честь п'ятдесятиріччя
+оригінальної статті її параметри були уточнені і детальніше викладені \cite{thermal-process-tissue-pennes-explained}. На
+даний момент у багатьох дослідженнях для опису моделі процесів всередині людського тіла використовують це рівняння.
+Зокрема у працях \cite{example-pennes-heterogeneous-blood-perfusion},
+\cite{example-pennes-instantaneous-moving-heat-source}, \cite{example-pennes-nonlinear-specific-heat},
+\cite{example-pennes-radiofrequency-tumor-ablation}.
+
+Для отримання числових розв'язків цього рівняння використовується МСЕ і МГЕ. У статті
+\cite{example-pennes-bem-heterogeneous-tissue} розглядається неоднорідні властивості тканин людського тіла і
+застосовується МГЕ для отримання розв'язків. Фундаментальна стаття \cite{example-pennes-bem-transfer-equation} описує
+принцип використання МГЕ для рівняння Пеннеса.
+
+%   In this paper, the boundary element method (BEM) approach is applied to solve the Pennes (1948) bioheat equation. The
+%   objective is to develop the BEM formulation and demonstrate its feasibility. The basic BEM formulations for the
+%   transient and steady-state cases are first presented. To demonstrate the usefulness of the BEM approach, numerical
+%   solutions for 2-D steady-state problems are obtained and compared to analytical solutions. Further, the BEM
+%   formulation is applied to model a conjugate problem for an artery imbedded in a perfused heated tissue. Analytical
+%   solution is possible when the conduction in the x-direction is negligible. The BEM and analytical results have very
+%   good agreement.
+
+%   Boundary element method with bioheat equation for skin burn injury
+%   https://doi.org/10.1016/j.burns.2009.01.010
+
+% Mathematical modeling has proven to be a reliable approach for investigating the temperature distribution inside
+% biological systems. One of the most commonly used mathematical models for describing the heat transfer inside biological
+% tissues is the Pennes bioheat equation [3]. The Pennes bioheat equation or the bioheat equation in short, is a
+% practically simple model that distinguishes itself from the classical heat diffusion equation by including the thermal
+% effects due to blood perfusion and metabolic heat generation, i.e. features that are identified in biological tissues.
+% It has since become the starting point of scientific modeling work in bioheat transfer. Although various improved and
+% alternative models have emerged, the Pennes bioheat model is still widely in use due to its accuracy and its simplicity
+% in numerical coding. The use of mathematical models based on the Pennes bioheat equation to predict the temperature
+% changes inside the human skin when subjected to heat has been a very popular method.
+
+% Among the more notable works are
+% those by Diller et al. [4] and Ng and Chua [5], [6], [7]. 
+
+% Solutions of these models were obtained using numerical
+% techniques such as the finite difference method and the finite element method. The boundary element method is a
+% relatively new numerical technique when compared with the finite element method and the finite difference method. While
+% less popular than the latter two, the boundary element method has been gaining many of the researchers’ attention of
+% late. Unlike the finite element method and the finite difference method, the boundary element method is classified as a
+% boundary method, meaning that only the boundary of the solution domain has to be discretized as part of the numerical
+% scheme [10]. This offers a numerical alternative that is computationally less expensive than the other numerical methods
+% that may be classified as domain methods (full domain discretion is required). The boundary element method has been used
+% for solving various problems pertaining to the heat transfer inside biological tissues [8], [9]. It may be interesting
+% to examine the feasibility of this method in simulating the temperature changes inside the human skin during burns. In
+% this study, the boundary element method was used to obtain a numerical solution of the temperature distribution inside
+% the human skin when subjected to a constant temperature heat source. Ideally, by accurately predicting the temperature
+% within the skin tissues using proper computer-programmed codes, we may predict the seriousness of different burns
+% effectively. Nonetheless, in this preliminary study, we shall only consider the steady state temperature changes inside
+% the human skin.
+
+% H.H. Pennes
+% Analysis of tissue and arterial blood temperatures in the resting forearm
+% J Appl Physiol
+% (1948)
+% K.R. Diller et al.
+% A mathematical model for the thermal efficacy of cooling therapy for burns
+% J Burn Care Rehabil
+% (1983)
+% E.Y.K. Ng et al.
+% Prediction of skin burn injury. Part 1. Numerical modeling
+% Proc Inst Mech Eng Part H: J Eng Med
+% (2002)
+% E.Y.K. Ng et al.
+% Mesh independent prediction of skin burns injury
+% J Med Eng Technol
+% (2000)
+% E.Y.K. Ng et al.
+% Quick numerical assessment of skin burn injury with spreadsheet in PC
+% Int J Mech Med Biol
+% (2001)
   
   \begin{center}
     \textbf{Формулювання цілі статті}
