@@ -39,6 +39,9 @@
 \usepackage{pgf-umlcd}
 \usepackage{pgfplots}
 
+\usepackage[round, comma, authoryear]{natbib}
+
+
 % Debug
 % Highlighting
 \usepackage{xcolor}
@@ -77,7 +80,7 @@ Email: l...
 
 \end{center}
 
-\textcopyright Андрій Петльований, Любов Журавчак, 2025
+\textcopyrightАндрій Петльований, Любов Журавчак, 2025
 
 Анотація. У статті описується розв'язування рівняння Пеннеса методом приграничних елементів. Отримані результати 
 порівнюються із методом скінчених елементів і відомим аналітичним розв'язком. Робляться висновки про ефективність 
@@ -92,7 +95,7 @@ Email: l...
 \begin{center}
   Author1, Author2
 
-  1Affiliation (educational institution, department, city, country, 
+  1Affiliation (educational institution, department, city, country,)
 
   2Affiliation 
   
@@ -109,7 +112,7 @@ Keywords -
 
 % End of Titlepage
 
-\mainmatter %% turns on page numeration for pages below
+\mainmatter%% turns on page numeration for pages below
 
 % \input{chapter-01-content.tex}
 
@@ -118,7 +121,7 @@ Keywords -
 
 \clearpage
 \addcontentsline{toc}{chapter}{ПЕРЕЛІК ПОСИЛАНЬ}
-\bibliographystyle{plain}
+\bibliographystyle{natdin}
 \bibliography{literatura}
 
 \end{document}
