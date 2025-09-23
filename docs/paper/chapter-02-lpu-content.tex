@@ -69,17 +69,26 @@
   \textbf{Аналіз останніх досліджень та публікацій}
 \end{center}
 
-Рівняння Пеннеса було сформульовано у 1948 році у статті \cite{thermal-process-tissue-pennes}. У честь п'ятдесятиріччя
-оригінальної статті її параметри були уточнені і детальніше викладені \cite{thermal-process-tissue-pennes-explained}. На
-даний момент у багатьох дослідженнях для опису моделі процесів всередині людського тіла використовують це рівняння.
-Зокрема у працях \cite{example-pennes-heterogeneous-blood-perfusion},
-\cite{example-pennes-instantaneous-moving-heat-source}, \cite{example-pennes-nonlinear-specific-heat},
-\cite{example-pennes-radiofrequency-tumor-ablation}.
+\cite{ostadhossein2023bioheat} розв'язують одновимірні лінійні і нелінійні задачі для рівняння Пеннеса. Ці рівняння
+описують вплив різкий перепад температур на поверхні людської шкіри. Коефіцієнти питомої теплоємності, теплопровідності
+і перфузії крові розглядаються як лінійні функції від температури. Для розв'язування задачі використовується метод
+скінчених різниць (МСР) і метод скінчених об'ємів (МСО). Робляться висновки, що коефіцієнт теплопровідності і перфузія
+крові, залежні від температури, мають суттєвий вплив на модель із різким перепадом температур на поверхні шкіри, а
+питома теплоємність може залишатися сталою.
 
-Для отримання числових розв'язків цього рівняння використовується МСЕ і МГЕ. У статті
-\cite{example-pennes-bem-heterogeneous-tissue} розглядається неоднорідні властивості тканин людського тіла і
-застосовується МГЕ для отримання розв'язків. Фундаментальна стаття \cite{example-pennes-bem-transfer-equation} описує
-принцип використання МГЕ для рівняння Пеннеса.
+Multigrid Waveform Relaxation Method (WRMG) використовується у \cite{santiago2023multigrid} для розв'язування...
+
+% Рівняння Пеннеса було сформульовано у 1948 році у статті \cite{thermal-process-tissue-pennes}. У честь п'ятдесятиріччя
+% оригінальної статті її параметри були уточнені і детальніше викладені \cite{thermal-process-tissue-pennes-explained}. На
+% даний момент у багатьох дослідженнях для опису моделі процесів всередині людського тіла використовують це рівняння.
+% Зокрема у працях \cite{example-pennes-heterogeneous-blood-perfusion},
+% \cite{example-pennes-instantaneous-moving-heat-source}, \cite{example-pennes-nonlinear-specific-heat},
+% \cite{example-pennes-radiofrequency-tumor-ablation}.
+
+% Для отримання числових розв'язків цього рівняння використовується МСЕ і МГЕ. У статті
+% \cite{example-pennes-bem-heterogeneous-tissue} розглядається неоднорідні властивості тканин людського тіла і
+% застосовується МГЕ для отримання розв'язків. Фундаментальна стаття \cite{example-pennes-bem-transfer-equation} описує
+% принцип використання МГЕ для рівняння Пеннеса.
 
 %   In this paper, the boundary element method (BEM) approach is applied to solve the Pennes (1948) bioheat equation. The
 %   objective is to develop the BEM formulation and demonstrate its feasibility. The basic BEM formulations for the
@@ -142,7 +151,26 @@
 % Int J Mech Med Biol
 % (2001)
 
-  
+\begin{center}
+  \begin{tabular}{|c|p{3cm}|p{4cm}|p{4cm}|p{4cm}|}
+    \hline
+      \textbf{Рік} & \textbf{Автор(и)} & \textbf{Підхід} & \textbf{Особливості} & \textbf{Cons} \\    
+      \hline
+      2023 & Ostadhossein \& Hoseinzadeh & МСР, МСО & Одновимірні лінійні і нелінійні задачі & --- \\
+      \hline
+      2023 & Santiago et al. & Multigrid Waveform Relaxation (FDM with FEM validation) & Highly parallelizable; fast convergence & Requires structured grids; less flexible than FEM \\
+      \hline
+      2023 & El-Sapaa et al. & Thermoelastic modeling with analytical BEM & Captures relaxation time effects; analytical insight & Limited to simplified geometries; not fully numerical \\
+      \hline
+      2024 & Gangadhara \& Panchatcharam & FEM stability analysis & Rigorous stability criteria; applicable to ablation modeling & Focused on theory; lacks clinical validation \\
+      \hline
+      2025 & Fahmy \& Almutlg & Fractional BEM with memory effects & Models nonlocal heat transfer; accurate for tissue dynamics & Computationally intensive; complex formulation \\
+      \hline
+      2025 & Fahmy \& Alharbi & Hybrid BEM–CVM for vascular tissue & Retrocalculates perfusion; good for implant design & Requires detailed vascular data; hybrid complexity \\
+      \hline  
+  \end{tabular}
+\end{center}
+
   
 
   
