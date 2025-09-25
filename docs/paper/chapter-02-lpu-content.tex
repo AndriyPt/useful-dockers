@@ -189,13 +189,21 @@ $\theta_c$ -- внутрішня температура тіла, $q_m$ -- ме�
 \end{center}
 
 Візьмемо фундаментальні розв'язки рівняння Пеннеса (\ref{eqn:theory_thermo_pennes_eqn}) із
-\cite{pennes-equation-bem-fundamental-solutions} і позначимо їх $\hat{\theta}$ і $\hat{q}$. 
+\cite{pennes-equation-bem-fundamental-solutions} і позначимо їх $\hat{\theta}$ і $\hat{q}$: 
 
-TODO: Add fundamental solutions
+\begin{equation*}
+  \hat{\theta}(x, y) = \frac{K_0(r(x, y) \sqrt{\omega \rho_b C_b})}{2\pi}
+\end{equation*}
 
-Розглянемо таку область $B
-  \subset R^n$, що $\Omega \subset B$, $\partial\Omega \cap \partial B = \varnothing$. Позначимо приграничну область $G =
-  B \setminus \Omega$. Інтегральне подання розв'язку для МПГЕ запишемо у вигляді:
+\begin{equation*}
+  \hat{q}(x, y) = \frac{\partial \hat{\theta}(x, y)}{\partial n},
+\end{equation*}
+
+\noindent де $K_0(x)$ -- модифікована функція Бесселя другого роду нульового порядку, $r(x, y)$ -- відстань між точками
+x і y, а $n$ -- нормаль.
+
+Розглянемо таку область $B \subset R^n$, що $\Omega \subset B$, $\partial\Omega \cap \partial B = \varnothing$.
+  Позначимо приграничну область $G = B \setminus \Omega$. Інтегральне подання розв'язку для МПГЕ запишемо у вигляді:
 
 \begin{equation}
   \label{eqn:thermo_cobem_pennes_theta}
