@@ -124,6 +124,10 @@ Multigrid Waveform Relaxation Method (WRMG) використовується у 
   \textbf{Виклад основного матеріалу}
 \end{center}
 
+\begin{center}
+  \textit{Постановка задачі}
+\end{center}
+
 Рівняння Пеннеса було сформульовано у 1948 році у статті \cite{thermal-process-tissue-pennes}. У честь п'ятдесятиріччя
 оригінальної статті її параметри були уточнені і детальніше викладені \cite{thermal-process-tissue-pennes-explained}. На
 даний момент у багатьох дослідженнях для опису моделі процесів всередині людського тіла використовують це рівняння.
@@ -180,8 +184,16 @@ $\theta_c$ -- внутрішня температура тіла, $q_m$ -- ме�
 на межі, а не всередині області інтегрування. Це дозволяє використовувати звичайні формули інтегрування для обчислення
 розв'язку. Симулятори можуть базуватися на МПГЕ.
 
+\begin{center}
+  \textit{Інтегральне подання}
+\end{center}
+
 Візьмемо фундаментальні розв'язки рівняння Пеннеса (\ref{eqn:theory_thermo_pennes_eqn}) із
-\cite{pennes-equation-bem-fundamental-solutions} і позначимо їх $\hat{\theta}$ і $\hat{q}$. Розглянемо таку область $B
+\cite{pennes-equation-bem-fundamental-solutions} і позначимо їх $\hat{\theta}$ і $\hat{q}$. 
+
+TODO: Add fundamental solutions
+
+Розглянемо таку область $B
   \subset R^n$, що $\Omega \subset B$, $\partial\Omega \cap \partial B = \varnothing$. Позначимо приграничну область $G =
   B \setminus \Omega$. Інтегральне подання розв'язку для МПГЕ запишемо у вигляді:
 
@@ -195,32 +207,32 @@ $\theta_c$ -- внутрішня температура тіла, $q_m$ -- ме�
   q(\xi) = \int \limits_G g(x)\hat{q}(x,\xi)dG(x)
 \end{equation}
 
-\begin{center}
-  \textbf{Виклад основного матеріалу}
-\end{center}
-
 Область $G$ розіб'ємо на приграничні елементи $G_j$, $j=\overline{1,n}$. Кожен із цих елементів містить кусок границі
 області $\Omega$, $G_j \cap \Gamma \neq \varnothing$. Визначимо область $G$, яка містить область $\Omega$, причому
 $\partial G \cap \partial \Omega = \varnothing$.
+
+\begin{center}
+  \textit{Дискредитація}
+\end{center}
 
 Дискретизуємо інтегральне подання \ref{eqn:thermo_cobem_pennes_theta}:
 
 \begin{equation}
   \label{eqn:thermo_cobem_pennes_theta_discrete}
-  \theta(\xi) = g_j \int \limits_{G_j} \hat{\theta}(x,\xi)dG_j(x),
+  \theta(\xi) = \sum_j^n g_j  \int \limits_{G_j} \hat{\theta}(x,\xi)dG_j(x),
 \end{equation}
 
 \noindent де $g_j$ -- стале значення функції $g(x)$ на усьому пригранич­ному елементі $G_j$. Відповідно у точці
 колокації $x_i$ отримаємо:
 
 \begin{equation*}
-  \theta(x_i) = g_j \int \limits_{G_j} \hat{\theta}(x,x_i)dG_j(x)
+  \theta(x_i) = \sum_j^n g_j \int \limits_{G_j} \hat{\theta}(x,x_i)dG_j(x)
 \end{equation*}
 
 \noindent Таке рівняння можна переписати у вигляді $\theta_i = \theta_{\Gamma_D}(x_i) = H_{ij} g_j$, де: 
 
 \begin{equation*}
-  H_{ij} = \int \limits_{G_j} \hat{\theta}(x,x_i)dG_j(x)
+  H_{ij} = \sum_j^n \int \limits_{G_j} \hat{\theta}(x,x_i)dG_j(x)
 \end{equation*}
 
 \noindent Відповідно, $q_i = q_{\Gamma_N}(x_i) = P_{ij} g_j$ -- це дискретне представлення для інтегрального подання
@@ -267,9 +279,9 @@ $\partial G \cap \partial \Omega = \varnothing$.
 обчислити температуру у довільній точці області $\Omega$.
 
 \begin{center}
-  \textbf{Висновки}
+  \textbf{Порівняння методів}
 \end{center}
-  
+
 Для порівняння методів візьмемо область $\Omega$ у вигляді квадратної пластини, довжина сторони 1 сантиметр.
 Розв'яжемо задачу (\ref{eqn:theory_thermo_pennes_eqn}) (\ref{eqn:theory_thermo_cond_dirichlet}). Візьмемо наступні
 значення коефіцієнтів: $\lambda_{\theta} = 1 \frac{\text{Вт}}{\text{м}\cdot\text{К}}$, $\omega = 1 \frac{1}{c}$, $\rho_b
@@ -281,6 +293,12 @@ $\theta(x) = sinh(x_2)$.
 40 приграничних елементів. Максимальна похибка у МСЕ приблизно рівна 0,09, а в МПГЕ 0,06. У другому експерименті було
 226 скінчених і 120 приграничних елементів. У МСЕ максимальна похибка приблизно рівна 0,09, а в МПГЕ -- 0,00025. В обох
 чисельних експериментах ширина приграничної смуги 0,4.
+
+
+\begin{center}
+  \textbf{Висновки}
+\end{center}
+  
 
 Вищенаведені результати показують, що МПГЕ застосовний до розв'язування задачі (\ref{eqn:theory_thermo_pennes_eqn})
 (\ref{eqn:theory_thermo_cond_dirichlet}). Також, вимагає меншої кількості елементів дискредитації для отримання високої
