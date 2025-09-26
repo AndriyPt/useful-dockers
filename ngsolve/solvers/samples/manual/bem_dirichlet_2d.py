@@ -11,17 +11,19 @@ from matplotlib import cm
 class GlobalSettings(object):
     CHART_STEPS = 25
     CHART_SKIP_BORDER_WIDTH = 0.0
-    BORDER_ELEMENTS_COUNT = 10
+    BORDER_ELEMENTS_COUNT = 30
     INCLUSION_ELEMENTS_COUNT = 10
-    PLOT_ERROR = False
+    PLOT_ERROR = True
+    PLOT_ISOLINES_COUNT = 10
+    PLOT_ERROR_CONTOURS = False
     PLOT_DETAILS = False
-    COBORDER_DEPTH = 1.0
+    COBORDER_DEPTH = 0.4
     """
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
         5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM
         9 - Pennes Dirichlet BEM, 10 - Pennes Neumann BEM, 11 - Pennes Dirichlet CoBEM, 12 - Pennes Neumann CoBEM  
     """
-    EXAMPLE_TYPE = 12
+    EXAMPLE_TYPE = 11
 
 
 class ExpressionTerm:
@@ -180,6 +182,28 @@ class Utils:
                     z_data[x_index][y_index] = function(point)
             surf = axis.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0, antialiased=False)
             fig.colorbar(surf, shrink=0.5, aspect=10)
+
+        plt.show()
+
+    @staticmethod
+    def plot_contour(x_limits: np.array, y_limits: np.array, function):
+        assert Constants.TWO_DIM == len(x_limits)
+        assert Constants.TWO_DIM == len(y_limits)
+        assert function is not None
+
+        fig, ax = plt.subplots()
+        x_data_linear = np.linspace(x_limits[0], x_limits[1], GlobalSettings.CHART_STEPS)
+        y_data_linear = np.linspace(y_limits[0], y_limits[1], GlobalSettings.CHART_STEPS)
+        x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
+
+        z_data = np.empty([GlobalSettings.CHART_STEPS, GlobalSettings.CHART_STEPS])
+        for x_index in range(GlobalSettings.CHART_STEPS):
+            for y_index in range(GlobalSettings.CHART_STEPS):
+                point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
+                z_data[x_index][y_index] = function(point)
+
+        cs = ax.contour(x_data, y_data, z_data, levels=GlobalSettings.PLOT_ISOLINES_COUNT)
+        ax.clabel(cs, inline=True, fontsize=8)
 
         plt.show()
 
@@ -1381,11 +1405,18 @@ class Problem(object):
             Utils.plot([x_min, x_max], [y_min, y_max], functions)
         else:
             if GlobalSettings.PLOT_ERROR and self.__analytical_solution is not None:
-                Utils.plot(
-                    [x_min, x_max],
-                    [y_min, y_max],
-                    [lambda point: np.abs(self.solution_value(point) - self.__analytical_solution(point))],
-                )
+                if GlobalSettings.PLOT_ERROR_CONTOURS:
+                    Utils.plot_contour(
+                        [x_min, x_max],
+                        [y_min, y_max],
+                        lambda point: np.abs(self.solution_value(point) - self.__analytical_solution(point)),
+                    )
+                else:
+                    Utils.plot(
+                        [x_min, x_max],
+                        [y_min, y_max],
+                        [lambda point: np.abs(self.solution_value(point) - self.__analytical_solution(point))],
+                    )
             else:
                 Utils.plot([x_min, x_max], [y_min, y_max], [self.solution_value])
 

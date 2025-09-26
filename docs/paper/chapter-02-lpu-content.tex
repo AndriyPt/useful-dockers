@@ -298,9 +298,44 @@ $\partial G \cap \partial \Omega = \varnothing$.
 $\theta(x) = sinh(x_2)$.
 
 Порівняємо результати отримані МСЕ і МПГЕ. У першому чисельному експерименті було використано 56 скінчених елементів і
-40 приграничних елементів. Максимальна похибка у МСЕ приблизно рівна 0,09, а в МПГЕ 0,06. У другому експерименті було
-226 скінчених і 120 приграничних елементів. У МСЕ максимальна похибка приблизно рівна 0,09, а в МПГЕ -- 0,00025. В обох
+40 приграничних елементів, ширина приграничної смуги 0,4. Максимальна похибка у МСЕ приблизно рівна 0,09, а в МПГЕ 0,06. 
+
+\begin{figure}
+  \centering
+  \begin{subfigure}{.5\textwidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{fem_56_error.png}
+    \caption{МСЕ (56 елементів)}
+    \label{fig:experiment_1_fem}
+  \end{subfigure}%
+  \begin{subfigure}{.5\textwidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{cobem_40_0_4_error.png}
+    \caption{МПГЕ (40 елементів)}
+    \label{fig:experiment_1_cobem}
+  \end{subfigure}
+  \label{fig:experiment_1}
+\end{figure}
+
+У другому експерименті було 226 скінчених і 120 приграничних елементів. У МСЕ максимальна похибка приблизно рівна 0,09, а в МПГЕ -- 0,00025. В обох
 чисельних експериментах ширина приграничної смуги 0,4.
+
+\begin{figure}
+  \centering
+  \begin{subfigure}{.5\textwidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{fem_226_error.png}
+    \caption{МСЕ (226 елементів)}
+    \label{fig:experiment_2_fem}
+  \end{subfigure}%
+  \begin{subfigure}{.5\textwidth}
+    \centering
+    \includegraphics[width=.8\linewidth]{cobem_120_0_4_error.png}
+    \caption{МПГЕ (120 елементів)}
+    \label{fig:experiment_2_cobem}
+  \end{subfigure}
+  \label{fig:experiment_2}
+\end{figure}
 
 
 \begin{center}

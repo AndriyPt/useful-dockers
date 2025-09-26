@@ -13,7 +13,7 @@ from matplotlib import cm
 BORDER_TOP = "top"
 BORDER_BOTTOM = "bottom"
 BORDER_SIDE = "side"
-LARGE_MAXH = 0.2
+LARGE_MAXH = 0.1
 K_SQUARE = 1.0
 
 ngsglobals.msg_level = 1
@@ -86,11 +86,11 @@ for x_index in range(CHART_STEPS):
         point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
         z_data[x_index][y_index] = error(point[0], point[1])
 
-if False:
+if True:
 
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-
-    surf = ax.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0)
+    surf = ax.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0, antialiased=False)
+    fig.colorbar(surf, shrink=0.5, aspect=10)
 
 else:
     fig, ax = plt.subplots()
