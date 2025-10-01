@@ -28,3 +28,5 @@ docs/demo/presentation.pdf
 core.*
 
 docs/paper/paper.pdf
+ngsolve/solvers/samples/manual/cobem.csv
+ngsolve/solvers/samples/manual/fem.csv

@@ -4,6 +4,7 @@ from enum import Enum
 from collections.abc import Callable
 import numpy as np
 import scipy
+import csv
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
@@ -11,12 +12,14 @@ from matplotlib import cm
 class GlobalSettings(object):
     CHART_STEPS = 25
     CHART_SKIP_BORDER_WIDTH = 0.0
-    BORDER_ELEMENTS_COUNT = 30
+    BORDER_ELEMENTS_COUNT = 10
     INCLUSION_ELEMENTS_COUNT = 10
     PLOT_ERROR = True
     PLOT_ISOLINES_COUNT = 10
     PLOT_ERROR_CONTOURS = False
     PLOT_DETAILS = False
+    ERROR_TO_CSV = True
+    ERROR_CSV_STEPS = 5
     COBORDER_DEPTH = 0.4
     """
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
@@ -1417,6 +1420,32 @@ class Problem(object):
                         [y_min, y_max],
                         [lambda point: np.abs(self.solution_value(point) - self.__analytical_solution(point))],
                     )
+                if GlobalSettings.ERROR_TO_CSV:
+                    x_values = np.linspace(x_min, x_max, num=GlobalSettings.ERROR_CSV_STEPS)
+                    y_values = np.linspace(y_min, y_max, num=GlobalSettings.ERROR_CSV_STEPS)
+
+                    header = ['/']
+                    for y in y_values:
+                        header.append(y)
+
+                    data = []
+                    for x in x_values:
+                        line = [x]
+                        for y in y_values:
+                            point = np.array([x, y])
+                            value = abs(self.solution_value(point) - self.__analytical_solution(point))
+                            line.append(f"{value:.3}")
+                        data.append(line)
+
+                    file_path = "/home/user/workspace/project/ngsolve/solvers/samples/manual/cobem.csv"
+
+                    with open(file_path, mode='w', newline='') as file:
+                        writer = csv.writer(file)
+                        writer.writerow(header)
+                        writer.writerows(data)
+
+                    print(f"Data written to {file_path}")
+
             else:
                 Utils.plot([x_min, x_max], [y_min, y_max], [self.solution_value])
 

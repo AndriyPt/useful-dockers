@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
-LARGE_MAXH = 0.1
+LARGE_MAXH = 0.2
 K_SQUARE = 1.0
 
 ngsglobals.msg_level = 1
@@ -19,8 +19,8 @@ mesh = Mesh(unit_square.GenerateMesh(maxh=LARGE_MAXH))
 # H1-conforming finite element space
 fes = H1(mesh, order=3, dirichlet=[1,2,3,4])
 
-# exact = sinh(y)
-exact = exp(y)
+exact = sinh(y)
+# exact = exp(y)
 
 dirichlet_condition = GridFunction(fes)
 dirichlet_condition.Set(exact, BND)
@@ -75,22 +75,48 @@ for x_index in range(CHART_STEPS):
         z_data[x_index][y_index] = error(point[0], point[1])
 
 if True:
+    if True:
 
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-    surf = ax.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0, antialiased=False)
-    fig.colorbar(surf, shrink=0.5, aspect=10)
+        fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+        surf = ax.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0, antialiased=False)
+        fig.colorbar(surf, shrink=0.5, aspect=10)
 
-else:
-    fig, ax = plt.subplots()
+    else:
+        fig, ax = plt.subplots()
 
-    CS = ax.contour(x_data, y_data, z_data, levels=10) # Draws 10 automatically chosen isolines
+        CS = ax.contour(x_data, y_data, z_data, levels=10) # Draws 10 automatically chosen isolines
 
-    ax.clabel(CS, inline=True, fontsize=8)
+        ax.clabel(CS, inline=True, fontsize=8)
+    plt.show()
 
-    # ax.set_title('Contour Plot of Z = sin(X) + cos(Y)')
-    # ax.set_xlabel('X-axis')
-    # ax.set_ylabel('Y-axis')
+if True:
+    import csv
 
-plt.show()
+    STEPS_CSV = 5
+    x_values = np.linspace(0, 1, num=STEPS_CSV)
+    y_values = np.linspace(0, 1, num=STEPS_CSV)
+
+    header = ['/']
+    for y in y_values:
+        header.append(y)
+
+    data = []
+    for x in x_values:
+        line = [x]
+        for y in y_values:
+            value = abs(error(x, y))
+            line.append(f"{value:.3}")
+        data.append(line)
+
+    # Specify the file path where the CSV will be saved
+    file_path = "/home/user/workspace/project/ngsolve/solvers/samples/manual/fem.csv"
+
+    # Write data to CSV
+    with open(file_path, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(header)  # Write the header first
+        writer.writerows(data)   # Write the function values
+
+    print(f"Data written to {file_path}")
 
 print("Done!")
