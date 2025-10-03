@@ -1,4 +1,4 @@
-from bem_dirichlet_2d import Kernel, Integrator2D
+from bem_dirichlet_2d import Kernel, Integrator2D, HexagonalDomain2D, BoundaryConditionType, GlobalSettings
 import numpy as np
 
 FLOAT_VALUE_EPSILON = 0.001
@@ -102,10 +102,55 @@ def test_trapezoid_integration():
     )
     assert_floats_are_equal(4.0, result)
 
+
+def test_hexagonal_domain():
+
+    GlobalSettings.COBORDER_DEPTH = 1.0
+
+    domain = HexagonalDomain2D(
+        np.array([-1.0, 0.0]),
+        np.array([1.0, 2.0]),
+        4.0,
+        [BoundaryConditionType.DIRICHLET] * 6,
+        [lambda point: 0.0] * 6,
+        1
+    )
+
+    assert 6 == len(domain.get_edge_points())
+
+    assert_floats_are_equal(-1.0, domain.get_edge_points()[0][0])
+    assert_floats_are_equal(0.0, domain.get_edge_points()[0][1])
+
+    assert_floats_are_equal(1.0, domain.get_edge_points()[1][0])
+    assert_floats_are_equal(0.0, domain.get_edge_points()[1][1])
+
+    assert_floats_are_equal(2.0, domain.get_edge_points()[2][0])
+    assert_floats_are_equal(1.0, domain.get_edge_points()[2][1])
+
+    assert_floats_are_equal(1.0, domain.get_edge_points()[3][0])
+    assert_floats_are_equal(2.0, domain.get_edge_points()[3][1])
+
+    assert_floats_are_equal(-1.0, domain.get_edge_points()[4][0])
+    assert_floats_are_equal(2.0, domain.get_edge_points()[4][1])
+
+    assert_floats_are_equal(-2.0, domain.get_edge_points()[5][0])
+    assert_floats_are_equal(1.0, domain.get_edge_points()[5][1])
+
+    assert 6 == len(domain.get_border())
+
+    assert_floats_are_equal(0.0, domain.get_border()[0].point[0])
+    assert_floats_are_equal(0.0, domain.get_border()[0].point[1])
+
+    assert_floats_are_equal(1.5, domain.get_border()[1].point[0])
+    assert_floats_are_equal(0.5, domain.get_border()[1].point[1])
+
+    assert 6 == len(domain.get_coborder())
+
 def main():
     test_segment_integration()
     test_square_integration()
     test_trapezoid_integration()
+    test_hexagonal_domain()
     print("All tests have passed!")
 
 

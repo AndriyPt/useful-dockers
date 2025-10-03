@@ -14,19 +14,20 @@ class GlobalSettings(object):
     CHART_SKIP_BORDER_WIDTH = 0.0
     BORDER_ELEMENTS_COUNT = 10
     INCLUSION_ELEMENTS_COUNT = 10
-    PLOT_ERROR = True
+    PLOT_ERROR = False
     PLOT_ISOLINES_COUNT = 10
     PLOT_ERROR_CONTOURS = False
     PLOT_DETAILS = False
-    ERROR_TO_CSV = True
+    ERROR_TO_CSV = False
     ERROR_CSV_STEPS = 5
     COBORDER_DEPTH = 0.4
     """
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
         5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM
         9 - Pennes Dirichlet BEM, 10 - Pennes Neumann BEM, 11 - Pennes Dirichlet CoBEM, 12 - Pennes Neumann CoBEM  
+        13 - Pennes Dirichlet Hexagon CoBEM  
     """
-    EXAMPLE_TYPE = 11
+    EXAMPLE_TYPE = 13
 
 
 class ExpressionTerm:
@@ -80,9 +81,15 @@ class Utils:
     @staticmethod
     def normalize(vector: np.array):
         norm = np.linalg.norm(vector)
-        if 0 == norm:
+        if norm > 0.0 or norm < 0.0:
             vector /= norm
         return vector
+
+    @staticmethod
+    def get_normalized_vector(start_point: np.array, end_point: np.array):
+        vector = end_point - start_point
+        result = Utils.normalize(vector)
+        return result
 
     @staticmethod
     def cross_product(vector1: np.array, vector2: np.array):
@@ -450,6 +457,161 @@ class SquareDomain2D(Domain2D):
     def is_point_inside_domain(self, point: np.array):
         result = Utils.is_point_within_square(point, self.__square, Domain2D.POINT_LOCATION_EPSILON)
         return result
+
+
+class HexagonalDomain2D(Domain2D):
+    def __init__(
+        self,
+        bottom_left_point: np.array,
+        top_right_point: np.array,
+        width: float,
+        conditions: list[BoundaryConditionType],
+        values: list[Callable],
+        side_elements_count: int,
+        subdomains: list = [],
+    ):
+        super().__init__(subdomains)
+
+        assert bottom_left_point is not None
+        assert top_right_point is not None
+        assert width > 0.0
+        assert 6 == len(conditions)
+        assert 6 == len(values)
+        assert side_elements_count > 0
+
+        side_points_count = side_elements_count + 1
+        center_point = (bottom_left_point + top_right_point) / 2.0
+        self.__border = np.empty(0)
+
+        self.__edge_points = []
+        self.__edge_points.append(bottom_left_point)
+        self.__edge_points.append(np.array([top_right_point[0], bottom_left_point[1]]))
+        self.__edge_points.append(np.array([center_point[0] + width / 2.0, center_point[1]]))
+        self.__edge_points.append(top_right_point)
+        self.__edge_points.append(np.array([bottom_left_point[0], top_right_point[1]]))
+        self.__edge_points.append(np.array([center_point[0] - width / 2.0, center_point[1]]))
+
+        for index in range(0, len(self.__edge_points)):
+            begin = self.__edge_points[index]
+            if index < len(self.__edge_points) - 1:
+                end = self.__edge_points[index + 1]
+            else:
+                end = self.__edge_points[0]
+            line_points = np.linspace(begin, end, side_points_count)
+            self.__border = np.append(
+                self.__border, np.array(Domain2D._process_points(line_points, conditions[index], values[index]))
+            )
+
+        # TODO: Add Mesh
+        self.__mesh = []
+        self.__mesh = np.array(self.__mesh)
+        # TODO: Add square
+        # self.__square = np.array([bottom_left_point, bottom_right_point, top_right_point, top_left_point])
+        self._fill_coborder_elements()
+
+    def _fill_coborder_elements(self):
+        assert self.__border is not None
+        assert self.__edge_points is not None
+
+        def get_growth_vector(prev_start, corner, next_end, normal1, normal2):
+            direction_previous_forward = Utils.get_normalized_vector(prev_start, corner)
+            direction_next_backward = Utils.get_normalized_vector(next_end, corner)
+            cross_prod_norms = Utils.cross_product(normal1, normal2)
+            result = direction_previous_forward + direction_next_backward
+            result = result * GlobalSettings.COBORDER_DEPTH / np.linalg.norm(cross_prod_norms)
+            return result
+
+        self.__coborder = []
+        for index in range(len(self.__border)):
+            point_info = self.__border[index]
+            item = Point2DInfo()
+            item.point = point_info.point
+            item.type = point_info.type
+            item.normal = point_info.normal
+            item.value = point_info.value
+            item.robin_coeff = point_info.robin_coeff
+
+            corner_points = []
+            for corner in self.__edge_points:
+                for element in point_info.element:
+                    if Utils.is_the_same_point(element, corner, Domain2D.POINT_LOCATION_EPSILON):
+                        corner_points.append(element)
+
+            elements = []
+            elements.append(point_info.element[0])
+            elements.append(point_info.element[1])
+
+            if len(corner_points) > 0:
+                corner_point = corner_points[0]
+                if Utils.is_the_same_point(elements[0], corner_point, Domain2D.POINT_LOCATION_EPSILON) or 2 == len(
+                    corner_points
+                ):
+                    prev_index = index - 1
+                    if prev_index < 0:
+                        prev_index = len(self.__border) - 1
+                    corner_grow_vector = get_growth_vector(
+                        self.__border[prev_index].element[0],
+                        point_info.element[0],
+                        point_info.element[1],
+                        self.__border[prev_index].normal,
+                        point_info.normal,
+                    )
+                    elements.append(point_info.element[0] + corner_grow_vector)
+                    if 1 == len(corner_points):
+                        elements.append(point_info.element[1] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
+
+                if Utils.is_the_same_point(elements[1], corner_point, Domain2D.POINT_LOCATION_EPSILON) or 2 == len(
+                    corner_points
+                ):
+                    next_index = index + 1
+                    if next_index >= len(self.__border):
+                        next_index = 0
+                    corner_grow_vector = get_growth_vector(
+                        point_info.element[0],
+                        point_info.element[1],
+                        self.__border[next_index].element[1],
+                        point_info.normal,
+                        self.__border[next_index].normal,
+                    )
+                    elements.append(point_info.element[1] + corner_grow_vector)
+                    if 1 == len(corner_points):
+                        elements.append(point_info.element[0] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
+            else:
+                elements.append(point_info.element[1] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
+                elements.append(point_info.element[0] + point_info.normal * GlobalSettings.COBORDER_DEPTH)
+
+            if Utils.is_the_same_point(point_info.normal, np.array([1.0, 0.0]), Domain2D.POINT_LOCATION_EPSILON):
+                elements[1], elements[2], elements[3] = elements[2], elements[3], elements[1]
+            elif Utils.is_the_same_point(point_info.normal, np.array([0.0, 1.0]), Domain2D.POINT_LOCATION_EPSILON):
+                elements[0], elements[1] = elements[1], elements[0]
+            elif Utils.is_the_same_point(point_info.normal, np.array([-1.0, 0.0]), Domain2D.POINT_LOCATION_EPSILON):
+                elements[0], elements[2], elements[3] = elements[3], elements[0], elements[2]
+            else:
+                elements[3], elements[2], elements[0], elements[1] = elements[0], elements[1], elements[2], elements[3]
+
+            item.element = elements
+            self.__coborder.append(item)
+
+        self.__coborder = np.array(self.__coborder)
+
+    def get_border(self):
+        return self.__border
+
+    def get_mesh(self):
+        return self.__mesh
+
+    def get_coborder(self):
+        return self.__coborder
+
+    def get_edge_points(self):
+        return self.__edge_points
+
+    def is_point_inside_domain(self, point: np.array):
+        # TODO: Add implementation using area measurement from each vertex to point
+        # it should be not larger than existing area
+        # result = Utils.is_point_within_convex_polygon(point, self.__edge_points , Domain2D.POINT_LOCATION_EPSILON)
+        # return result
+        raise NotImplementedError("Not implemented yet")
 
 
 class KernelValueType(Enum):
@@ -1391,10 +1553,10 @@ class Problem(object):
     def plot(self):
         print("Visualizing data...")
 
-        x_min = min(point_info.point[0] for point_info in self.__domain.get_border())
-        y_min = min(point_info.point[1] for point_info in self.__domain.get_border())
-        x_max = max(point_info.point[0] for point_info in self.__domain.get_border())
-        y_max = max(point_info.point[1] for point_info in self.__domain.get_border())
+        x_min = min(point_info.element[0][0] for point_info in self.__domain.get_border())
+        y_min = min(point_info.element[0][1] for point_info in self.__domain.get_border())
+        x_max = max(point_info.element[0][0] for point_info in self.__domain.get_border())
+        y_max = max(point_info.element[0][1] for point_info in self.__domain.get_border())
 
         x_min += GlobalSettings.CHART_SKIP_BORDER_WIDTH
         y_min += GlobalSettings.CHART_SKIP_BORDER_WIDTH
@@ -1424,7 +1586,7 @@ class Problem(object):
                     x_values = np.linspace(x_min, x_max, num=GlobalSettings.ERROR_CSV_STEPS)
                     y_values = np.linspace(y_min, y_max, num=GlobalSettings.ERROR_CSV_STEPS)
 
-                    header = ['/']
+                    header = ["/"]
                     for y in y_values:
                         header.append(y)
 
@@ -1439,7 +1601,7 @@ class Problem(object):
 
                     file_path = "/home/user/workspace/project/ngsolve/solvers/samples/manual/cobem.csv"
 
-                    with open(file_path, mode='w', newline='') as file:
+                    with open(file_path, mode="w", newline="") as file:
                         writer = csv.writer(file)
                         writer.writerow(header)
                         writer.writerows(data)
@@ -1921,6 +2083,36 @@ def init_pennes_neumann_cobem():
     return problem
 
 
+def init_pennes_dirichlet_hexagon_cobem():
+    print("CoBEM for Dirichlet problem for Pennes equation in hexagon...")
+
+    K_SQUARE_CONSTANT = 2.0
+
+    print("Define boundary conditions...")
+
+    def analytical_solution(point: np.array):
+        return np.sinh(point[0] + point[1])
+
+    def dirichlet_boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    domain = HexagonalDomain2D(
+        np.array([1.0, 0.0]),
+        np.array([3.0, 2.0]),
+        4.0,
+        [BoundaryConditionType.DIRICHLET] * 6,
+        [dirichlet_boundary_value] * 6,
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
+    )
+
+    expression = [
+        SingleLayerCoBEMTerm(Pennes2DKernel(K_SQUARE_CONSTANT), domain, 1),
+    ]
+
+    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+    return problem
+
+
 if "__main__" == __name__:
     problem = None
     if 1 == GlobalSettings.EXAMPLE_TYPE:
@@ -1943,6 +2135,8 @@ if "__main__" == __name__:
         problem = init_pennes_dirichlet_cobem()
     elif 12 == GlobalSettings.EXAMPLE_TYPE:
         problem = init_pennes_neumann_cobem()
+    elif 13 == GlobalSettings.EXAMPLE_TYPE:
+        problem = init_pennes_dirichlet_hexagon_cobem()
 
     assert problem is not None
 
