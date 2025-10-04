@@ -185,14 +185,14 @@ class Utils:
 
         for index, function in enumerate(functions):
             axis = fig.add_subplot(1, functions_count, index + 1, projection="3d")
-            z_data = np.empty([GlobalSettings.CHART_STEPS, GlobalSettings.CHART_STEPS])
+            z_data = np.empty_like(x_data)
             z_data.fill(np.nan)
-            for x_index in range(GlobalSettings.CHART_STEPS):
-                for y_index in range(GlobalSettings.CHART_STEPS):
-                    simple_point = [x_data_linear[x_index], y_data_linear[y_index]]
+            for i in range(x_data.shape[0]):
+                for j in range(x_data.shape[1]):
+                    simple_point = (x_data[i, j], y_data[i, j])
                     point = np.array(simple_point)
-                    if domain_path is not None and domain_path.contains_point(tuple(simple_point)):
-                        z_data[x_index][y_index] = function(point)
+                    if domain_path is not None and domain_path.contains_point(simple_point) or domain_path is None:
+                        z_data[i, j] = function(point)
             surf = axis.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0, antialiased=False)
             fig.colorbar(surf, shrink=0.5, aspect=10)
 
@@ -208,16 +208,14 @@ class Utils:
         x_data_linear = np.linspace(x_limits[0], x_limits[1], GlobalSettings.CHART_STEPS)
         y_data_linear = np.linspace(y_limits[0], y_limits[1], GlobalSettings.CHART_STEPS)
         x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
-
-        z_data = np.empty([GlobalSettings.CHART_STEPS, GlobalSettings.CHART_STEPS])
+        z_data = np.empty_like(x_data)
         z_data.fill(np.nan)
-        for x_index in range(GlobalSettings.CHART_STEPS):
-            for y_index in range(GlobalSettings.CHART_STEPS):
-                simple_point = (x_data_linear[x_index], y_data_linear[y_index])
+        for i in range(x_data.shape[0]):
+            for j in range(x_data.shape[1]):
+                simple_point = (x_data[i, j], y_data[i, j])
                 point = np.array(simple_point)
-                if domain_path is not None and domain_path.contains_point(simple_point):
-                    z_data[x_index][y_index] = function(point)
-
+                if domain_path is not None and domain_path.contains_point(simple_point) or domain_path is None:
+                    z_data[i, j] = function(point)
         cs = ax.contour(x_data, y_data, z_data, levels=GlobalSettings.PLOT_ISOLINES_COUNT)
         ax.clabel(cs, inline=True, fontsize=8)
 
@@ -2169,6 +2167,7 @@ def init_laplace_dirichlet_hexagon_cobem():
     )
 
     # Utils.plot_2d_domain(domain)
+    Utils.plot([0, 5], [0, 5], [lambda point: 1], domain.get_matplot_path())
 
     expression = [
         SingleLayerCoBEMTerm(Laplace2DKernel(), domain, 1),
