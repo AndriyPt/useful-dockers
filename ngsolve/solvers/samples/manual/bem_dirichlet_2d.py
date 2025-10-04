@@ -6,28 +6,28 @@ import numpy as np
 import scipy
 import csv
 import matplotlib.pyplot as plt
-from matplotlib import cm
+from matplotlib import cm, path, patches
 
 
 class GlobalSettings(object):
     CHART_STEPS = 25
     CHART_SKIP_BORDER_WIDTH = 0.0
-    BORDER_ELEMENTS_COUNT = 10
+    BORDER_ELEMENTS_COUNT = 5
     INCLUSION_ELEMENTS_COUNT = 10
-    PLOT_ERROR = False
+    PLOT_ERROR = True
     PLOT_ISOLINES_COUNT = 10
     PLOT_ERROR_CONTOURS = False
     PLOT_DETAILS = False
     ERROR_TO_CSV = False
     ERROR_CSV_STEPS = 5
-    COBORDER_DEPTH = 0.4
+    COBORDER_DEPTH = 0.5
     """
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
         5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM
         9 - Pennes Dirichlet BEM, 10 - Pennes Neumann BEM, 11 - Pennes Dirichlet CoBEM, 12 - Pennes Neumann CoBEM  
-        13 - Pennes Dirichlet Hexagon CoBEM  
+        13 - Pennes Dirichlet Hexagon CoBEM, 14 - Laplace Dirichlet Hexagon CoBEM
     """
-    EXAMPLE_TYPE = 13
+    EXAMPLE_TYPE = 14
 
 
 class ExpressionTerm:
@@ -172,7 +172,7 @@ class Utils:
         return result
 
     @staticmethod
-    def plot(x_limits: np.array, y_limits: np.array, functions: list):
+    def plot(x_limits: np.array, y_limits: np.array, functions: list, domain_path: path.Path = None):
         assert Constants.TWO_DIM == len(x_limits)
         assert Constants.TWO_DIM == len(y_limits)
         assert len(functions) > 0
@@ -186,17 +186,20 @@ class Utils:
         for index, function in enumerate(functions):
             axis = fig.add_subplot(1, functions_count, index + 1, projection="3d")
             z_data = np.empty([GlobalSettings.CHART_STEPS, GlobalSettings.CHART_STEPS])
+            z_data.fill(np.nan)
             for x_index in range(GlobalSettings.CHART_STEPS):
                 for y_index in range(GlobalSettings.CHART_STEPS):
-                    point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
-                    z_data[x_index][y_index] = function(point)
+                    simple_point = [x_data_linear[x_index], y_data_linear[y_index]]
+                    point = np.array(simple_point)
+                    if domain_path is not None and domain_path.contains_point(tuple(simple_point)):
+                        z_data[x_index][y_index] = function(point)
             surf = axis.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0, antialiased=False)
             fig.colorbar(surf, shrink=0.5, aspect=10)
 
         plt.show()
 
     @staticmethod
-    def plot_contour(x_limits: np.array, y_limits: np.array, function):
+    def plot_contour(x_limits: np.array, y_limits: np.array, function, domain_path: path.Path = None):
         assert Constants.TWO_DIM == len(x_limits)
         assert Constants.TWO_DIM == len(y_limits)
         assert function is not None
@@ -207,14 +210,27 @@ class Utils:
         x_data, y_data = np.meshgrid(x_data_linear, y_data_linear)
 
         z_data = np.empty([GlobalSettings.CHART_STEPS, GlobalSettings.CHART_STEPS])
+        z_data.fill(np.nan)
         for x_index in range(GlobalSettings.CHART_STEPS):
             for y_index in range(GlobalSettings.CHART_STEPS):
-                point = np.array([x_data_linear[x_index], y_data_linear[y_index]])
-                z_data[x_index][y_index] = function(point)
+                simple_point = (x_data_linear[x_index], y_data_linear[y_index])
+                point = np.array(simple_point)
+                if domain_path is not None and domain_path.contains_point(simple_point):
+                    z_data[x_index][y_index] = function(point)
 
         cs = ax.contour(x_data, y_data, z_data, levels=GlobalSettings.PLOT_ISOLINES_COUNT)
         ax.clabel(cs, inline=True, fontsize=8)
 
+        plt.show()
+
+    @staticmethod
+    def plot_2d_domain(domain):
+        assert domain is not None
+        fig, ax = plt.subplots()
+        patch = patches.PathPatch(domain.get_matplot_path(), facecolor="lightblue", edgecolor="blue", lw=2)
+        ax.add_patch(patch)
+        ax.set_xlim(-5, 5)
+        ax.set_ylim(-5, 5)
         plt.show()
 
     @staticmethod
@@ -261,6 +277,7 @@ class Domain2D(Domain):
 
     def __init__(self, subdomains: list = []):
         super().__init__(subdomains)
+        self.__polygon = None
 
     @staticmethod
     def _process_points(border_elements: np.array, type: BoundaryConditionType, value_function: Callable):
@@ -287,6 +304,11 @@ class Domain2D(Domain):
             result.append(item)
         return result
 
+    def _init_polygon(self, polygon: np.array):
+        assert polygon is not None
+        border_list = [(point[0], point[1]) for point in polygon]
+        self.__polygon = path.Path(border_list)
+
     def get_border(self):
         raise NotImplementedError("Call to abstract method")
 
@@ -296,6 +318,10 @@ class Domain2D(Domain):
     def get_coborder(self):
         raise NotImplementedError("Call to abstract method")
 
+    def get_matplot_path(self):
+        assert self.__polygon is not None
+        return self.__polygon
+
     def is_point_on_border(self, point: np.array):
         for border_point in self.get_border():
             if Utils.is_point_within_segment(
@@ -303,6 +329,10 @@ class Domain2D(Domain):
             ):
                 return True
         return False
+
+    def is_point_inside_domain(self, point):
+        assert self.__polygon is not None
+        return self.__polygon.contains_point(tuple(point))
 
 
 class SquareDomain2D(Domain2D):
@@ -375,6 +405,7 @@ class SquareDomain2D(Domain2D):
                 self.__mesh.append(point_info)
         self.__mesh = np.array(self.__mesh)
         self.__square = np.array([bottom_left_point, bottom_right_point, top_right_point, top_left_point])
+        self._init_polygon(self.__square)
         self._fill_coborder_elements()
 
     def _fill_coborder_elements(self):
@@ -501,6 +532,8 @@ class HexagonalDomain2D(Domain2D):
             self.__border = np.append(
                 self.__border, np.array(Domain2D._process_points(line_points, conditions[index], values[index]))
             )
+
+        self._init_polygon(self.__edge_points)
 
         # TODO: Add Mesh
         self.__mesh = []
@@ -1567,7 +1600,7 @@ class Problem(object):
             functions = []
             for index in range(0, len(self.__expression)):
                 functions.append(lambda point, _index=index: self.__expression[_index].value(point))
-            Utils.plot([x_min, x_max], [y_min, y_max], functions)
+            Utils.plot([x_min, x_max], [y_min, y_max], functions, self.__domain.get_matplot_path())
         else:
             if GlobalSettings.PLOT_ERROR and self.__analytical_solution is not None:
                 if GlobalSettings.PLOT_ERROR_CONTOURS:
@@ -1575,12 +1608,14 @@ class Problem(object):
                         [x_min, x_max],
                         [y_min, y_max],
                         lambda point: np.abs(self.solution_value(point) - self.__analytical_solution(point)),
+                        self.__domain.get_matplot_path(),
                     )
                 else:
                     Utils.plot(
                         [x_min, x_max],
                         [y_min, y_max],
                         [lambda point: np.abs(self.solution_value(point) - self.__analytical_solution(point))],
+                        self.__domain.get_matplot_path(),
                     )
                 if GlobalSettings.ERROR_TO_CSV:
                     x_values = np.linspace(x_min, x_max, num=GlobalSettings.ERROR_CSV_STEPS)
@@ -1609,7 +1644,7 @@ class Problem(object):
                     print(f"Data written to {file_path}")
 
             else:
-                Utils.plot([x_min, x_max], [y_min, y_max], [self.solution_value])
+                Utils.plot([x_min, x_max], [y_min, y_max], [self.solution_value], self.__domain.get_matplot_path())
 
         print("Done!")
 
@@ -2113,6 +2148,36 @@ def init_pennes_dirichlet_hexagon_cobem():
     return problem
 
 
+def init_laplace_dirichlet_hexagon_cobem():
+    print("CoBEM for Dirichlet problem for Laplace equation in hexagon...")
+
+    print("Define boundary conditions...")
+
+    def analytical_solution(point: np.array):
+        return point[0] * point[0] - point[1] * point[1]
+
+    def dirichlet_boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    domain = HexagonalDomain2D(
+        np.array([1.0, 0.0]),
+        np.array([3.0, 2.0]),
+        4.0,
+        [BoundaryConditionType.DIRICHLET] * 6,
+        [dirichlet_boundary_value] * 6,
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
+    )
+
+    # Utils.plot_2d_domain(domain)
+
+    expression = [
+        SingleLayerCoBEMTerm(Laplace2DKernel(), domain, 1),
+    ]
+
+    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+    return problem
+
+
 if "__main__" == __name__:
     problem = None
     if 1 == GlobalSettings.EXAMPLE_TYPE:
@@ -2137,6 +2202,8 @@ if "__main__" == __name__:
         problem = init_pennes_neumann_cobem()
     elif 13 == GlobalSettings.EXAMPLE_TYPE:
         problem = init_pennes_dirichlet_hexagon_cobem()
+    elif 14 == GlobalSettings.EXAMPLE_TYPE:
+        problem = init_laplace_dirichlet_hexagon_cobem()
 
     assert problem is not None
 
