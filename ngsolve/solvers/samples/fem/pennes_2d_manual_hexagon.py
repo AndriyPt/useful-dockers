@@ -35,7 +35,7 @@ mesh = Mesh(geo.GenerateMesh(maxh=LARGE_MAXH))
 Draw(mesh)
 
 # H1-conforming finite element space
-fes = H1(mesh, order=3, dirichlet=[1, 2, 3, 4])
+fes = H1(mesh, order=3, dirichlet=[1, 2, 3, 4, 5, 6])
 
 exact = sinh(y)
 # exact = exp(y)
@@ -74,7 +74,7 @@ Draw(error)
 
 print("L2-error:", sqrt(Integrate((gfu - exact) * (gfu - exact), mesh)))
 
-CHART_STEPS = 5
+CHART_STEPS = 25
 
 x_min = 0.0
 y_min = 0.0
@@ -97,7 +97,6 @@ for i in range(x_data.shape[0]):
         point = (x_data[i, j], y_data[i, j])
         if domain.contains_point(point):
             z_data[i, j] = error(point[0], point[1])
-            print("{} {} = {}".format(point[0], point[1], z_data[i, j]))
 
 if True:
     if True:
