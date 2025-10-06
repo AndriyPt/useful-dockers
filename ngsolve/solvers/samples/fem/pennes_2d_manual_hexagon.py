@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 from matplotlib import cm, path
 
 
-LARGE_MAXH = 0.05
-K_SQUARE = 1.0
+LARGE_MAXH = 0.2
+K_SQUARE = 0.25
 
 ngsglobals.msg_level = 1
 
@@ -18,9 +18,9 @@ geo = CSG2d()
 
 vertices = [
     (1, 0),
-    (3, 0),
-    (4, 1),
-    (3, 2),
+    (5, 0),
+    (6, 1),
+    (5, 2),
     (1, 2),
     (0, 1),
 ]
@@ -37,8 +37,8 @@ Draw(mesh)
 # H1-conforming finite element space
 fes = H1(mesh, order=3, dirichlet=[1, 2, 3, 4, 5, 6])
 
-exact = sinh(y)
-# exact = exp(y)
+exact = sinh(0.5 * y)
+# exact = exp(0.5 * y)
 
 dirichlet_condition = GridFunction(fes)
 dirichlet_condition.Set(exact, BND)
@@ -74,11 +74,11 @@ Draw(error)
 
 print("L2-error:", sqrt(Integrate((gfu - exact) * (gfu - exact), mesh)))
 
-CHART_STEPS = 25
+CHART_STEPS = 50
 
 x_min = 0.0
 y_min = 0.0
-x_max = 4.0
+x_max = 6.0
 y_max = 2.0
 
 domain = path.Path(vertices)

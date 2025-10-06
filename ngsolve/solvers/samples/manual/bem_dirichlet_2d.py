@@ -12,7 +12,7 @@ from matplotlib import cm, path, patches
 class GlobalSettings(object):
     CHART_STEPS = 25
     CHART_SKIP_BORDER_WIDTH = 0.0
-    BORDER_ELEMENTS_COUNT = 5
+    BORDER_ELEMENTS_COUNT = 20
     INCLUSION_ELEMENTS_COUNT = 10
     PLOT_ERROR = True
     PLOT_ISOLINES_COUNT = 10
@@ -20,14 +20,14 @@ class GlobalSettings(object):
     PLOT_DETAILS = False
     ERROR_TO_CSV = False
     ERROR_CSV_STEPS = 5
-    COBORDER_DEPTH = 0.5
+    COBORDER_DEPTH = 1.2
     """
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
         5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM
         9 - Pennes Dirichlet BEM, 10 - Pennes Neumann BEM, 11 - Pennes Dirichlet CoBEM, 12 - Pennes Neumann CoBEM  
         13 - Pennes Dirichlet Hexagon CoBEM, 14 - Laplace Dirichlet Hexagon CoBEM
     """
-    EXAMPLE_TYPE = 14
+    EXAMPLE_TYPE = 13
 
 
 class ExpressionTerm:
@@ -2119,20 +2119,20 @@ def init_pennes_neumann_cobem():
 def init_pennes_dirichlet_hexagon_cobem():
     print("CoBEM for Dirichlet problem for Pennes equation in hexagon...")
 
-    K_SQUARE_CONSTANT = 2.0
+    K_SQUARE_CONSTANT = 0.25
 
     print("Define boundary conditions...")
 
     def analytical_solution(point: np.array):
-        return np.sinh(point[0] + point[1])
+        return np.sinh(0.5 * point[1])
 
     def dirichlet_boundary_value(point: np.array):
         return analytical_solution(point)
 
     domain = HexagonalDomain2D(
         np.array([1.0, 0.0]),
-        np.array([3.0, 2.0]),
-        4.0,
+        np.array([5.0, 2.0]),
+        6.0,
         [BoundaryConditionType.DIRICHLET] * 6,
         [dirichlet_boundary_value] * 6,
         GlobalSettings.BORDER_ELEMENTS_COUNT,
@@ -2165,9 +2165,6 @@ def init_laplace_dirichlet_hexagon_cobem():
         [dirichlet_boundary_value] * 6,
         GlobalSettings.BORDER_ELEMENTS_COUNT,
     )
-
-    # Utils.plot_2d_domain(domain)
-    Utils.plot([0, 5], [0, 5], [lambda point: 1], domain.get_matplot_path())
 
     expression = [
         SingleLayerCoBEMTerm(Laplace2DKernel(), domain, 1),
