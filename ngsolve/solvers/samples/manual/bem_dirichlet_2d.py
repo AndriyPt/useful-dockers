@@ -25,7 +25,8 @@ class GlobalSettings(object):
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
         5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM
         9 - Pennes Dirichlet BEM, 10 - Pennes Neumann BEM, 11 - Pennes Dirichlet CoBEM, 12 - Pennes Neumann CoBEM  
-        13 - Pennes Dirichlet Hexagon CoBEM, 14 - Laplace Dirichlet Hexagon CoBEM
+        13 - Pennes Dirichlet Hexagon CoBEM, 14 - Laplace Dirichlet Hexagon CoBEM, 
+        15 - Laplace Dirichlet Convex CoBEM,
     """
     EXAMPLE_TYPE = 13
 
@@ -643,6 +644,67 @@ class HexagonalDomain2D(Domain2D):
         # result = Utils.is_point_within_convex_polygon(point, self.__edge_points , Domain2D.POINT_LOCATION_EPSILON)
         # return result
         raise NotImplementedError("Not implemented yet")
+
+# TODO: Finish implementation
+class PlainDomain2D(Domain):
+    POINT_LOCATION_EPSILON = 0.001
+
+    def __init__(self, paths: list[path.Path], conditions: list, functions: list, subdomains: list = []):
+        super().__init__(subdomains)
+        self.__polygon = path.Path.make_compound_path(paths)
+        # for path in paths:
+        #     path.to_polygons()
+        #     # path.interpolated(how to calculate?) # TODO:
+
+    @staticmethod
+    def _process_points(border_elements: np.array, type: BoundaryConditionType, value_function: Callable):
+        assert border_elements is not None
+        assert value_function is not None
+        result = []
+        for index in range(len(border_elements) - 1):
+            item = Point2DInfo()
+            item.point = (border_elements[index + 1] + border_elements[index]) / 2.0
+            item.type = type
+
+            border_vector = border_elements[index + 1] - border_elements[index]
+            assert np.linalg.norm(border_vector) != 0, "Points of border element should be different"
+            border_vector /= np.linalg.norm(border_vector)
+
+            # TODO: Check if it is always external normal
+            item.normal = np.array([border_vector[1], -border_vector[0]])
+            item.element = np.array([border_elements[index], border_elements[index + 1]])
+            if BoundaryConditionType.ROBIN == type:
+                item.robin_coeff, item.value = value_function(item.point)
+            else:
+                item.value = value_function(item.point)
+
+            result.append(item)
+        return result
+
+    def get_border(self):
+        raise NotImplementedError("Call to abstract method")
+
+    def get_mesh(self):
+        raise NotImplementedError("Call to abstract method")
+
+    def get_coborder(self):
+        raise NotImplementedError("Call to abstract method")
+
+    def get_matplot_path(self):
+        assert self.__polygon is not None
+        return self.__polygon
+
+    def is_point_on_border(self, point: np.array):
+        for border_point in self.get_border():
+            if Utils.is_point_within_segment(
+                point, border_point.element[0], border_point.element[1], Domain2D.POINT_LOCATION_EPSILON
+            ):
+                return True
+        return False
+
+    def is_point_inside_domain(self, point):
+        assert self.__polygon is not None
+        return self.__polygon.contains_point(tuple(point))
 
 
 class KernelValueType(Enum):
@@ -2174,6 +2236,32 @@ def init_laplace_dirichlet_hexagon_cobem():
     return problem
 
 
+def init_laplace_dirichlet_convex_cobem():
+    print("CoBEM for Dirichlet problem for Laplace equation in convex shape...")
+
+    print("Define boundary conditions...")
+
+    def analytical_solution(point: np.array):
+        return point[0] * point[0] - point[1] * point[1]
+
+    def dirichlet_boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    domain = PlainDomain2D(
+        [(1.0, 0.0), (2.0, 0.0), (2.0, 2.0), (0.0, 2.0)],
+        [BoundaryConditionType.DIRICHLET] * 4,
+        [dirichlet_boundary_value] * 4,
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
+    )
+
+    expression = [
+        SingleLayerCoBEMTerm(Laplace2DKernel(), domain, 1),
+    ]
+
+    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+    return problem
+
+
 if "__main__" == __name__:
     problem = None
     if 1 == GlobalSettings.EXAMPLE_TYPE:
@@ -2200,6 +2288,8 @@ if "__main__" == __name__:
         problem = init_pennes_dirichlet_hexagon_cobem()
     elif 14 == GlobalSettings.EXAMPLE_TYPE:
         problem = init_laplace_dirichlet_hexagon_cobem()
+    elif 15 == GlobalSettings.EXAMPLE_TYPE:
+        problem = init_laplace_dirichlet_convex_cobem()
 
     assert problem is not None
 
