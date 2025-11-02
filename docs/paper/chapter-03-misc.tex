@@ -1,0 +1,137 @@
+Виведення для рівняння Лапласа:
+
+\begin{equation}
+    \label{eqn:theory_thermo_laplace_eqn}
+    \nabla \cdot \lambda_\theta(x) \nabla \theta(x) = 0, x \in \Omega
+\end{equation}
+
+перепишемо рівняння у вигляді:
+
+\begin{equation}
+    \lambda_\theta(x) \Delta \theta(x) = - \nabla \lambda_\theta(x) \cdot \nabla \theta(x), x \in \Omega
+\end{equation}
+
+\begin{equation}
+    \Delta \theta(x) = - \frac{\nabla \lambda_\theta(x) \cdot \nabla \theta(x)}{\lambda_\theta(x)}, x \in \Omega
+\end{equation}
+
+\noindent де $\lambda_\theta(x)$ сталий на всій області $\Omega$ крім області $G$: 
+
+\begin{equation}
+    \lambda_\theta(x) = const, x \in \Omega \setminus G
+\end{equation}
+
+Частина інтегрального подання для правої частини:
+\begin{equation}
+    b(x) = \int \limits_{G} \frac{\nabla \lambda_\theta(\xi) \cdot \nabla \theta(\xi)}{\lambda_\theta(\xi)} 
+        \hat{\theta}(x,\xi) d \xi,
+\end{equation}
+
+\noindent де $\hat{\theta}(x, \xi)$ -- фундаментальний розв'язок рівняння Лапласа (\ref{eqn:theory_thermo_laplace_eqn}). 
+Продовжимо процес виведення за допомогою формули диференціювання множення для скалярної функції $p(x)$ і вектора 
+$\overline{V(x)}$:
+\begin{equation}
+    \label{eqn:theory_vector_differentiation}
+    \nabla p(x) \cdot \overline{V(x)} = \nabla \cdot (p(x)\overline{V(x)}) - p(x) \nabla \cdot \overline{V(x)}
+\end{equation}
+
+\noindent покладемо $p(x) = \theta(x)$ і 
+$\overline{V(x)} = \nabla \lambda_{\theta}(x) \frac{\hat{\theta}(x, \xi)}{\lambda_{\theta}(x)}$. Отримаємо:
+
+\begin{equation}
+    \begin{split}
+        b(x) =  \int \limits_{G} \nabla \cdot 
+            \left( \theta(\xi) \frac{\nabla \lambda_\theta(\xi) \hat{\theta}(x, \xi)}{\lambda_\theta(\xi)} \right) d \xi 
+            -
+            \int \limits_{G} \theta(\xi) \nabla \cdot  
+                \left( \frac{\nabla \lambda_\theta(\xi) \hat{\theta}(x, \xi)}{\lambda_\theta(\xi)} \right) d \xi 
+    \end{split}
+\end{equation}
+
+\noindent До першого доданка застосуємо формулу Ґріна, а у другому виконаємо диференціювання:
+
+\begin{equation}
+    \begin{split}
+        b(x) =  \int \limits_{\Gamma_G} \overline{n} 
+            \left[ \theta(\xi) \frac{\nabla \lambda_\theta(\xi) \hat{\theta}(x, \xi)}{\lambda_\theta(\xi)} 
+                \right] d \xi - \\
+            -
+            \int \limits_{G} \theta(\xi) \left[
+                \Delta \lambda_{\theta}(\xi) \frac{\hat{\theta}(x, \xi)}{\lambda_{\theta}(\xi)} +
+                \nabla \left(\frac{\hat{\theta}(x, \xi)}{\lambda_{\theta}(\xi)}\right) 
+                    \cdot \nabla \lambda_{\theta}(\xi) \right] d \xi 
+    \end{split}
+\end{equation}
+
+\noindent $\Gamma_G$ -- межа області G. Перший доданок рівний нулю оскільки містить похідну від сталої функції на межі 
+$\Gamma_G$. Виконаємо диференціювання у другому доданку і отримаємо:
+
+\begin{equation}
+    \begin{split}
+        b(x) =  - \int \limits_{G} \theta(\xi) \frac{\Delta \lambda_{\theta}(\xi)}{\lambda_{\theta}(\xi)} 
+            \hat{\theta}(x, \xi) d \xi +
+            \int \limits_{G} \theta(\xi) \frac{\nabla \lambda_{\theta}(\xi) \cdot \nabla \lambda_{\theta}(\xi)}
+                {\lambda_{\theta}^2(\xi)}\hat{\theta}(x, \xi) d \xi - \\
+            -  
+            \int \limits_{G} \theta(\xi) \frac{\nabla \lambda_{\theta}(\xi) \cdot \nabla \hat{\theta}(x, \xi)}
+                {\lambda_{\theta}(\xi)} d \xi
+    \end{split}
+\end{equation}
+
+\noindent Розіб'ємо $G$ на $m$ трикутних елементів $G_i$, 
+$G = \bigcup_{i=1}^m G_i$, $G_i \cap G_j = \varnothing, \forall i \neq j$. На кожному із цих елементів апроксимуємо 
+$\theta(x)$ сталим значенням у центрі мас трикутника $x_i$, $\theta_i = \theta(x_i)$. Перепишемо попереднє рівняння із
+врахуванням апроксимацій:
+
+\begin{equation}
+    \begin{split}
+        b(x) =  - \sum_{j=1}^{m} \theta_j \int \limits_{G_j} \frac{\Delta \lambda_{\theta}(\xi)}{\lambda_{\theta}(\xi)} 
+            \hat{\theta}(x, \xi) d \xi +
+            \sum_{j=1}^{m} \theta_j \int \limits_{G_j} \frac{\nabla \lambda_{\theta}(\xi) \cdot \nabla 
+                \lambda_{\theta}(\xi)} {\lambda_{\theta}^2(\xi)}\hat{\theta}(x, \xi) d \xi - \\
+            -  
+            \sum_{j=1}^{m} \theta_j \int \limits_{G_j} \frac{\nabla \lambda_{\theta}(\xi) \cdot \nabla 
+                \hat{\theta}(x, \xi)} {\lambda_{\theta}(\xi)} d \xi
+    \end{split}
+\end{equation}
+
+\noindent До третього доданка застосуємо диференціальну формулу (\ref{eqn:theory_vector_differentiation}). Покладемо
+$p(x) = \hat{\theta}(x, \xi)$, $\overline{V} = \frac{\nabla \lambda_{\theta}(x)}{\lambda_{\theta}(x)}$:
+
+\begin{equation}
+    \begin{split}
+        \int \limits_{G_j} \frac{\nabla \lambda_{\theta}(\xi) \cdot \nabla \hat{\theta}(x, \xi)} 
+            {\lambda_{\theta}(\xi)} d \xi = 
+        \int \limits_{G_j} \nabla \cdot \left[\frac{\hat{\theta}(x, \xi) \nabla \lambda_{\theta}(\xi)}
+            {\lambda_{\theta}(\xi)} \right] d \xi - \\ 
+        - 
+        \int \limits_{G_j} \hat{\theta}(x, \xi) \nabla \cdot \left[ \frac{\nabla \lambda_{\theta}(\xi)}
+            {\lambda_{\theta}(\xi)} \right] d \xi
+    \end{split}
+\end{equation}
+
+\noindent Застосуємо формулу Ґріна до першого доданка і інтегруємо другий доданок:
+
+\begin{equation}
+    \begin{split}
+        \int \limits_{G_j} \frac{\nabla \lambda_{\theta}(\xi) \cdot \nabla \hat{\theta}(x, \xi)} 
+            {\lambda_{\theta}(\xi)} d \xi = 
+        \int \limits_{\Gamma_{G_j}} \overline{n} \frac{\nabla \lambda_{\theta}(\xi)}
+            {\lambda_{\theta}(\xi)} \hat{\theta}(x, \xi) ds - \\ 
+        - 
+        \int \limits_{G_j} \frac{\Delta \lambda_{\theta}(\xi)}{\lambda_{\theta}(\xi)} \hat{\theta}(x, \xi)  d \xi
+        + 
+        \int \limits_{G_j} \frac{\nabla \lambda_{\theta}(\xi) \cdot \nabla \lambda_{\theta}(\xi)}
+            {\lambda_{\theta}^2(\xi)} \hat{\theta}(x, \xi) d \xi
+        \end{split}
+\end{equation}
+
+\noindent Підставимо все у формулу для правої частини:
+
+\begin{equation}
+    \begin{split}
+        b(x) =  - \sum_{j=1}^{m} \theta_j \int \limits_{\Gamma_{G_j}} \overline{n} \frac{\nabla \lambda_{\theta}(\xi)}
+        {\lambda_{\theta}(\xi)} \hat{\theta}(x, \xi) ds
+    \end{split}
+\end{equation}
+
