@@ -12,12 +12,12 @@ from matplotlib import cm, path, patches
 class GlobalSettings(object):
     CHART_STEPS = 25
     CHART_SKIP_BORDER_WIDTH = 0.0
-    BORDER_ELEMENTS_COUNT = 20
-    INCLUSION_ELEMENTS_COUNT = 10
-    PLOT_ERROR = True
+    BORDER_ELEMENTS_COUNT = 3
+    INCLUSION_ELEMENTS_COUNT = 1
+    PLOT_ERROR = False
     PLOT_ISOLINES_COUNT = 10
     PLOT_ERROR_CONTOURS = False
-    PLOT_DETAILS = False
+    PLOT_DETAILS = True
     ERROR_TO_CSV = False
     ERROR_CSV_STEPS = 5
     COBORDER_DEPTH = 1.2
@@ -28,7 +28,7 @@ class GlobalSettings(object):
         13 - Pennes Dirichlet Hexagon CoBEM, 14 - Laplace Dirichlet Hexagon CoBEM, 
         15 - Laplace Dirichlet Convex CoBEM,
     """
-    EXAMPLE_TYPE = 13
+    EXAMPLE_TYPE = 4
 
 
 class ExpressionTerm:
@@ -42,6 +42,7 @@ class BoundaryConditionType(Enum):
     ROBIN = 4
     INCLUSION_DX = 5
     INCLUSION_DY = 6
+    INCLUSION = 7
 
 
 class ProblemSolverType(Enum):
@@ -250,6 +251,12 @@ class Utils:
             result = KernelValueType.GRADIENT_DY
         return result
 
+    @staticmethod
+    def get_right_side_normal(begin: np.array, end: np.array):
+        vector = Utils.get_normalized_vector(begin, end)
+        result = np.array([vector[1], -1.0 * vector[0]])
+        return result
+
 
 class Domain:
     def __init__(self, subdomains: list = []):
@@ -398,7 +405,7 @@ class SquareDomain2D(Domain2D):
                     )
                     / 2.0
                 )
-                point_info.type = [BoundaryConditionType.INCLUSION_DX, BoundaryConditionType.INCLUSION_DY]
+                point_info.type = BoundaryConditionType.INCLUSION
                 point_info.value = 0.0
                 point_info.element = np.array(square)
                 self.__mesh.append(point_info)
@@ -644,6 +651,7 @@ class HexagonalDomain2D(Domain2D):
         # result = Utils.is_point_within_convex_polygon(point, self.__edge_points , Domain2D.POINT_LOCATION_EPSILON)
         # return result
         raise NotImplementedError("Not implemented yet")
+
 
 # TODO: Finish implementation
 class PlainDomain2D(Domain):
@@ -1567,6 +1575,115 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         return result
 
 
+class SingleLayerInclusionTermFixed(ExpressionTerm):
+
+    NOMINAL_INTEGRATION_POINTS_PER_AXIS = 2
+    SINGULARITY_INTEGRATION_POINTS_PER_AXIS = 4
+    EPS = 0.001
+
+    def __init__(
+        self,
+        kernel: Kernel,
+        domain: Domain,
+        coeff_function: Callable,
+        grad_function: Callable,
+        sign: int = 1,
+    ):
+        super().__init__(kernel, domain, sign)
+        assert coeff_function is not None
+        assert grad_function is not None
+
+        def adjusted_gradient(point: np.array):
+            result = grad_function(point) / coeff_function(point)
+            return result
+
+        self.__grad_function = adjusted_gradient
+        self.__unknown_count = 0
+        self.__unknown_values = np.empty(0)
+        self.__integrator = Integrator2D(
+            kernel,
+            SingleLayerInclusionTermFixed.NOMINAL_INTEGRATION_POINTS_PER_AXIS,
+            SingleLayerInclusionTermFixed.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
+        )
+
+    def calculate_coefficients(self, point_info: Point2DInfo, condition: BoundaryConditionType):
+        assert point_info is not None
+        coefficients = np.empty(0)
+        for face in self.domain.get_mesh():
+            is_same_point = Utils.is_the_same_point(point_info.point, face.point, SingleLayerInclusionTermFixed.EPS)
+            if condition in [
+                BoundaryConditionType.DIRICHLET,
+                BoundaryConditionType.NEUMANN,
+                BoundaryConditionType.INCLUSION,
+            ]:
+                res = 0.0
+                for index in range(Constants.PLANE_SQUARE_DIM):
+                    next_index = index + 1
+                    if Constants.PLANE_SQUARE_DIM == next_index:
+                        next_index = 0
+                    normal = Utils.get_right_side_normal(face.element[index], face.element[next_index])
+
+                    def integral_function(point: np.array):
+                        result = np.dot(normal, self.__grad_function(point))
+                        return result
+
+                    res -= self.__integrator.segment_of(
+                        KernelValueType.SCALAR,
+                        integral_function,
+                        point_info.point,
+                        face.element[index],
+                        face.element[next_index],
+                    )
+                if BoundaryConditionType.INCLUSION == condition and is_same_point:
+                    res -= 1.0
+                coefficients = np.append(coefficients, [res])
+            elif BoundaryConditionType.ROBIN == condition:
+                raise NotImplementedError("Not implemented yet")
+            else:
+                raise AttributeError("Not supported boundary element type")
+        self.__unknown_count = len(coefficients)
+        return (self.sign * coefficients, 0.0)
+
+    def calculate_for_robin(self, point_info: Point2DInfo):
+        raise NotImplementedError("Implement")
+
+    def propagate_solution(self, solution: np.array):
+        self.__unknown_values = solution[: self.__unknown_count]
+        return solution[self.__unknown_count :]
+
+    def value(self, point: np.array):
+        assert point is not None
+        result = 0.0
+        unknown_index = 0
+        for face in self.domain.get_mesh():
+            face_value = 0.0
+            for index in range(Constants.PLANE_SQUARE_DIM):
+                next_index = index + 1
+                if Constants.PLANE_SQUARE_DIM == next_index:
+                    next_index = 0
+                normal = Utils.get_right_side_normal(face.element[index], face.element[next_index])
+
+                def integral_function(point: np.array):
+                    result = np.dot(normal, self.__grad_function(point))
+                    return result
+
+                face_value -= self.__integrator.segment_of(
+                    KernelValueType.SCALAR,
+                    integral_function,
+                    point,
+                    face.element[index],
+                    face.element[next_index],
+                )
+            face_value *= self.__unknown_values[unknown_index]
+            unknown_index += 1
+            result += face_value
+        assert self.__unknown_count == unknown_index, "Unknown could should match {} and {}".format(
+            self.__unknown_count, unknown_index
+        )
+        result *= self.sign
+        return result
+
+
 class Problem(object):
     def __init__(
         self,
@@ -1853,7 +1970,7 @@ def init_poisson_dirichlet_single_inclusion_bem():
     inclusion_domain = SquareDomain2D(
         np.array([INCLUSION_CENTER_X - INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y - INCLUSION_SIZE / 2.0]),
         np.array([INCLUSION_CENTER_X + INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y + INCLUSION_SIZE / 2.0]),
-        [[BoundaryConditionType.INCLUSION_DX, BoundaryConditionType.INCLUSION_DY]] * 4,
+        [BoundaryConditionType.INCLUSION] * 4,
         [Utils.constant_one()] * 4,
         GlobalSettings.INCLUSION_ELEMENTS_COUNT,
     )
@@ -1945,12 +2062,12 @@ def init_poisson_dirichlet_single_inclusion_bem():
 
     expression = [
         # TODO: Calculate Inclusion Integral properly
-        SingleLayerInclusionTerm(
+        SingleLayerInclusionTermFixed(
             Laplace2DKernel(),
             inclusion_domain,
             thermal_conductivity,
             thermal_conductivity_gradient,
-            -1.0,
+            1.0,
         ),
         DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
         SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
