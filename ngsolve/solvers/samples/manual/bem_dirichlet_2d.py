@@ -1489,16 +1489,11 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         assert coeff_function is not None
         assert grad_function is not None
 
-        def adjusted_gradient_x(point: np.array):
+        def adjusted_gradient(point: np.array):
             result = grad_function(point) / coeff_function(point)
-            return result[0]
+            return result
 
-        def adjusted_gradient_y(point: np.array):
-            result = grad_function(point) / coeff_function(point)
-            return result[1]
-
-        self.__grad_function_x = adjusted_gradient_x
-        self.__grad_function_y = adjusted_gradient_y
+        self.__grad_function = adjusted_gradient
         self.__unknown_count = 0
         self.__unknown_values = np.empty(0)
         self.__integrator = Integrator2D(
@@ -1512,105 +1507,6 @@ class SingleLayerInclusionTerm(ExpressionTerm):
         coefficients = np.empty(0)
         for face in self.domain.get_mesh():
             is_same_point = Utils.is_the_same_point(point_info.point, face.point, SingleLayerInclusionTerm.EPS)
-            if condition in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN]:
-                res = self.__integrator.square_of(
-                    KernelValueType.SCALAR, self.__grad_function_x, point_info.point, face.element
-                )
-                coefficients = np.append(coefficients, [res])
-                res = self.__integrator.square_of(
-                    KernelValueType.SCALAR, self.__grad_function_y, point_info.point, face.element
-                )
-                coefficients = np.append(coefficients, [res])
-            elif BoundaryConditionType.ROBIN == condition:
-                raise NotImplementedError("Not implemented yet")
-            elif BoundaryConditionType.INCLUSION_DX == condition:
-                res = self.__integrator.square_of(
-                    KernelValueType.DX, self.__grad_function_x, point_info.point, face.element
-                )
-                if is_same_point:
-                    res -= 1.0
-                coefficients = np.append(coefficients, [res])
-                res = self.__integrator.square_of(
-                    KernelValueType.DX, self.__grad_function_y, point_info.point, face.element
-                )
-                coefficients = np.append(coefficients, [res])
-            elif BoundaryConditionType.INCLUSION_DY == condition:
-                res = self.__integrator.square_of(
-                    KernelValueType.DY, self.__grad_function_x, point_info.point, face.element
-                )
-                coefficients = np.append(coefficients, [res])
-                res = self.__integrator.square_of(
-                    KernelValueType.DY, self.__grad_function_y, point_info.point, face.element
-                )
-                if is_same_point:
-                    res -= 1.0
-                coefficients = np.append(coefficients, [res])
-            else:
-                raise AttributeError("Not supported boundary element type")
-        self.__unknown_count = len(coefficients)
-        return (self.sign * coefficients, 0.0)
-
-    def calculate_for_robin(self, point_info: Point2DInfo):
-        raise NotImplementedError("Implement")
-
-    def propagate_solution(self, solution: np.array):
-        self.__unknown_values = solution[: self.__unknown_count]
-        return solution[self.__unknown_count :]
-
-    def value(self, point: np.array):
-        assert point is not None
-        result = 0.0
-        unknown_index = 0
-        for face in self.domain.get_mesh():
-            for func in [self.__grad_function_x, self.__grad_function_y]:
-                face_value = self.__integrator.square_of(KernelValueType.SCALAR, func, point, face.element)
-                face_value *= self.__unknown_values[unknown_index]
-                unknown_index += 1
-                result += face_value
-
-        assert self.__unknown_count == unknown_index, "Unknown could should match {} and {}".format(
-            self.__unknown_count, unknown_index
-        )
-        result *= self.sign
-        return result
-
-
-class SingleLayerInclusionTermFixed(ExpressionTerm):
-
-    NOMINAL_INTEGRATION_POINTS_PER_AXIS = 2
-    SINGULARITY_INTEGRATION_POINTS_PER_AXIS = 4
-    EPS = 0.001
-
-    def __init__(
-        self,
-        kernel: Kernel,
-        domain: Domain,
-        coeff_function: Callable,
-        grad_function: Callable,
-        sign: int = 1,
-    ):
-        super().__init__(kernel, domain, sign)
-        assert coeff_function is not None
-        assert grad_function is not None
-
-        def adjusted_gradient(point: np.array):
-            result = grad_function(point) / coeff_function(point)
-            return result
-
-        self.__grad_function = adjusted_gradient
-        self.__unknown_count = 0
-        self.__unknown_values = np.empty(0)
-        self.__integrator = Integrator2D(
-            kernel,
-            SingleLayerInclusionTermFixed.NOMINAL_INTEGRATION_POINTS_PER_AXIS,
-            SingleLayerInclusionTermFixed.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
-        )
-
-    def calculate_coefficients(self, point_info: Point2DInfo, condition: BoundaryConditionType):
-        assert point_info is not None
-        coefficients = np.empty(0)
-        for face in self.domain.get_mesh():
-            is_same_point = Utils.is_the_same_point(point_info.point, face.point, SingleLayerInclusionTermFixed.EPS)
             if condition in [
                 BoundaryConditionType.DIRICHLET,
                 BoundaryConditionType.NEUMANN,
@@ -2070,7 +1966,7 @@ def init_poisson_dirichlet_single_inclusion_bem():
 
     expression = [
         # TODO: Calculate Inclusion Integral properly
-        SingleLayerInclusionTermFixed(
+        SingleLayerInclusionTerm(
             Laplace2DKernel(),
             inclusion_domain,
             thermal_conductivity,
