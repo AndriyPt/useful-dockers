@@ -12,12 +12,12 @@ from matplotlib import cm, path, patches
 class GlobalSettings(object):
     CHART_STEPS = 25
     CHART_SKIP_BORDER_WIDTH = 0.0
-    BORDER_ELEMENTS_COUNT = 3
-    INCLUSION_ELEMENTS_COUNT = 1
+    BORDER_ELEMENTS_COUNT = 10
+    INCLUSION_ELEMENTS_COUNT = 5
     PLOT_ERROR = False
     PLOT_ISOLINES_COUNT = 10
     PLOT_ERROR_CONTOURS = False
-    PLOT_DETAILS = True
+    PLOT_DETAILS = False
     ERROR_TO_CSV = False
     ERROR_CSV_STEPS = 5
     COBORDER_DEPTH = 1.2
@@ -948,10 +948,10 @@ class Integrator2D(Integrator):
         real_nodes, real_weights = self._get_segment_nodes_and_weights(point, min_limit, max_limit)
         if type in [KernelValueType.GRADIENT, KernelValueType.GRADIENT_DX, KernelValueType.GRADIENT_DY]:
             for real_node, weight in zip(real_nodes, real_weights):
-                result += weight * np.dot(self.kernel.grad(point, real_node), function(point))
+                result += weight * np.dot(self.kernel.grad(point, real_node), function(real_node))
         else:
             for real_node, weight in zip(real_nodes, real_weights):
-                result += weight * self.kernel.value_of(type, point, real_node) * function(point)
+                result += weight * self.kernel.value_of(type, point, real_node) * function(real_node)
         return result
 
     # TODO: Deprecated. Use segment_of instead
@@ -987,10 +987,10 @@ class Integrator2D(Integrator):
         real_nodes, real_weights = self._get_square_nodes_and_weights(point, square)
         if type in [KernelValueType.GRADIENT, KernelValueType.GRADIENT_DX, KernelValueType.GRADIENT_DY]:
             for real_node, weight in zip(real_nodes, real_weights):
-                result += weight * np.dot(self.kernel.grad(point, real_node), function(point))
+                result += weight * np.dot(self.kernel.grad(point, real_node), function(real_node))
         else:
             for real_node, weight in zip(real_nodes, real_weights):
-                result += weight * self.kernel.value_of(type, point, real_node) * function(point)
+                result += weight * self.kernel.value_of(type, point, real_node) * function(real_node)
         return result
 
     # Use Jacobian to transform trapezoid to unit square
@@ -1821,7 +1821,15 @@ class Problem(object):
                     print(f"Data written to {file_path}")
 
             else:
-                Utils.plot([x_min, x_max], [y_min, y_max], [self.solution_value], self.__domain.get_matplot_path())
+                if GlobalSettings.PLOT_ERROR_CONTOURS:
+                    Utils.plot_contour(
+                        [x_min, x_max],
+                        [y_min, y_max],
+                        self.solution_value,
+                        self.__domain.get_matplot_path(),
+                    )
+                else:
+                    Utils.plot([x_min, x_max], [y_min, y_max], [self.solution_value], self.__domain.get_matplot_path())
 
         print("Done!")
 
@@ -1998,7 +2006,7 @@ def init_poisson_dirichlet_single_inclusion_bem():
         result = np.array([0.0, 0.0])
         if inclusion_domain.is_point_inside_domain(point):
             result[0] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[0]) / INCLUSION_RADIUS**2
-            result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[1]) / INCLUSION_RADIUS**2
+            result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_Y - point[1]) / INCLUSION_RADIUS**2
         return result
 
     # def thermal_conductivity(point: np.array):
