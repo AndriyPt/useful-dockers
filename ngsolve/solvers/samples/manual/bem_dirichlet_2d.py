@@ -1375,7 +1375,7 @@ class SingleLayerCoBEMTerm(ExpressionTerm):
         right_side_ret = 0.0
         for boundary_item in self.domain.get_coborder():
             is_same_point = Utils.is_the_same_point(point_info.point, boundary_item.point, SingleLayerCoBEMTerm.EPS)
-            if BoundaryConditionType.DIRICHLET == point_info.type:
+            if point_info.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.INCLUSION]:
                 res = self.__integrator.trapezoid_of(
                     KernelValueType.SCALAR, Utils.constant_one(), point_info.point, boundary_item.element
                 )
