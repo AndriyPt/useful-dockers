@@ -28,7 +28,7 @@ class GlobalSettings(object):
         13 - Pennes Dirichlet Hexagon CoBEM, 14 - Laplace Dirichlet Hexagon CoBEM, 
         15 - Laplace Dirichlet Convex CoBEM,
     """
-    EXAMPLE_TYPE = 4
+    EXAMPLE_TYPE = 7
 
 
 class ExpressionTerm:
@@ -2162,6 +2162,50 @@ def init_poisson_neumann_cobem():
     return problem
 
 
+def init_poisson_robin_cobem():
+    print("CoBEM for Robin problem for Poisson equation...")
+
+    print("Define boundary conditions...")
+
+    def analytical_solution(point: np.array):
+        return point[0] + point[1] + 1.0
+
+    def dirichlet_boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    def robin_boundary_right_value(point: np.array):
+        return (1.0 / analytical_solution(point), 0.0)
+
+    def robin_boundary_left_value(point: np.array):
+        return (-1.0 / analytical_solution(point), 0.0)
+
+    domain = SquareDomain2D(
+        np.array([0.0, 0.0]),
+        np.array([1.0, 1.0]),
+        [BoundaryConditionType.DIRICHLET, BoundaryConditionType.ROBIN] * 2,
+        [
+            dirichlet_boundary_value,
+            robin_boundary_right_value,
+            dirichlet_boundary_value,
+            robin_boundary_left_value,
+        ],
+        GlobalSettings.BORDER_ELEMENTS_COUNT,
+    )
+
+    print("Define heat source function...")
+
+    def heat_source_function(point: np.array):
+        return 0.0
+
+    expression = [
+        SingleLayerCoBEMTerm(Laplace2DKernel(), domain),
+        SingleLayerVolumeCoBEMTerm(Laplace2DKernel(), domain, heat_source_function, -1),
+    ]
+
+    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+    return problem
+
+
 # Article https://pubmed.ncbi.nlm.nih.gov/1522731/
 def init_pennes_dirichlet_bem():
     print("BEM for Dirichlet problem for Pennes equation...")
@@ -2401,6 +2445,8 @@ if "__main__" == __name__:
         problem = init_poisson_dirichlet_cobem()
     elif 6 == GlobalSettings.EXAMPLE_TYPE:
         problem = init_poisson_neumann_cobem()
+    elif 7 == GlobalSettings.EXAMPLE_TYPE:
+        problem = init_poisson_robin_cobem()
     elif 9 == GlobalSettings.EXAMPLE_TYPE:
         problem = init_pennes_dirichlet_bem()
     elif 10 == GlobalSettings.EXAMPLE_TYPE:
