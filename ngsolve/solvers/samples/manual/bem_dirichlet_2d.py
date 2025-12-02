@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from enum import Enum
+import math
 from collections.abc import Callable
 import numpy as np
 import scipy
@@ -14,6 +15,7 @@ class GlobalSettings(object):
     CHART_SKIP_BORDER_WIDTH = 0.0
     BORDER_ELEMENTS_COUNT = 10
     INCLUSION_ELEMENTS_COUNT = 5
+    BORDER_ELEMENT_MAX_SIZE = 0.1
     PLOT_ERROR = False
     PLOT_ISOLINES_COUNT = 10
     PLOT_ERROR_CONTOURS = False
@@ -639,10 +641,22 @@ class PlainDomain2D(Domain):
 
     def __init__(self, paths: list[path.Path], conditions: list, functions: list, subdomains: list = []):
         super().__init__(subdomains)
-        self.__polygon = path.Path.make_compound_path(paths)
+        assert paths is not None
+        list = []
+        for item in paths:
+            item.to_polygons(closed_only=False)
+            verts = item.vertices
+            max_dist = max(Utils.distance(verts[i], verts[i - 1]) for i in range(1, len(verts)))
+            steps = math.ceil(max_dist / GlobalSettings.BORDER_ELEMENT_MAX_SIZE)
+            new_item = item.interpolated(steps)
+            list.append(new_item)
+            # TODO: Add border with points
+
+        # self.__polygon = path.Path.make_compound_path(*paths)
+        # TODO: Check approach for interpolation below
         # for path in paths:
         #     path.to_polygons()
-        #     # path.interpolated(how to calculate?) # TODO:
+        #     # path.interpolated(how to calculate?)
 
     @staticmethod
     def _process_points(border_elements: np.array, type: BoundaryConditionType, value_function: Callable):
@@ -2419,7 +2433,7 @@ def init_laplace_dirichlet_convex_cobem():
         return analytical_solution(point)
 
     domain = PlainDomain2D(
-        [(1.0, 0.0), (2.0, 0.0), (2.0, 2.0), (0.0, 2.0)],
+        [path.Path([(1.0, 0.0), (2.0, 0.0), (2.0, 2.0), (0.0, 2.0)])],
         [BoundaryConditionType.DIRICHLET] * 4,
         [dirichlet_boundary_value] * 4,
         GlobalSettings.BORDER_ELEMENTS_COUNT,
