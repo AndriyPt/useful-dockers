@@ -1333,6 +1333,7 @@ class SingleLayerVolumeCoBEMTerm(SingleLayerVolumeTerm):
     def calculate_coefficients(self, point_info: Point2DInfo, condition: BoundaryConditionType):
         assert point_info is not None
         coefficients = np.empty(0)
+        # TODO: Add Robin condition
         if BoundaryConditionType.NEUMANN == point_info.type:
             right_side_ret = self.value_grad_of(KernelValueType.GRADIENT, point_info.point, point_info.normal)
         else:
@@ -1399,24 +1400,12 @@ class SingleLayerCoBEMTerm(ExpressionTerm):
                     point_info.point,
                     boundary_item.element,
                 )
-                res -= point_info.robin_coeff * self.__integrator.trapezoid(
-                    Utils.constant_one(), point_info.point, boundary_item.element
-                )
-                coefficients = np.append(coefficients, [res])
-
-                # TODO: FInish implementation
-                if is_same_point:
-                    right_side_ret = boundary_item.value
-                res = self.__integrator.trapezoid_of(
-                    KernelValueType.GRADIENT,
-                    Utils.constant_value(boundary_item.normal),
-                    point_info.point,
-                    boundary_item.element,
+                res -= point_info.robin_coeff * self.__integrator.trapezoid_of(
+                    KernelValueType.SCALAR, Utils.constant_one(), point_info.point, boundary_item.element
                 )
                 coefficients = np.append(coefficients, [res])
                 if is_same_point:
                     right_side_ret += boundary_item.value
-
             else:
                 raise AttributeError("Not supported boundary element type")
         self.__unknown_count = len(coefficients)
@@ -1439,7 +1428,11 @@ class SingleLayerCoBEMTerm(ExpressionTerm):
             integral_value = self.__integrator.trapezoid_of(
                 KernelValueType.SCALAR, Utils.constant_one(), point, boundary_item.element
             )
-            if boundary_item.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN]:
+            if boundary_item.type in [
+                BoundaryConditionType.DIRICHLET,
+                BoundaryConditionType.NEUMANN,
+                BoundaryConditionType.ROBIN,
+            ]:
                 result += self.__unknown_values[unknown_index] * integral_value
                 unknown_index += 1
             else:
