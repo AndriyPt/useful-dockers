@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
 from enum import Enum
 import math
 from collections.abc import Callable
@@ -13,6 +14,7 @@ from matplotlib import cm, path, patches
 class GlobalSettings(object):
     CHART_STEPS = 25
     CHART_SKIP_BORDER_WIDTH = 0.0
+    # TODO: Remove
     BORDER_ELEMENTS_COUNT = 10
     INCLUSION_ELEMENTS_COUNT = 5
     BORDER_ELEMENT_MAX_SIZE = 0.1
@@ -30,7 +32,7 @@ class GlobalSettings(object):
         13 - Pennes Dirichlet Hexagon CoBEM, 14 - Laplace Dirichlet Hexagon CoBEM, 
         15 - Laplace Dirichlet Convex BEM, 16 - Laplace Dirichlet Convex CoBEM,
     """
-    EXAMPLE_TYPE = 16
+    EXAMPLE_TYPE = 15
 
 
 class ExpressionTerm:
@@ -183,7 +185,7 @@ class Utils:
         return result
 
     @staticmethod
-    def plot(x_limits: np.array, y_limits: np.array, functions: list, domain=None):
+    def plot(x_limits: np.array, y_limits: np.array, functions: list, domain: Domain2D = None):
         assert Constants.TWO_DIM == len(x_limits)
         assert Constants.TWO_DIM == len(y_limits)
         assert len(functions) > 0
@@ -265,6 +267,18 @@ class Domain:
     def is_point_on_border(self, point: np.array):
         raise NotImplementedError("Call to abstract method")
 
+    def is_corner_point(self, point: np.array):
+        raise NotImplementedError("Call to abstract method")
+
+    def is_point_inside_domain(self, point: np.array):
+        raise NotImplementedError("Call to abstract method")
+
+    def contains_point(self, point: np.array):
+        result = False
+        if self.is_point_inside_domain(point) or self.is_point_on_border(point):
+            result = True
+        return result
+
     def get_subdomains(self):
         return self.__subdomains
 
@@ -304,16 +318,12 @@ class Domain2D(Domain):
     def _init_polygon(self, polygon: np.array):
         assert polygon is not None
         border_list = [(point[0], point[1]) for point in polygon]
-        self.__polygon = path.Path(border_list)
+        item = path.Path(border_list)
+        self._set_polygon(item)
 
-    def get_border(self):
-        raise NotImplementedError("Call to abstract method")
-
-    def get_mesh(self):
-        raise NotImplementedError("Call to abstract method")
-
-    def get_coborder(self):
-        raise NotImplementedError("Call to abstract method")
+    def _set_polygon(self, polygon: path.Path):
+        assert polygon is not None
+        self.__polygon = polygon
 
     def get_matplot_path(self):
         assert self.__polygon is not None
@@ -327,18 +337,19 @@ class Domain2D(Domain):
                 return True
         return False
 
-    def is_point_inside_domain(self, point):
+    def is_point_inside_domain(self, point: np.array):
         assert self.__polygon is not None
         return self.__polygon.contains_point(tuple(point))
 
-    def contains_point(self, point: np.array):
-        result = False
-        if self.is_point_inside_domain(point) or self.is_point_on_border(point):
-            result = True
-        return result
-
     def is_corner_point(self, point: np.array):
-        raise NotImplementedError("Call to abstract method")
+        result = False
+        for item in self.get_border():
+            if item.is_right_corner and Utils.is_the_same_point(
+                item.element[1], point, PlainDomain2D.POINT_LOCATION_EPSILON
+            ):
+                result = True
+                break
+        return result
 
 
 class SquareDomain2D(Domain2D):
@@ -487,9 +498,6 @@ class SquareDomain2D(Domain2D):
 
     def get_coborder(self):
         return self.__coborder
-
-    def get_square(self):
-        return self.__square
 
     def is_point_inside_domain(self, point: np.array):
         result = Utils.is_point_within_square(point, self.__square, Domain2D.POINT_LOCATION_EPSILON)
@@ -669,7 +677,6 @@ class PlainDomain2D(Domain2D):
         assert paths is not None
         assert len(paths) == len(conditions)
         assert len(paths) == len(functions)
-        self.__polygon = None
         self.__border = []
         list = []
         for index, item in enumerate(paths):
@@ -682,7 +689,8 @@ class PlainDomain2D(Domain2D):
             points = self._process_points(new_item, conditions[index], functions[index])
             self.__border = np.append(self.__border, points)
         self.__init_corner_points()
-        self.__polygon = path.Path.make_compound_path(*list)
+        item = path.Path.make_compound_path(*list)
+        self._set_polygon(item)
 
     def __init_corner_points(self):
         assert len(self.__border) > 0, "Border points should be initialized"
@@ -726,32 +734,6 @@ class PlainDomain2D(Domain2D):
 
     def get_coborder(self):
         raise NotImplementedError("Call to abstract method")
-
-    def get_matplot_path(self):
-        assert self.__polygon is not None
-        return self.__polygon
-
-    def is_point_on_border(self, point: np.array):
-        for border_point in self.get_border():
-            if Utils.is_point_within_segment(
-                point, border_point.element[0], border_point.element[1], Domain2D.POINT_LOCATION_EPSILON
-            ):
-                return True
-        return False
-
-    def is_point_inside_domain(self, point):
-        assert self.__polygon is not None
-        return self.__polygon.contains_point(tuple(point))
-
-    def is_corner_point(self, point: np.array):
-        result = False
-        for item in self.__border:
-            if item.is_right_corner and Utils.is_the_same_point(
-                item.element[1], point, PlainDomain2D.POINT_LOCATION_EPSILON
-            ):
-                result = True
-                break
-        return result
 
 
 class KernelValueType(Enum):
