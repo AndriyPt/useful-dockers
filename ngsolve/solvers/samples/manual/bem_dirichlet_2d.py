@@ -28,9 +28,9 @@ class GlobalSettings(object):
         5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM
         9 - Pennes Dirichlet BEM, 10 - Pennes Neumann BEM, 11 - Pennes Dirichlet CoBEM, 12 - Pennes Neumann CoBEM  
         13 - Pennes Dirichlet Hexagon CoBEM, 14 - Laplace Dirichlet Hexagon CoBEM, 
-        15 - Laplace Dirichlet Convex CoBEM,
+        15 - Laplace Dirichlet Convex BEM, 16 - Laplace Dirichlet Convex CoBEM,
     """
-    EXAMPLE_TYPE = 7
+    EXAMPLE_TYPE = 16
 
 
 class ExpressionTerm:
@@ -63,6 +63,7 @@ class Point2DInfo:
         self.element = np.empty(0)
         self.value = 0.0
         self.robin_coeff = 0.0  # Robin condition is represented as 1 * q = robin_coeff * u + value
+        self.is_right_corner = False
 
 
 class Utils:
@@ -78,6 +79,14 @@ class Utils:
     @staticmethod
     def is_the_same_point(point1: np.array, point2: np.array, eps: float):
         result = Utils.distance(point1, point2) < eps
+        return result
+
+    @staticmethod
+    def is_the_same_vector(vector1: np.array, vector2: np.array, eps: float):
+        norm_vect1 = Utils.normalize(vector1)
+        norm_vect2 = Utils.normalize(vector2)
+        norm = np.linalg.norm(norm_vect1 - norm_vect2)
+        result = norm < eps
         return result
 
     @staticmethod
@@ -174,7 +183,7 @@ class Utils:
         return result
 
     @staticmethod
-    def plot(x_limits: np.array, y_limits: np.array, functions: list, domain_path: path.Path = None):
+    def plot(x_limits: np.array, y_limits: np.array, functions: list, domain=None):
         assert Constants.TWO_DIM == len(x_limits)
         assert Constants.TWO_DIM == len(y_limits)
         assert len(functions) > 0
@@ -193,7 +202,7 @@ class Utils:
                 for j in range(x_data.shape[1]):
                     simple_point = (x_data[i, j], y_data[i, j])
                     point = np.array(simple_point)
-                    if domain_path is not None and domain_path.contains_point(simple_point) or domain_path is None:
+                    if domain is not None and domain.contains_point(simple_point) or domain is None:
                         z_data[i, j] = function(point)
             surf = axis.plot_surface(x_data, y_data, z_data, cmap=cm.coolwarm, linewidth=0, antialiased=False)
             fig.colorbar(surf, shrink=0.5, aspect=10)
@@ -321,6 +330,15 @@ class Domain2D(Domain):
     def is_point_inside_domain(self, point):
         assert self.__polygon is not None
         return self.__polygon.contains_point(tuple(point))
+
+    def contains_point(self, point: np.array):
+        result = False
+        if self.is_point_inside_domain(point) or self.is_point_on_border(point):
+            result = True
+        return result
+
+    def is_corner_point(self, point: np.array):
+        raise NotImplementedError("Call to abstract method")
 
 
 class SquareDomain2D(Domain2D):
@@ -475,6 +493,14 @@ class SquareDomain2D(Domain2D):
 
     def is_point_inside_domain(self, point: np.array):
         result = Utils.is_point_within_square(point, self.__square, Domain2D.POINT_LOCATION_EPSILON)
+        return result
+
+    def is_corner_point(self, point: np.array):
+        result = False
+        for corner in self.__square:
+            if Utils.distance(point, corner) < Domain2D.POINT_LOCATION_EPSILON:
+                result = True
+                break
         return result
 
 
@@ -635,56 +661,65 @@ class HexagonalDomain2D(Domain2D):
         raise NotImplementedError("Not implemented yet")
 
 
-# TODO: Finish implementation
-class PlainDomain2D(Domain):
+class PlainDomain2D(Domain2D):
     POINT_LOCATION_EPSILON = 0.001
 
     def __init__(self, paths: list[path.Path], conditions: list, functions: list, subdomains: list = []):
         super().__init__(subdomains)
         assert paths is not None
+        assert len(paths) == len(conditions)
+        assert len(paths) == len(functions)
+        self.__polygon = None
+        self.__border = []
         list = []
-        for item in paths:
+        for index, item in enumerate(paths):
             item.to_polygons(closed_only=False)
             verts = item.vertices
             max_dist = max(Utils.distance(verts[i], verts[i - 1]) for i in range(1, len(verts)))
             steps = math.ceil(max_dist / GlobalSettings.BORDER_ELEMENT_MAX_SIZE)
             new_item = item.interpolated(steps)
             list.append(new_item)
-            # TODO: Add border with points
+            points = self._process_points(new_item, conditions[index], functions[index])
+            self.__border = np.append(self.__border, points)
+        self.__init_corner_points()
+        self.__polygon = path.Path.make_compound_path(*list)
 
-        # self.__polygon = path.Path.make_compound_path(*paths)
-        # TODO: Check approach for interpolation below
-        # for path in paths:
-        #     path.to_polygons()
-        #     # path.interpolated(how to calculate?)
+    def __init_corner_points(self):
+        assert len(self.__border) > 0, "Border points should be initialized"
+        for index, element in enumerate(self.__border):
+            if index < len(self.__border) - 1:
+                next_element = self.__border[index + 1]
+            else:
+                next_element = self.__border[0]
+            if not Utils.is_the_same_vector(element.normal, next_element.normal, PlainDomain2D.POINT_LOCATION_EPSILON):
+                element.is_right_corner = True
 
     @staticmethod
-    def _process_points(border_elements: np.array, type: BoundaryConditionType, value_function: Callable):
-        assert border_elements is not None
+    def _process_points(path_element: path.Path, type: BoundaryConditionType, value_function: Callable):
+        assert path_element is not None
         assert value_function is not None
         result = []
-        for index in range(len(border_elements) - 1):
+        verts = path_element.vertices
+        for index in range(len(verts) - 1):
             item = Point2DInfo()
-            item.point = (border_elements[index + 1] + border_elements[index]) / 2.0
+            item.point = (verts[index + 1] + verts[index]) / 2.0
             item.type = type
-
-            border_vector = border_elements[index + 1] - border_elements[index]
+            border_vector = verts[index + 1] - verts[index]
             assert np.linalg.norm(border_vector) != 0, "Points of border element should be different"
             border_vector /= np.linalg.norm(border_vector)
 
             # TODO: Check if it is always external normal
             item.normal = np.array([border_vector[1], -border_vector[0]])
-            item.element = np.array([border_elements[index], border_elements[index + 1]])
+            item.element = np.array([verts[index], verts[index + 1]])
             if BoundaryConditionType.ROBIN == type:
                 item.robin_coeff, item.value = value_function(item.point)
             else:
                 item.value = value_function(item.point)
-
             result.append(item)
         return result
 
     def get_border(self):
-        raise NotImplementedError("Call to abstract method")
+        return self.__border
 
     def get_mesh(self):
         raise NotImplementedError("Call to abstract method")
@@ -707,6 +742,16 @@ class PlainDomain2D(Domain):
     def is_point_inside_domain(self, point):
         assert self.__polygon is not None
         return self.__polygon.contains_point(tuple(point))
+
+    def is_corner_point(self, point: np.array):
+        result = False
+        for item in self.__border:
+            if item.is_right_corner and Utils.is_the_same_point(
+                item.element[1], point, PlainDomain2D.POINT_LOCATION_EPSILON
+            ):
+                result = True
+                break
+        return result
 
 
 class KernelValueType(Enum):
@@ -1590,8 +1635,7 @@ class Problem(object):
             # TODO: Check this behaviour
             if self.__domain.is_point_on_border(point):
                 result *= 2.0
-            for corner in self.__domain.get_square():
-                if Utils.distance(point, corner) < Domain2D.POINT_LOCATION_EPSILON:
+                if self.__domain.is_corner_point(point):
                     result *= 2.0
         return result
 
@@ -1713,7 +1757,7 @@ class Problem(object):
                         self.__domain.get_matplot_path(),
                     )
                 else:
-                    Utils.plot([x_min, x_max], [y_min, y_max], [self.solution_value], self.__domain.get_matplot_path())
+                    Utils.plot([x_min, x_max], [y_min, y_max], [self.solution_value], self.__domain)
 
         print("Done!")
 
@@ -2414,6 +2458,37 @@ def init_laplace_dirichlet_hexagon_cobem():
     return problem
 
 
+def init_laplace_dirichlet_convex_bem():
+    print("BEM for Dirichlet problem for Laplace equation in convex shape...")
+
+    print("Define boundary conditions...")
+
+    def analytical_solution(point: np.array):
+        return point[0] * point[0] - point[1] * point[1]
+
+    def dirichlet_boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    domain = PlainDomain2D(
+        [
+            path.Path([(1.0, 0.0), (2.0, 0.0)]),
+            path.Path([(2.0, 0.0), (2.0, 2.0)]),
+            path.Path([(2.0, 2.0), (1.0, 2.0)]),
+            path.Path([(1.0, 2.0), (1.0, 0.0)]),
+        ],
+        [BoundaryConditionType.DIRICHLET] * 4,
+        [dirichlet_boundary_value] * 4,
+    )
+
+    expression = [
+        DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
+        SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
+    ]
+
+    problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
+    return problem
+
+
 def init_laplace_dirichlet_convex_cobem():
     print("CoBEM for Dirichlet problem for Laplace equation in convex shape...")
 
@@ -2426,10 +2501,14 @@ def init_laplace_dirichlet_convex_cobem():
         return analytical_solution(point)
 
     domain = PlainDomain2D(
-        [path.Path([(1.0, 0.0), (2.0, 0.0), (2.0, 2.0), (0.0, 2.0)])],
+        [
+            path.Path([(1.0, 0.0), (2.0, 0.0)]),
+            path.Path([(2.0, 0.0), (2.0, 2.0)]),
+            path.Path([(2.0, 2.0), (1.0, 2.0)]),
+            path.Path([(1.0, 2.0), (1.0, 0.0)]),
+        ],
         [BoundaryConditionType.DIRICHLET] * 4,
         [dirichlet_boundary_value] * 4,
-        GlobalSettings.BORDER_ELEMENTS_COUNT,
     )
 
     expression = [
@@ -2471,6 +2550,8 @@ if "__main__" == __name__:
     elif 14 == GlobalSettings.EXAMPLE_TYPE:
         problem = init_laplace_dirichlet_hexagon_cobem()
     elif 15 == GlobalSettings.EXAMPLE_TYPE:
+        problem = init_laplace_dirichlet_convex_bem()
+    elif 16 == GlobalSettings.EXAMPLE_TYPE:
         problem = init_laplace_dirichlet_convex_cobem()
 
     assert problem is not None
