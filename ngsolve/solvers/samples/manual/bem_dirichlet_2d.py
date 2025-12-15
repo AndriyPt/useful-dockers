@@ -8,7 +8,7 @@ import numpy as np
 import scipy
 import csv
 import matplotlib.pyplot as plt
-from matplotlib import cm, path, patches
+from matplotlib import cm, path, patches, transforms
 
 
 class GlobalSettings(object):
@@ -17,7 +17,7 @@ class GlobalSettings(object):
     # TODO: Remove
     BORDER_ELEMENTS_COUNT = 10
     INCLUSION_ELEMENTS_COUNT = 5
-    BORDER_ELEMENT_MAX_SIZE = 0.1
+    BORDER_ELEMENT_MAX_SIZE = 1.0
     PLOT_ERROR = False
     PLOT_ISOLINES_COUNT = 10
     PLOT_ERROR_CONTOURS = False
@@ -25,6 +25,7 @@ class GlobalSettings(object):
     ERROR_TO_CSV = False
     ERROR_CSV_STEPS = 5
     COBORDER_DEPTH = 1.2
+    COBORDER_SCALE = 1.5
     """
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
         5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM
@@ -32,7 +33,7 @@ class GlobalSettings(object):
         13 - Pennes Dirichlet Hexagon CoBEM, 14 - Laplace Dirichlet Hexagon CoBEM, 
         15 - Laplace Dirichlet Convex BEM, 16 - Laplace Dirichlet Convex CoBEM,
     """
-    EXAMPLE_TYPE = 15
+    EXAMPLE_TYPE = 16
 
 
 class ExpressionTerm:
@@ -238,7 +239,9 @@ class Utils:
     def plot_2d_domain(domain):
         assert domain is not None
         fig, ax = plt.subplots()
-        patch = patches.PathPatch(domain.get_matplot_path(), facecolor="lightblue", edgecolor="blue", lw=2)
+        patch = patches.PathPatch(domain.get_matplot_border(), facecolor="lightblue", edgecolor="blue", lw=2)
+        ax.add_patch(patch)
+        patch = patches.PathPatch(domain.get_matplot_coborder(), facecolor="lightblue", edgecolor="blue", lw=2)
         ax.add_patch(patch)
         ax.set_xlim(-5, 5)
         ax.set_ylim(-5, 5)
@@ -288,7 +291,8 @@ class Domain2D(Domain):
 
     def __init__(self, subdomains: list = []):
         super().__init__(subdomains)
-        self.__polygon = None
+        self.__border_polygon = None
+        self.__coborder_polygon = None
 
     @staticmethod
     def _process_points(border_elements: np.array, type: BoundaryConditionType, value_function: Callable):
@@ -323,11 +327,34 @@ class Domain2D(Domain):
 
     def _set_polygon(self, polygon: path.Path):
         assert polygon is not None
-        self.__polygon = polygon
+        self.__border_polygon = polygon
 
-    def get_matplot_path(self):
-        assert self.__polygon is not None
-        return self.__polygon
+    def _set_coborder_polygon(self, polygon: path.Path):
+        assert polygon is not None
+        self.__coborder_polygon = polygon
+
+    def get_matplot_border(self):
+        assert self.__border_polygon is not None
+        return self.__border_polygon
+
+    def get_matplot_coborder(self):
+        assert self.__coborder_polygon is not None
+        return self.__coborder_polygon
+
+    @staticmethod
+    def _get_unique_vertices(vertices):
+        assert vertices is not None
+        outcome = []
+        for index, item in enumerate(vertices):
+            if index < len(vertices) - 1:
+                next_item = np.array(vertices[index + 1])
+            else:
+                next_item = np.array(vertices[0])
+            current = np.array(item)
+            if not Utils.is_the_same_point(current, next_item, Domain2D.POINT_LOCATION_EPSILON):
+                outcome.append(current)
+        result = np.array(outcome)
+        return result
 
     def is_point_on_border(self, point: np.array):
         for border_point in self.get_border():
@@ -338,8 +365,8 @@ class Domain2D(Domain):
         return False
 
     def is_point_inside_domain(self, point: np.array):
-        assert self.__polygon is not None
-        return self.__polygon.contains_point(tuple(point))
+        assert self.__border_polygon is not None
+        return self.__border_polygon.contains_point(tuple(point))
 
     def is_corner_point(self, point: np.array):
         result = False
@@ -686,11 +713,16 @@ class PlainDomain2D(Domain2D):
             steps = math.ceil(max_dist / GlobalSettings.BORDER_ELEMENT_MAX_SIZE)
             new_item = item.interpolated(steps)
             list.append(new_item)
-            points = self._process_points(new_item, conditions[index], functions[index])
+            points = self.__process_points(new_item, conditions[index], functions[index])
             self.__border = np.append(self.__border, points)
         self.__init_corner_points()
         item = path.Path.make_compound_path(*list)
         self._set_polygon(item)
+        # TODO:  Fix that center of mass should have coordinates (0, 0) for proper scaling
+        coboundary_scale = transforms.Affine2D().scale(GlobalSettings.COBORDER_SCALE)
+        coborder_item = item.transformed(coboundary_scale)
+        self._set_coborder_polygon(coborder_item)
+        self.__process_coborder_points()
 
     def __init_corner_points(self):
         assert len(self.__border) > 0, "Border points should be initialized"
@@ -703,11 +735,11 @@ class PlainDomain2D(Domain2D):
                 element.is_right_corner = True
 
     @staticmethod
-    def _process_points(path_element: path.Path, type: BoundaryConditionType, value_function: Callable):
+    def __process_points(path_element: path.Path, type: BoundaryConditionType, value_function: Callable):
         assert path_element is not None
         assert value_function is not None
         result = []
-        verts = path_element.vertices
+        verts = Domain2D._get_unique_vertices(path_element.vertices)
         for index in range(len(verts) - 1):
             item = Point2DInfo()
             item.point = (verts[index + 1] + verts[index]) / 2.0
@@ -726,6 +758,35 @@ class PlainDomain2D(Domain2D):
             result.append(item)
         return result
 
+    def __process_coborder_points(self):
+        assert self.__border is not None
+
+        self.__coborder = []
+        border_vertices = Domain2D._get_unique_vertices(self.get_matplot_border().vertices)
+        coborder_vertices = Domain2D._get_unique_vertices(self.get_matplot_coborder().vertices)
+        for index in range(len(self.__border)):
+            point_info = self.__border[index]
+            item = Point2DInfo()
+            item.point = point_info.point
+            item.type = point_info.type
+            item.normal = point_info.normal
+            item.value = point_info.value
+            item.robin_coeff = point_info.robin_coeff
+
+            next_index = index + 1
+            if next_index == len(self.__border):
+                next_index = 0
+
+            elements = []
+            elements.append(coborder_vertices[index])
+            elements.append(coborder_vertices[next_index])
+            elements.append(border_vertices[next_index])
+            elements.append(border_vertices[index])
+            item.element = elements
+            self.__coborder.append(item)
+
+        self.__coborder = np.array(self.__coborder)
+
     def get_border(self):
         return self.__border
 
@@ -733,7 +794,7 @@ class PlainDomain2D(Domain2D):
         raise NotImplementedError("Call to abstract method")
 
     def get_coborder(self):
-        raise NotImplementedError("Call to abstract method")
+        return self.__coborder
 
 
 class KernelValueType(Enum):
@@ -2453,10 +2514,10 @@ def init_laplace_dirichlet_convex_bem():
 
     domain = PlainDomain2D(
         [
-            path.Path([(1.0, 0.0), (2.0, 0.0)]),
-            path.Path([(2.0, 0.0), (2.0, 2.0)]),
-            path.Path([(2.0, 2.0), (1.0, 2.0)]),
-            path.Path([(1.0, 2.0), (1.0, 0.0)]),
+            path.Path([(-0.5, -1.0), (0.5, -1.0)]),
+            path.Path([(0.5, -1.0), (0.5, 1.0)]),
+            path.Path([(0.5, 1.0), (-0.5, 1.0)]),
+            path.Path([(-0.5, 1.0), (-0.5, -1.0)]),
         ],
         [BoundaryConditionType.DIRICHLET] * 4,
         [dirichlet_boundary_value] * 4,
@@ -2484,10 +2545,10 @@ def init_laplace_dirichlet_convex_cobem():
 
     domain = PlainDomain2D(
         [
-            path.Path([(1.0, 0.0), (2.0, 0.0)]),
-            path.Path([(2.0, 0.0), (2.0, 2.0)]),
-            path.Path([(2.0, 2.0), (1.0, 2.0)]),
-            path.Path([(1.0, 2.0), (1.0, 0.0)]),
+            path.Path([(-0.5, -1.0), (0.5, -1.0)]),
+            path.Path([(0.5, -1.0), (0.5, 1.0)]),
+            path.Path([(0.5, 1.0), (-0.5, 1.0)]),
+            path.Path([(-0.5, 1.0), (-0.5, -1.0)]),
         ],
         [BoundaryConditionType.DIRICHLET] * 4,
         [dirichlet_boundary_value] * 4,
