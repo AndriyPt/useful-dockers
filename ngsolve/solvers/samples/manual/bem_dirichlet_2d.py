@@ -140,6 +140,28 @@ class Utils:
     def is_point_within_trapezoid(point: np.array, mesh: np.array, eps: float):
         return Utils.is_point_within_square(point, mesh, eps)
 
+    # Calculate initial sign (expect all same sign for convex) based on cross product
+    # (x2-x1)*(py-y1) - (y2-y1)*(px-x1) gives Z-component of cross product
+    # Sign tells if point is left/right/on edge
+    @staticmethod
+    def is_point_within_convex_quadrilateral(point: np.array, vertices: np.array):
+        result = True
+        px, py = point
+        num_vertices = len(vertices)
+        p1 = vertices[0]
+        p2 = vertices[1]
+        initial_sign = np.sign((p2[0] - p1[0]) * (py - p1[1]) - (p2[1] - p1[1]) * (px - p1[0]))
+
+        for i in range(1, num_vertices):
+            p1 = vertices[i]
+            p2 = vertices[(i + 1) % num_vertices]
+            current_sign = np.sign((p2[0] - p1[0]) * (py - p1[1]) - (p2[1] - p1[1]) * (px - p1[0]))
+            # If signs differ (and not zero), point is outside
+            if current_sign != initial_sign and current_sign != 0:
+                result = False
+                break
+        return result
+
     @staticmethod
     def is_square_side(begin: np.array, end: np.array, mesh_item: np.array, eps: float):
         assert Constants.TWO_DIM == len(begin)
@@ -537,6 +559,7 @@ class SquareDomain2D(Domain2D):
                 result = True
                 break
         return result
+
 
 # TODO: Remove not used domain
 class HexagonalDomain2D(Domain2D):
@@ -1133,6 +1156,42 @@ class Integrator2D(Integrator):
                 result += weight * np.dot(self.kernel.value_of(type, point, real_node), function(real_node)) * jacobian
             else:
                 result += weight * self.kernel.value_of(type, point, real_node) * function(real_node) * jacobian
+        return result
+
+    def convex_quadrilateral_of(self, type: KernelValueType, function: Callable, point: np.array, vertices: np.array):
+        assert Constants.PLANE_SQUARE_DIM == len(vertices)
+        result = 0.0
+        unit_square = np.array(
+            [np.array([-1.0, -1.0]), np.array([1.0, -1.0]), np.array([1.0, 1.0]), np.array([-1.0, 1.0])]
+        )
+        matrix = None
+        right_side = np.empty(0)
+        for unit, actual in zip(unit_square, vertices):
+            matrix_row = np.array([1.0, unit[0], unit[1], unit[0] * unit[1], 0.0, 0.0, 0.0, 0.0])
+            if matrix is None:
+                matrix = matrix_row
+            else:
+                matrix = np.vstack((matrix, matrix_row))
+            matrix_row = np.array([0.0, 0.0, 0.0, 0.0, 1.0, unit[0], unit[1], unit[0] * unit[1]])
+            matrix = np.vstack((matrix, matrix_row))
+            right_side = np.append(right_side, [actual[0], actual[1]])
+        coeff = np.linalg.solve(matrix, right_side)
+        a, b, c, d, e, f = (coeff[1], coeff[2], coeff[3], coeff[5], coeff[6], coeff[7])
+        const_x, const_y = (coeff[0], coeff[4])
+
+        interpolation_order = self.__nominal_number_of_points
+        if Utils.is_point_within_convex_quadrilateral(point, vertices):
+            interpolation_order = self.__singular_number_of_points
+        nodes, weights = np.polynomial.legendre.leggauss(interpolation_order)
+
+        for x1, wx in zip(nodes, weights):
+            for y1, wy in zip(nodes, weights):
+                node = np.array([const_x + a * x1 + b * y1 + c * x1 * y1, const_y + d * x1 + e * y1 + f * x1 * y1])
+                jacobian = (a * e - b * d) + (a * f - c * d) * x1 + (c * e - b * f) * y1
+                if type in [KernelValueType.GRADIENT, KernelValueType.GRADIENT_DX, KernelValueType.GRADIENT_DY]:
+                    result += wx * wy * np.dot(self.kernel.value_of(type, point, node), function(node)) * jacobian
+                else:
+                    result += wx * wy * self.kernel.value_of(type, point, node) * function(node) * jacobian
         return result
 
 
