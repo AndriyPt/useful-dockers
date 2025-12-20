@@ -9,6 +9,7 @@ import scipy
 import csv
 import matplotlib.pyplot as plt
 from matplotlib import cm, path, patches, transforms
+from matplotlib.collections import PolyCollection
 
 
 class GlobalSettings(object):
@@ -16,16 +17,19 @@ class GlobalSettings(object):
     CHART_SKIP_BORDER_WIDTH = 0.0
     # TODO: Remove
     BORDER_ELEMENTS_COUNT = 10
+    # TODO: Remove
     INCLUSION_ELEMENTS_COUNT = 5
+    # TODO: Remove
+    COBORDER_DEPTH = 1.2
     BORDER_ELEMENT_MAX_SIZE = 0.2
+    INCLUSION_ELEMENTS_MAX_SIZE = 0.5
+    COBORDER_SCALE = 2.0
     PLOT_ERROR = False
     PLOT_ISOLINES_COUNT = 10
     PLOT_ERROR_CONTOURS = False
     PLOT_DETAILS = False
     ERROR_TO_CSV = False
     ERROR_CSV_STEPS = 5
-    COBORDER_DEPTH = 1.2
-    COBORDER_SCALE = 2.0
     """
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
         5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM
@@ -270,9 +274,43 @@ class Utils:
         plt.show()
 
     @staticmethod
+    def plot_2d_mesh(mesh: list):
+        assert mesh is not None
+        min_x = min(vertex[0] for quad in mesh for vertex in quad)
+        min_y = min(vertex[1] for quad in mesh for vertex in quad)
+        max_x = max(vertex[0] for quad in mesh for vertex in quad)
+        max_y = max(vertex[1] for quad in mesh for vertex in quad)
+        x_border = (max_x - min_x) * 0.5
+        y_border = (max_y - min_y) * 0.5
+        fig, ax = plt.subplots()
+        col = PolyCollection(mesh, closed=True, facecolors="none")
+        ax.add_collection(col)
+        ax.set_xlim(min_x - x_border, max_x + x_border)
+        ax.set_ylim(min_y - y_border, max_y + y_border)
+        plt.show()
+
+    @staticmethod
     def get_right_side_normal(begin: np.array, end: np.array):
         vector = Utils.get_normalized_vector(begin, end)
         result = np.array([vector[1], -1.0 * vector[0]])
+        return result
+
+    @staticmethod
+    def get_next_index(current: int, list: np.array):
+        assert list is not None
+        result = current + 1
+        if len(list) == result:
+            result = 0
+        return result
+
+    @staticmethod
+    def get_line_chunk_point(index: int, count: int, beginning: np.array, end: np.array):
+        assert count > 0
+        assert index >= 0 and index <= count
+        assert beginning is not None
+        assert end is not None
+
+        result = beginning + (end - beginning) * float(index) / float(count)
         return result
 
 
@@ -720,6 +758,7 @@ class PlainDomain2D(Domain2D):
         assert paths is not None
         assert len(paths) == len(conditions)
         assert len(paths) == len(functions)
+        self.__center = np.zeros(Constants.TWO_DIM)
         self.__border = []
         list = []
         for index, item in enumerate(paths):
@@ -739,6 +778,7 @@ class PlainDomain2D(Domain2D):
         coborder_item = item.transformed(coboundary_scale)
         self._set_coborder_polygon(coborder_item)
         self.__process_coborder_points()
+        self.__process_mesh()
 
     def __init_corner_points(self):
         assert len(self.__border) > 0, "Border points should be initialized"
@@ -776,7 +816,6 @@ class PlainDomain2D(Domain2D):
 
     def __process_coborder_points(self):
         assert self.__border is not None
-
         self.__coborder = []
         border_vertices = Domain2D._get_unique_vertices(self.get_matplot_border().vertices)
         coborder_vertices = Domain2D._get_unique_vertices(self.get_matplot_coborder().vertices)
@@ -803,11 +842,62 @@ class PlainDomain2D(Domain2D):
 
         self.__coborder = np.array(self.__coborder)
 
+    # TODO: Implement for non-convex polygons
+    def __process_mesh(self):
+        assert self.__border is not None
+        assert self.__center is not None
+        self.__mesh = []
+        for point in self.__border:
+            mesh = PlainDomain2D.__quadragulate_triangle(point.element[0], self.__center, point.element[1])
+            self.__mesh.extend(mesh)
+        Utils.plot_2d_mesh(self.__mesh)
+        self.__mesh = np.array(self.__mesh)
+
+    @staticmethod
+    def __quadragulate_triangle(vertex1: np.array, vertex2: np.array, vertex3: np.array):
+        result = []
+        left_side_len = Utils.distance(vertex1, vertex2)
+        right_side_len = Utils.distance(vertex3, vertex2)
+        slices_count = math.ceil(max(left_side_len, right_side_len) / GlobalSettings.INCLUSION_ELEMENTS_MAX_SIZE)
+        for slice_index in range(slices_count - 1):
+            bottom_line_left = Utils.get_line_chunk_point(slice_index, slices_count, vertex1, vertex2)
+            bottom_line_right = Utils.get_line_chunk_point(slice_index, slices_count, vertex3, vertex2)
+            top_line_left = Utils.get_line_chunk_point(slice_index + 1, slices_count, vertex1, vertex2)
+            top_line_right = Utils.get_line_chunk_point(slice_index + 1, slices_count, vertex3, vertex2)
+            bottom_side_len = Utils.distance(bottom_line_left, bottom_line_right)
+            chunks_count = math.ceil(bottom_side_len / GlobalSettings.INCLUSION_ELEMENTS_MAX_SIZE)
+            for chunk_index in range(chunks_count):
+                quadrilateral = [
+                    Utils.get_line_chunk_point(chunk_index, chunks_count, bottom_line_left, bottom_line_right),
+                    Utils.get_line_chunk_point(chunk_index + 1, chunks_count, bottom_line_left, bottom_line_right),
+                    Utils.get_line_chunk_point(chunk_index + 1, chunks_count, top_line_left, top_line_right),
+                    Utils.get_line_chunk_point(chunk_index, chunks_count, top_line_left, top_line_right),
+                ]
+                result.append(quadrilateral)
+
+        # Process small triangle on top by splitting it using middle lines
+        # finding point inside inner middle line based triangle and
+        # joining middle point with vertices and medians
+        vertex_left = Utils.get_line_chunk_point(slices_count - 1, slices_count, vertex1, vertex2)
+        vertex_right = Utils.get_line_chunk_point(slices_count - 1, slices_count, vertex3, vertex2)
+        mid_left_point = (vertex_left + vertex2) * 0.5
+        mid_right_point = (vertex_right + vertex2) * 0.5
+        mid_bottom_point = (vertex_left + vertex_right) * 0.5
+
+        mid_mid_point_top = (mid_left_point + mid_right_point) * 0.5
+        bulls_eye_point = (mid_bottom_point + mid_mid_point_top) * 0.5
+
+        result.append([bulls_eye_point, mid_right_point, vertex2, mid_left_point])
+        result.append([bulls_eye_point, mid_left_point, vertex_left, mid_bottom_point])
+        result.append([bulls_eye_point, mid_bottom_point, vertex_right, mid_right_point])
+
+        return result
+
     def get_border(self):
         return self.__border
 
     def get_mesh(self):
-        raise NotImplementedError("Call to abstract method")
+        return self.__mesh
 
     def get_coborder(self):
         return self.__coborder
