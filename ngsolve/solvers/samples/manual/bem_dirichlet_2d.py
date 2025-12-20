@@ -21,7 +21,7 @@ class GlobalSettings(object):
     INCLUSION_ELEMENTS_COUNT = 5
     # TODO: Remove
     COBORDER_DEPTH = 1.2
-    BORDER_ELEMENT_MAX_SIZE = 0.2
+    BORDER_ELEMENT_MAX_SIZE = 0.5
     INCLUSION_ELEMENTS_MAX_SIZE = 0.5
     COBORDER_SCALE = 2.0
     PLOT_ERROR = False
@@ -2600,10 +2600,11 @@ def init_pennes_dirichlet_hexagon_cobem():
 
     domain = PlainDomain2D(
         [
-            path.Path([(-3.0, 0.0), (-2.0, -1.0), (2.0, -1.0), (3.0, 0.0), (2.0, 1.0), (-2.0, 1.0)], closed=True),
+            path.Path([(-3.0, 0.0), (-2.0, -1.0), (2.0, -1.0), (3.0, 0.0), (2.0, 1.0), (-2.0, 1.0)]),
+            path.Path([(-2.0, 1.0), (-3.0, 0.0)]),
         ],
-        [BoundaryConditionType.DIRICHLET],
-        [dirichlet_boundary_value],
+        [BoundaryConditionType.DIRICHLET] * 2,
+        [dirichlet_boundary_value] * 2,
     )
 
     expression = [
@@ -2627,10 +2628,11 @@ def init_laplace_dirichlet_hexagon_cobem():
 
     domain = PlainDomain2D(
         [
-            path.Path([(-2.0, 0.0), (-1.0, -1.0), (1.0, -1.0), (2.0, 0.0), (1.0, 1.0), (-1.0, 1.0)], closed=True),
+            path.Path([(-2.0, 0.0), (-1.0, -1.0), (1.0, -1.0), (2.0, 0.0), (1.0, 1.0), (-1.0, 1.0)]),
+            path.Path([(-1.0, 1.0), (-2.0, 0.0)]),
         ],
-        [BoundaryConditionType.DIRICHLET],
-        [dirichlet_boundary_value],
+        [BoundaryConditionType.DIRICHLET] * 2,
+        [dirichlet_boundary_value] * 2,
     )
 
     expression = [
