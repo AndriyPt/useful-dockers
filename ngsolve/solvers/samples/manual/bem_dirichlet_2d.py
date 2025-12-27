@@ -36,8 +36,9 @@ class GlobalSettings(object):
         9 - Pennes Dirichlet BEM, 10 - Pennes Neumann BEM, 11 - Pennes Dirichlet CoBEM, 12 - Pennes Neumann CoBEM  
         13 - Pennes Dirichlet Hexagon CoBEM, 14 - Laplace Dirichlet Hexagon CoBEM, 
         15 - Laplace Dirichlet Convex BEM, 16 - Laplace Dirichlet Convex CoBEM,
+        17 - Poisson Dirichlet Convex BEM, 18 - Poisson Dirichlet Convex CoBEM,
     """
-    EXAMPLE_TYPE = 13
+    EXAMPLE_TYPE = 17
 
 
 class ExpressionTerm:
@@ -850,7 +851,6 @@ class PlainDomain2D(Domain2D):
         for point in self.__border:
             mesh = PlainDomain2D.__quadragulate_triangle(point.element[0], self.__center, point.element[1])
             self.__mesh.extend(mesh)
-        Utils.plot_2d_mesh(self.__mesh)
         self.__mesh = np.array(self.__mesh)
 
     @staticmethod
@@ -2177,8 +2177,6 @@ class Samples:
 
                 print("Define boundary conditions...")
 
-                K_TISSUE = 0.19  # W/m/^C
-                K_MAX_TUMOR = 0.495  # W/m/^C
                 INCLUSION_SIZE = 0.2
                 INCLUSION_CENTER_X = 0.5
                 INCLUSION_CENTER_Y = 0.5
@@ -2223,67 +2221,9 @@ class Samples:
                         result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_Y - point[1]) / INCLUSION_RADIUS**2
                     return result
 
-                # def thermal_conductivity(point: np.array):
-                #     result = K_TISSUE
-                #     if inclusion_domain.is_point_inside_domain(point):
-                #         result = (K_MAX_TUMOR - K_TISSUE) * np.cos(
-                #             (0.5 * np.pi / INCLUSION_RADIUS**2)
-                #             * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                #         ) + K_TISSUE
-                #     return result
-
-                # def thermal_conductivity_gradient(point: np.array):
-                #     result = np.array([0.0, 0.0])
-                #     if inclusion_domain.is_point_inside_domain(point):
-                #         result[0] = (
-                #             -(K_MAX_TUMOR - K_TISSUE)
-                #             * np.sin(
-                #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-                #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                #             )
-                #             * (np.pi / INCLUSION_RADIUS**2)
-                #             * (point[0] - INCLUSION_CENTER_X)
-                #         )
-                #         result[1] = (
-                #             -(K_MAX_TUMOR - K_TISSUE)
-                #             * np.sin(
-                #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-                #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                #             )
-                #             * (np.pi / INCLUSION_RADIUS**2)
-                #             * (point[1] - INCLUSION_CENTER_Y)
-                #         )
-                #     return result
-
-                # def thermal_conductivity_laplacian(point: np.array):
-                #     result = 0.0
-                #     if inclusion_domain.is_point_inside_domain(point):
-                #         result = ((K_TISSUE - K_MAX_TUMOR) * np.pi / INCLUSION_RADIUS**2) * (
-                #             np.cos(
-                #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-                #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                #             )
-                #             * (np.pi / INCLUSION_RADIUS**2 * (point[0] - INCLUSION_CENTER_X) ** 2)
-                #             + np.sin(
-                #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-                #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                #             )
-                #             + np.cos(
-                #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-                #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                #             )
-                #             * (np.pi / INCLUSION_RADIUS**2 * (point[1] - INCLUSION_CENTER_X) ** 2)
-                #             + np.sin(
-                #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-                #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                #             )
-                #         )
-                #     return result
-
                 print("Define heat source function...")
 
                 expression = [
-                    # TODO: Calculate Inclusion Integral properly
                     SingleLayerInclusionTerm(
                         Laplace2DKernel(),
                         inclusion_domain,
@@ -2296,6 +2236,43 @@ class Samples:
                 ]
 
                 problem = Problem(ProblemSolverType.BEM, expression, domain)
+                return problem
+
+            @staticmethod
+            def init_dirichlet_convex():
+                print("BEM for Dirichlet problem for Poisson equation in convex...")
+
+                print("Define boundary conditions...")
+
+                def analytical_solution(point: np.array):
+                    return 2 * (point[0] - 0.5) ** 2 + 2 * (point[1] - 0.5) ** 2
+
+                def boundary_value(point: np.array):
+                    return analytical_solution(point)
+
+                domain = PlainDomain2D(
+                    [
+                        path.Path([(-0.5, -1.0), (0.5, -1.0)]),
+                        path.Path([(0.5, -1.0), (0.5, 1.0)]),
+                        path.Path([(0.5, 1.0), (-0.5, 1.0)]),
+                        path.Path([(-0.5, 1.0), (-0.5, -1.0)]),
+                    ],
+                    [BoundaryConditionType.DIRICHLET] * 4,
+                    [boundary_value] * 4,
+                )
+
+                print("Define heat source function...")
+
+                def heat_source_function(point: np.array):
+                    return -8.0
+
+                expression = [
+                    DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
+                    SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
+                    SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
+                ]
+
+                problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
                 return problem
 
         class CoBEM:
@@ -2427,8 +2404,6 @@ class Samples:
 
                 print("Define boundary conditions...")
 
-                K_TISSUE = 0.19  # W/m/^C
-                K_MAX_TUMOR = 0.495  # W/m/^C
                 INCLUSION_SIZE = 0.2
                 INCLUSION_CENTER_X = 0.5
                 INCLUSION_CENTER_Y = 0.5
@@ -2472,63 +2447,6 @@ class Samples:
                         result[0] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[0]) / INCLUSION_RADIUS**2
                         result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_Y - point[1]) / INCLUSION_RADIUS**2
                     return result
-
-                # def thermal_conductivity(point: np.array):
-                #     result = K_TISSUE
-                #     if inclusion_domain.is_point_inside_domain(point):
-                #         result = (K_MAX_TUMOR - K_TISSUE) * np.cos(
-                #             (0.5 * np.pi / INCLUSION_RADIUS**2)
-                #             * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                #         ) + K_TISSUE
-                #     return result
-
-                # def thermal_conductivity_gradient(point: np.array):
-                #     result = np.array([0.0, 0.0])
-                #     if inclusion_domain.is_point_inside_domain(point):
-                #         result[0] = (
-                #             -(K_MAX_TUMOR - K_TISSUE)
-                #             * np.sin(
-                #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-                #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                #             )
-                #             * (np.pi / INCLUSION_RADIUS**2)
-                #             * (point[0] - INCLUSION_CENTER_X)
-                #         )
-                #         result[1] = (
-                #             -(K_MAX_TUMOR - K_TISSUE)
-                #             * np.sin(
-                #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-                #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                #             )
-                #             * (np.pi / INCLUSION_RADIUS**2)
-                #             * (point[1] - INCLUSION_CENTER_Y)
-                #         )
-                #     return result
-
-                # def thermal_conductivity_laplacian(point: np.array):
-                #     result = 0.0
-                #     if inclusion_domain.is_point_inside_domain(point):
-                #         result = ((K_TISSUE - K_MAX_TUMOR) * np.pi / INCLUSION_RADIUS**2) * (
-                #             np.cos(
-                #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-                #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                #             )
-                #             * (np.pi / INCLUSION_RADIUS**2 * (point[0] - INCLUSION_CENTER_X) ** 2)
-                #             + np.sin(
-                #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-                #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                #             )
-                #             + np.cos(
-                #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-                #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                #             )
-                #             * (np.pi / INCLUSION_RADIUS**2 * (point[1] - INCLUSION_CENTER_X) ** 2)
-                #             + np.sin(
-                #                 (0.5 * np.pi / INCLUSION_RADIUS**2)
-                #                 * ((point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2)
-                #             )
-                #         )
-                #     return result
 
                 print("Define heat source function...")
 
@@ -2758,6 +2676,11 @@ if "__main__" == __name__:
         problem = Samples.Laplace.BEM.init_dirichlet_convex()
     elif 16 == GlobalSettings.EXAMPLE_TYPE:
         problem = Samples.Laplace.CoBEM.init_dirichlet_convex()
+    elif 17 == GlobalSettings.EXAMPLE_TYPE:
+        problem = Samples.Poisson.BEM.init_dirichlet_convex()
+    elif 18 == GlobalSettings.EXAMPLE_TYPE:
+        pass
+        # problem = Samples.Poisson.CoBEM.init_dirichlet_convex()
 
     assert problem is not None
 
