@@ -1,4 +1,4 @@
-from bem_dirichlet_2d import Kernel, Integrator2D, HexagonalDomain2D, BoundaryConditionType, GlobalSettings
+from bem_dirichlet_2d import Kernel, Integrator2D, HexagonalDomain2D, BoundaryConditionType, GlobalSettings, KernelValueType
 import numpy as np
 
 FLOAT_VALUE_EPSILON = 0.001
@@ -60,48 +60,73 @@ def test_trapezoid_integration():
     SINGULARITY_POINTS = 6
     integrator = Integrator2D(IdentityKernel(), NOMINAL_POINTS, SINGULARITY_POINTS)
 
-    result = integrator.trapezoid(
+    result = integrator.convex_quadrilateral_of(
+        KernelValueType.SCALAR,
         identity_value,
         np.array([0.5, 0.5]),
         np.array([np.array([0.0, 0.0]), np.array([1.0, 0.0]), np.array([1.0, 2.0]), np.array([0.0, 1.0])]),
     )
     assert_floats_are_equal(1.5, result)
 
-    result = integrator.trapezoid(
+    result = integrator.convex_quadrilateral_of(
+        KernelValueType.SCALAR,
         identity_value,
         np.array([0.5, 0.5]),
         np.array([np.array([0.0, 0.0]), np.array([1.0, 0.0]), np.array([1.0, 1.0]), np.array([0.0, 2.0])]),
     )
     assert_floats_are_equal(1.5, result)
 
-    result = integrator.trapezoid(
+    result = integrator.convex_quadrilateral_of(
+        KernelValueType.SCALAR,
         identity_value,
         np.array([0.5, 0.5]),
         np.array([np.array([0.0, 0.0]), np.array([2.0, 0.0]), np.array([2.0, 2.0]), np.array([0.0, 4.0])]),
     )
     assert_floats_are_equal(6, result)
 
-    result = integrator.trapezoid(
+    result = integrator.convex_quadrilateral_of(
+        KernelValueType.SCALAR,
         identity_value,
         np.array([0.5, 0.5]),
         np.array([np.array([-3.0, 0.0]), np.array([3.0, 0.0]), np.array([3.0, 3.0]), np.array([0.0, 3.0])]),
     )
     assert_floats_are_equal(13.5, result)
 
-    result = integrator.trapezoid(
+    result = integrator.convex_quadrilateral_of(
+        KernelValueType.SCALAR,
         identity_value,
         np.array([0.5, 0.5]),
         np.array([np.array([0.0, 0.0]), np.array([3.0, 0.0]), np.array([2.0, 2.0]), np.array([0.0, 2.0])]),
     )
     assert_floats_are_equal(5.0, result)
 
-    result = integrator.trapezoid(
+    result = integrator.convex_quadrilateral_of(
+        KernelValueType.SCALAR,
         identity_value,
         np.array([0.5, 0.5]),
         np.array([np.array([0.0, 0.0]), np.array([3.0, 0.0]), np.array([2.0, 2.0]), np.array([1.0, 2.0])]),
     )
     assert_floats_are_equal(4.0, result)
 
+def test_parallelogram_integration():
+    NOMINAL_POINTS = 4
+    SINGULARITY_POINTS = 6
+    integrator = Integrator2D(IdentityKernel(), NOMINAL_POINTS, SINGULARITY_POINTS)
+
+    result = integrator.convex_quadrilateral_of(
+        KernelValueType.SCALAR,
+        identity_value,
+        np.array([0.5, 0.5]),
+        np.array([np.array([0.0, 0.0]), np.array([1.0, 0.0]), np.array([2.0, 1.0]), np.array([1.0, 1.0])]),
+    )
+
+    result = integrator.convex_quadrilateral_of(
+        KernelValueType.SCALAR,
+        identity_value,
+        np.array([0.5, 0.5]),
+        np.array([np.array([0.0, 0.0]), np.array([1.0, 0.0]), np.array([2.0, 2.0]), np.array([1.0, 2.0])]),
+    )
+    assert_floats_are_equal(2.0, result)
 
 def test_hexagonal_domain():
 
@@ -150,6 +175,7 @@ def main():
     test_segment_integration()
     test_square_integration()
     test_trapezoid_integration()
+    test_parallelogram_integration()
     test_hexagonal_domain()
     print("All tests have passed!")
 

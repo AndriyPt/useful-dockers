@@ -8,7 +8,8 @@ import numpy as np
 import scipy
 import csv
 import matplotlib.pyplot as plt
-from matplotlib import cm, path, patches
+from matplotlib import cm, path, patches, transforms
+from matplotlib.collections import PolyCollection
 
 
 class GlobalSettings(object):
@@ -16,15 +17,19 @@ class GlobalSettings(object):
     CHART_SKIP_BORDER_WIDTH = 0.0
     # TODO: Remove
     BORDER_ELEMENTS_COUNT = 10
+    # TODO: Remove
     INCLUSION_ELEMENTS_COUNT = 5
-    BORDER_ELEMENT_MAX_SIZE = 0.1
+    # TODO: Remove
+    COBORDER_DEPTH = 1.2
+    BORDER_ELEMENT_MAX_SIZE = 0.5
+    INCLUSION_ELEMENTS_MAX_SIZE = 0.5
+    COBORDER_SCALE = 2.0
     PLOT_ERROR = False
     PLOT_ISOLINES_COUNT = 10
     PLOT_ERROR_CONTOURS = False
     PLOT_DETAILS = False
     ERROR_TO_CSV = False
     ERROR_CSV_STEPS = 5
-    COBORDER_DEPTH = 1.2
     """
         1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
         5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM
@@ -32,7 +37,7 @@ class GlobalSettings(object):
         13 - Pennes Dirichlet Hexagon CoBEM, 14 - Laplace Dirichlet Hexagon CoBEM, 
         15 - Laplace Dirichlet Convex BEM, 16 - Laplace Dirichlet Convex CoBEM,
     """
-    EXAMPLE_TYPE = 15
+    EXAMPLE_TYPE = 13
 
 
 class ExpressionTerm:
@@ -139,6 +144,28 @@ class Utils:
     def is_point_within_trapezoid(point: np.array, mesh: np.array, eps: float):
         return Utils.is_point_within_square(point, mesh, eps)
 
+    # Calculate initial sign (expect all same sign for convex) based on cross product
+    # (x2-x1)*(py-y1) - (y2-y1)*(px-x1) gives Z-component of cross product
+    # Sign tells if point is left/right/on edge
+    @staticmethod
+    def is_point_within_convex_quadrilateral(point: np.array, vertices: np.array):
+        result = True
+        px, py = point
+        num_vertices = len(vertices)
+        p1 = vertices[0]
+        p2 = vertices[1]
+        initial_sign = np.sign((p2[0] - p1[0]) * (py - p1[1]) - (p2[1] - p1[1]) * (px - p1[0]))
+
+        for i in range(1, num_vertices):
+            p1 = vertices[i]
+            p2 = vertices[(i + 1) % num_vertices]
+            current_sign = np.sign((p2[0] - p1[0]) * (py - p1[1]) - (p2[1] - p1[1]) * (px - p1[0]))
+            # If signs differ (and not zero), point is outside
+            if current_sign != initial_sign and current_sign != 0:
+                result = False
+                break
+        return result
+
     @staticmethod
     def is_square_side(begin: np.array, end: np.array, mesh_item: np.array, eps: float):
         assert Constants.TWO_DIM == len(begin)
@@ -212,7 +239,7 @@ class Utils:
         plt.show()
 
     @staticmethod
-    def plot_contour(x_limits: np.array, y_limits: np.array, function, domain_path: path.Path = None):
+    def plot_contour(x_limits: np.array, y_limits: np.array, function, domain: Domain2D = None):
         assert Constants.TWO_DIM == len(x_limits)
         assert Constants.TWO_DIM == len(y_limits)
         assert function is not None
@@ -227,7 +254,7 @@ class Utils:
             for j in range(x_data.shape[1]):
                 simple_point = (x_data[i, j], y_data[i, j])
                 point = np.array(simple_point)
-                if domain_path is not None and domain_path.contains_point(simple_point) or domain_path is None:
+                if domain is not None and domain.contains_point(simple_point) or domain is None:
                     z_data[i, j] = function(point)
         cs = ax.contour(x_data, y_data, z_data, levels=GlobalSettings.PLOT_ISOLINES_COUNT)
         ax.clabel(cs, inline=True, fontsize=8)
@@ -238,16 +265,52 @@ class Utils:
     def plot_2d_domain(domain):
         assert domain is not None
         fig, ax = plt.subplots()
-        patch = patches.PathPatch(domain.get_matplot_path(), facecolor="lightblue", edgecolor="blue", lw=2)
+        patch = patches.PathPatch(domain.get_matplot_coborder(), facecolor="lightgreen", edgecolor="green", lw=2)
+        ax.add_patch(patch)
+        patch = patches.PathPatch(domain.get_matplot_border(), facecolor="lightblue", edgecolor="blue", lw=2)
         ax.add_patch(patch)
         ax.set_xlim(-5, 5)
         ax.set_ylim(-5, 5)
         plt.show()
 
     @staticmethod
+    def plot_2d_mesh(mesh: list):
+        assert mesh is not None
+        min_x = min(vertex[0] for quad in mesh for vertex in quad)
+        min_y = min(vertex[1] for quad in mesh for vertex in quad)
+        max_x = max(vertex[0] for quad in mesh for vertex in quad)
+        max_y = max(vertex[1] for quad in mesh for vertex in quad)
+        x_border = (max_x - min_x) * 0.5
+        y_border = (max_y - min_y) * 0.5
+        fig, ax = plt.subplots()
+        col = PolyCollection(mesh, closed=True, facecolors="none")
+        ax.add_collection(col)
+        ax.set_xlim(min_x - x_border, max_x + x_border)
+        ax.set_ylim(min_y - y_border, max_y + y_border)
+        plt.show()
+
+    @staticmethod
     def get_right_side_normal(begin: np.array, end: np.array):
         vector = Utils.get_normalized_vector(begin, end)
         result = np.array([vector[1], -1.0 * vector[0]])
+        return result
+
+    @staticmethod
+    def get_next_index(current: int, list: np.array):
+        assert list is not None
+        result = current + 1
+        if len(list) == result:
+            result = 0
+        return result
+
+    @staticmethod
+    def get_line_chunk_point(index: int, count: int, beginning: np.array, end: np.array):
+        assert count > 0
+        assert index >= 0 and index <= count
+        assert beginning is not None
+        assert end is not None
+
+        result = beginning + (end - beginning) * float(index) / float(count)
         return result
 
 
@@ -288,7 +351,8 @@ class Domain2D(Domain):
 
     def __init__(self, subdomains: list = []):
         super().__init__(subdomains)
-        self.__polygon = None
+        self.__border_polygon = None
+        self.__coborder_polygon = None
 
     @staticmethod
     def _process_points(border_elements: np.array, type: BoundaryConditionType, value_function: Callable):
@@ -323,11 +387,34 @@ class Domain2D(Domain):
 
     def _set_polygon(self, polygon: path.Path):
         assert polygon is not None
-        self.__polygon = polygon
+        self.__border_polygon = polygon
 
-    def get_matplot_path(self):
-        assert self.__polygon is not None
-        return self.__polygon
+    def _set_coborder_polygon(self, polygon: path.Path):
+        assert polygon is not None
+        self.__coborder_polygon = polygon
+
+    def get_matplot_border(self):
+        assert self.__border_polygon is not None
+        return self.__border_polygon
+
+    def get_matplot_coborder(self):
+        assert self.__coborder_polygon is not None
+        return self.__coborder_polygon
+
+    @staticmethod
+    def _get_unique_vertices(vertices):
+        assert vertices is not None
+        outcome = []
+        for index, item in enumerate(vertices):
+            if index < len(vertices) - 1:
+                next_item = np.array(vertices[index + 1])
+            else:
+                next_item = np.array(vertices[0])
+            current = np.array(item)
+            if not Utils.is_the_same_point(current, next_item, Domain2D.POINT_LOCATION_EPSILON):
+                outcome.append(current)
+        result = np.array(outcome)
+        return result
 
     def is_point_on_border(self, point: np.array):
         for border_point in self.get_border():
@@ -338,8 +425,8 @@ class Domain2D(Domain):
         return False
 
     def is_point_inside_domain(self, point: np.array):
-        assert self.__polygon is not None
-        return self.__polygon.contains_point(tuple(point))
+        assert self.__border_polygon is not None
+        return self.__border_polygon.contains_point(tuple(point))
 
     def is_corner_point(self, point: np.array):
         result = False
@@ -512,6 +599,7 @@ class SquareDomain2D(Domain2D):
         return result
 
 
+# TODO: Remove not used domain
 class HexagonalDomain2D(Domain2D):
     def __init__(
         self,
@@ -661,13 +749,6 @@ class HexagonalDomain2D(Domain2D):
     def get_edge_points(self):
         return self.__edge_points
 
-    def is_point_inside_domain(self, point: np.array):
-        # TODO: Add implementation using area measurement from each vertex to point
-        # it should be not larger than existing area
-        # result = Utils.is_point_within_convex_polygon(point, self.__edge_points , Domain2D.POINT_LOCATION_EPSILON)
-        # return result
-        raise NotImplementedError("Not implemented yet")
-
 
 class PlainDomain2D(Domain2D):
     POINT_LOCATION_EPSILON = 0.001
@@ -677,6 +758,7 @@ class PlainDomain2D(Domain2D):
         assert paths is not None
         assert len(paths) == len(conditions)
         assert len(paths) == len(functions)
+        self.__center = np.zeros(Constants.TWO_DIM)
         self.__border = []
         list = []
         for index, item in enumerate(paths):
@@ -686,11 +768,17 @@ class PlainDomain2D(Domain2D):
             steps = math.ceil(max_dist / GlobalSettings.BORDER_ELEMENT_MAX_SIZE)
             new_item = item.interpolated(steps)
             list.append(new_item)
-            points = self._process_points(new_item, conditions[index], functions[index])
+            points = self.__process_points(new_item, conditions[index], functions[index])
             self.__border = np.append(self.__border, points)
         self.__init_corner_points()
         item = path.Path.make_compound_path(*list)
         self._set_polygon(item)
+        # TODO:  Fix that center of mass should have coordinates (0, 0) for proper scaling
+        coboundary_scale = transforms.Affine2D().scale(GlobalSettings.COBORDER_SCALE)
+        coborder_item = item.transformed(coboundary_scale)
+        self._set_coborder_polygon(coborder_item)
+        self.__process_coborder_points()
+        self.__process_mesh()
 
     def __init_corner_points(self):
         assert len(self.__border) > 0, "Border points should be initialized"
@@ -703,11 +791,11 @@ class PlainDomain2D(Domain2D):
                 element.is_right_corner = True
 
     @staticmethod
-    def _process_points(path_element: path.Path, type: BoundaryConditionType, value_function: Callable):
+    def __process_points(path_element: path.Path, type: BoundaryConditionType, value_function: Callable):
         assert path_element is not None
         assert value_function is not None
         result = []
-        verts = path_element.vertices
+        verts = Domain2D._get_unique_vertices(path_element.vertices)
         for index in range(len(verts) - 1):
             item = Point2DInfo()
             item.point = (verts[index + 1] + verts[index]) / 2.0
@@ -726,14 +814,93 @@ class PlainDomain2D(Domain2D):
             result.append(item)
         return result
 
+    def __process_coborder_points(self):
+        assert self.__border is not None
+        self.__coborder = []
+        border_vertices = Domain2D._get_unique_vertices(self.get_matplot_border().vertices)
+        coborder_vertices = Domain2D._get_unique_vertices(self.get_matplot_coborder().vertices)
+        for index in range(len(self.__border)):
+            point_info = self.__border[index]
+            item = Point2DInfo()
+            item.point = point_info.point
+            item.type = point_info.type
+            item.normal = point_info.normal
+            item.value = point_info.value
+            item.robin_coeff = point_info.robin_coeff
+
+            next_index = index + 1
+            if next_index == len(self.__border):
+                next_index = 0
+
+            elements = []
+            elements.append(coborder_vertices[index])
+            elements.append(coborder_vertices[next_index])
+            elements.append(border_vertices[next_index])
+            elements.append(border_vertices[index])
+            item.element = elements
+            self.__coborder.append(item)
+
+        self.__coborder = np.array(self.__coborder)
+
+    # TODO: Implement for non-convex polygons
+    def __process_mesh(self):
+        assert self.__border is not None
+        assert self.__center is not None
+        self.__mesh = []
+        for point in self.__border:
+            mesh = PlainDomain2D.__quadragulate_triangle(point.element[0], self.__center, point.element[1])
+            self.__mesh.extend(mesh)
+        Utils.plot_2d_mesh(self.__mesh)
+        self.__mesh = np.array(self.__mesh)
+
+    @staticmethod
+    def __quadragulate_triangle(vertex1: np.array, vertex2: np.array, vertex3: np.array):
+        result = []
+        left_side_len = Utils.distance(vertex1, vertex2)
+        right_side_len = Utils.distance(vertex3, vertex2)
+        slices_count = math.ceil(max(left_side_len, right_side_len) / GlobalSettings.INCLUSION_ELEMENTS_MAX_SIZE)
+        for slice_index in range(slices_count - 1):
+            bottom_line_left = Utils.get_line_chunk_point(slice_index, slices_count, vertex1, vertex2)
+            bottom_line_right = Utils.get_line_chunk_point(slice_index, slices_count, vertex3, vertex2)
+            top_line_left = Utils.get_line_chunk_point(slice_index + 1, slices_count, vertex1, vertex2)
+            top_line_right = Utils.get_line_chunk_point(slice_index + 1, slices_count, vertex3, vertex2)
+            bottom_side_len = Utils.distance(bottom_line_left, bottom_line_right)
+            chunks_count = math.ceil(bottom_side_len / GlobalSettings.INCLUSION_ELEMENTS_MAX_SIZE)
+            for chunk_index in range(chunks_count):
+                quadrilateral = [
+                    Utils.get_line_chunk_point(chunk_index, chunks_count, bottom_line_left, bottom_line_right),
+                    Utils.get_line_chunk_point(chunk_index + 1, chunks_count, bottom_line_left, bottom_line_right),
+                    Utils.get_line_chunk_point(chunk_index + 1, chunks_count, top_line_left, top_line_right),
+                    Utils.get_line_chunk_point(chunk_index, chunks_count, top_line_left, top_line_right),
+                ]
+                result.append(quadrilateral)
+
+        # Process small triangle on top by splitting it using middle lines
+        # finding point inside inner middle line based triangle and
+        # joining middle point with vertices and medians
+        vertex_left = Utils.get_line_chunk_point(slices_count - 1, slices_count, vertex1, vertex2)
+        vertex_right = Utils.get_line_chunk_point(slices_count - 1, slices_count, vertex3, vertex2)
+        mid_left_point = (vertex_left + vertex2) * 0.5
+        mid_right_point = (vertex_right + vertex2) * 0.5
+        mid_bottom_point = (vertex_left + vertex_right) * 0.5
+
+        mid_mid_point_top = (mid_left_point + mid_right_point) * 0.5
+        bulls_eye_point = (mid_bottom_point + mid_mid_point_top) * 0.5
+
+        result.append([bulls_eye_point, mid_right_point, vertex2, mid_left_point])
+        result.append([bulls_eye_point, mid_left_point, vertex_left, mid_bottom_point])
+        result.append([bulls_eye_point, mid_bottom_point, vertex_right, mid_right_point])
+
+        return result
+
     def get_border(self):
         return self.__border
 
     def get_mesh(self):
-        raise NotImplementedError("Call to abstract method")
+        return self.__mesh
 
     def get_coborder(self):
-        raise NotImplementedError("Call to abstract method")
+        return self.__coborder
 
 
 class KernelValueType(Enum):
@@ -1079,6 +1246,42 @@ class Integrator2D(Integrator):
                 result += weight * np.dot(self.kernel.value_of(type, point, real_node), function(real_node)) * jacobian
             else:
                 result += weight * self.kernel.value_of(type, point, real_node) * function(real_node) * jacobian
+        return result
+
+    def convex_quadrilateral_of(self, type: KernelValueType, function: Callable, point: np.array, vertices: np.array):
+        assert Constants.PLANE_SQUARE_DIM == len(vertices)
+        result = 0.0
+        unit_square = np.array(
+            [np.array([-1.0, -1.0]), np.array([1.0, -1.0]), np.array([1.0, 1.0]), np.array([-1.0, 1.0])]
+        )
+        matrix = None
+        right_side = np.empty(0)
+        for unit, actual in zip(unit_square, vertices):
+            matrix_row = np.array([1.0, unit[0], unit[1], unit[0] * unit[1], 0.0, 0.0, 0.0, 0.0])
+            if matrix is None:
+                matrix = matrix_row
+            else:
+                matrix = np.vstack((matrix, matrix_row))
+            matrix_row = np.array([0.0, 0.0, 0.0, 0.0, 1.0, unit[0], unit[1], unit[0] * unit[1]])
+            matrix = np.vstack((matrix, matrix_row))
+            right_side = np.append(right_side, [actual[0], actual[1]])
+        coeff = np.linalg.solve(matrix, right_side)
+        a, b, c, d, e, f = (coeff[1], coeff[2], coeff[3], coeff[5], coeff[6], coeff[7])
+        const_x, const_y = (coeff[0], coeff[4])
+
+        interpolation_order = self.__nominal_number_of_points
+        if Utils.is_point_within_convex_quadrilateral(point, vertices):
+            interpolation_order = self.__singular_number_of_points
+        nodes, weights = np.polynomial.legendre.leggauss(interpolation_order)
+
+        for x1, wx in zip(nodes, weights):
+            for y1, wy in zip(nodes, weights):
+                node = np.array([const_x + a * x1 + b * y1 + c * x1 * y1, const_y + d * x1 + e * y1 + f * x1 * y1])
+                jacobian = (a * e - b * d) + (a * f - c * d) * x1 + (c * e - b * f) * y1
+                if type in [KernelValueType.GRADIENT, KernelValueType.GRADIENT_DX, KernelValueType.GRADIENT_DY]:
+                    result += wx * wy * np.dot(self.kernel.value_of(type, point, node), function(node)) * jacobian
+                else:
+                    result += wx * wy * self.kernel.value_of(type, point, node) * function(node) * jacobian
         return result
 
 
@@ -1687,7 +1890,7 @@ class Problem(object):
             functions = []
             for index in range(0, len(self.__expression)):
                 functions.append(lambda point, _index=index: self.__expression[_index].value(point))
-            Utils.plot([x_min, x_max], [y_min, y_max], functions, self.__domain.get_matplot_path())
+            Utils.plot([x_min, x_max], [y_min, y_max], functions, self.__domain)
         else:
             if GlobalSettings.PLOT_ERROR and self.__analytical_solution is not None:
                 if GlobalSettings.PLOT_ERROR_CONTOURS:
@@ -1695,14 +1898,14 @@ class Problem(object):
                         [x_min, x_max],
                         [y_min, y_max],
                         lambda point: np.abs(self.solution_value(point) - self.__analytical_solution(point)),
-                        self.__domain.get_matplot_path(),
+                        self.__domain,
                     )
                 else:
                     Utils.plot(
                         [x_min, x_max],
                         [y_min, y_max],
                         [lambda point: np.abs(self.solution_value(point) - self.__analytical_solution(point))],
-                        self.__domain.get_matplot_path(),
+                        self.__domain,
                     )
                 if GlobalSettings.ERROR_TO_CSV:
                     x_values = np.linspace(x_min, x_max, num=GlobalSettings.ERROR_CSV_STEPS)
@@ -1736,7 +1939,7 @@ class Problem(object):
                         [x_min, x_max],
                         [y_min, y_max],
                         self.solution_value,
-                        self.__domain.get_matplot_path(),
+                        self.__domain,
                     )
                 else:
                     Utils.plot([x_min, x_max], [y_min, y_max], [self.solution_value], self.__domain)
@@ -2498,20 +2701,20 @@ class Samples:
 
                 print("Define boundary conditions...")
 
-                def analytical_solution(point: np.array):
-                    return np.sinh(0.5 * point[1])
+    def analytical_solution(point: np.array):
+        return np.sinh(0.5 * (point[1] + 1))
 
                 def dirichlet_boundary_value(point: np.array):
                     return analytical_solution(point)
 
-                domain = HexagonalDomain2D(
-                    np.array([1.0, 0.0]),
-                    np.array([5.0, 2.0]),
-                    6.0,
-                    [BoundaryConditionType.DIRICHLET] * 6,
-                    [dirichlet_boundary_value] * 6,
-                    GlobalSettings.BORDER_ELEMENTS_COUNT,
-                )
+    domain = PlainDomain2D(
+        [
+            path.Path([(-3.0, 0.0), (-2.0, -1.0), (2.0, -1.0), (3.0, 0.0), (2.0, 1.0), (-2.0, 1.0)]),
+            path.Path([(-2.0, 1.0), (-3.0, 0.0)]),
+        ],
+        [BoundaryConditionType.DIRICHLET] * 2,
+        [dirichlet_boundary_value] * 2,
+    )
 
                 expression = [
                     SingleLayerCoBEMTerm(Pennes2DKernel(K_SQUARE_CONSTANT), domain, 1),
@@ -2519,6 +2722,95 @@ class Samples:
 
                 problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
                 return problem
+
+
+def init_laplace_dirichlet_hexagon_cobem():
+    print("CoBEM for Dirichlet problem for Laplace equation in hexagon...")
+
+    print("Define boundary conditions...")
+
+    def analytical_solution(point: np.array):
+        return (point[0] + 2) * (point[0] + 2) - (point[1] + 1) * (point[1] + 1)
+
+    def dirichlet_boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    domain = PlainDomain2D(
+        [
+            path.Path([(-2.0, 0.0), (-1.0, -1.0), (1.0, -1.0), (2.0, 0.0), (1.0, 1.0), (-1.0, 1.0)]),
+            path.Path([(-1.0, 1.0), (-2.0, 0.0)]),
+        ],
+        [BoundaryConditionType.DIRICHLET] * 2,
+        [dirichlet_boundary_value] * 2,
+    )
+
+    expression = [
+        SingleLayerCoBEMTerm(Laplace2DKernel(), domain, 1),
+    ]
+
+    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+    return problem
+
+
+def init_laplace_dirichlet_convex_bem():
+    print("BEM for Dirichlet problem for Laplace equation in convex shape...")
+
+    print("Define boundary conditions...")
+
+    def analytical_solution(point: np.array):
+        return point[0] * point[0] - point[1] * point[1]
+
+    def dirichlet_boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    domain = PlainDomain2D(
+        [
+            path.Path([(-0.5, -1.0), (0.5, -1.0)]),
+            path.Path([(0.5, -1.0), (0.5, 1.0)]),
+            path.Path([(0.5, 1.0), (-0.5, 1.0)]),
+            path.Path([(-0.5, 1.0), (-0.5, -1.0)]),
+        ],
+        [BoundaryConditionType.DIRICHLET] * 4,
+        [dirichlet_boundary_value] * 4,
+    )
+
+    expression = [
+        DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
+        SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
+    ]
+
+    problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
+    return problem
+
+
+def init_laplace_dirichlet_convex_cobem():
+    print("CoBEM for Dirichlet problem for Laplace equation in convex shape...")
+
+    print("Define boundary conditions...")
+
+    def analytical_solution(point: np.array):
+        return point[0] * point[0] - point[1] * point[1]
+
+    def dirichlet_boundary_value(point: np.array):
+        return analytical_solution(point)
+
+    domain = PlainDomain2D(
+        [
+            path.Path([(-0.5, -1.0), (0.5, -1.0)]),
+            path.Path([(0.5, -1.0), (0.5, 1.0)]),
+            path.Path([(0.5, 1.0), (-0.5, 1.0)]),
+            path.Path([(-0.5, 1.0), (-0.5, -1.0)]),
+        ],
+        [BoundaryConditionType.DIRICHLET] * 4,
+        [dirichlet_boundary_value] * 4,
+    )
+
+    expression = [
+        SingleLayerCoBEMTerm(Laplace2DKernel(), domain, 1),
+    ]
+
+    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+    return problem
 
 
 if "__main__" == __name__:
