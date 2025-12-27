@@ -850,7 +850,13 @@ class PlainDomain2D(Domain2D):
         self.__mesh = []
         for point in self.__border:
             mesh = PlainDomain2D.__quadragulate_triangle(point.element[0], self.__center, point.element[1])
-            self.__mesh.extend(mesh)
+            for quad in mesh:
+                point_info = Point2DInfo()
+                point_info.point = 0.5 * (quad[0] + quad[2])
+                point_info.type = BoundaryConditionType.INCLUSION
+                point_info.value = 0.0
+                point_info.element = np.array(quad)
+                self.__mesh.append(point_info)
         self.__mesh = np.array(self.__mesh)
 
     @staticmethod
@@ -1557,7 +1563,7 @@ class SingleLayerVolumeTerm(ExpressionTerm):
         assert point is not None
         result = 0.0
         for point_info in self.domain.get_mesh():
-            result += self.__integrator.square_of(type, self.__value_function, point, point_info.element)
+            result += self.__integrator.convex_quadrilateral_of(type, self.__value_function, point, point_info.element)
         result *= self.sign
         return result
 
@@ -1594,7 +1600,7 @@ class SingleLayerVolumeCoBEMTerm(SingleLayerVolumeTerm):
             return result
 
         for point_info in self.domain.get_mesh():
-            result += self._get_integrator().square_of(type, normal_function, point, point_info.element)
+            result += self._get_integrator().convex_quadrilateral_of(type, normal_function, point, point_info.element)
         result *= self.sign
         return result
 
