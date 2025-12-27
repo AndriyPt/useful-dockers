@@ -1966,10 +1966,10 @@ class Samples:
 
                 domain = PlainDomain2D(
                     [
-                        path.Path([(1.0, 0.0), (2.0, 0.0)]),
-                        path.Path([(2.0, 0.0), (2.0, 2.0)]),
-                        path.Path([(2.0, 2.0), (1.0, 2.0)]),
-                        path.Path([(1.0, 2.0), (1.0, 0.0)]),
+                        path.Path([(-0.5, -1.0), (0.5, -1.0)]),
+                        path.Path([(0.5, -1.0), (0.5, 1.0)]),
+                        path.Path([(0.5, 1.0), (-0.5, 1.0)]),
+                        path.Path([(-0.5, 1.0), (-0.5, -1.0)]),
                     ],
                     [BoundaryConditionType.DIRICHLET] * 4,
                     [dirichlet_boundary_value] * 4,
@@ -1992,18 +1992,18 @@ class Samples:
                 print("Define boundary conditions...")
 
                 def analytical_solution(point: np.array):
-                    return point[0] * point[0] - point[1] * point[1]
+                    return (point[0] + 2) * (point[0] + 2) - (point[1] + 1) * (point[1] + 1)
 
                 def dirichlet_boundary_value(point: np.array):
                     return analytical_solution(point)
 
-                domain = HexagonalDomain2D(
-                    np.array([1.0, 0.0]),
-                    np.array([3.0, 2.0]),
-                    4.0,
-                    [BoundaryConditionType.DIRICHLET] * 6,
-                    [dirichlet_boundary_value] * 6,
-                    GlobalSettings.BORDER_ELEMENTS_COUNT,
+                domain = PlainDomain2D(
+                    [
+                        path.Path([(-2.0, 0.0), (-1.0, -1.0), (1.0, -1.0), (2.0, 0.0), (1.0, 1.0), (-1.0, 1.0)]),
+                        path.Path([(-1.0, 1.0), (-2.0, 0.0)]),
+                    ],
+                    [BoundaryConditionType.DIRICHLET] * 2,
+                    [dirichlet_boundary_value] * 2,
                 )
 
                 expression = [
@@ -2027,10 +2027,10 @@ class Samples:
 
                 domain = PlainDomain2D(
                     [
-                        path.Path([(1.0, 0.0), (2.0, 0.0)]),
-                        path.Path([(2.0, 0.0), (2.0, 2.0)]),
-                        path.Path([(2.0, 2.0), (1.0, 2.0)]),
-                        path.Path([(1.0, 2.0), (1.0, 0.0)]),
+                        path.Path([(-0.5, -1.0), (0.5, -1.0)]),
+                        path.Path([(0.5, -1.0), (0.5, 1.0)]),
+                        path.Path([(0.5, 1.0), (-0.5, 1.0)]),
+                        path.Path([(-0.5, 1.0), (-0.5, -1.0)]),
                     ],
                     [BoundaryConditionType.DIRICHLET] * 4,
                     [dirichlet_boundary_value] * 4,
@@ -2701,20 +2701,20 @@ class Samples:
 
                 print("Define boundary conditions...")
 
-    def analytical_solution(point: np.array):
-        return np.sinh(0.5 * (point[1] + 1))
+                def analytical_solution(point: np.array):
+                    return np.sinh(0.5 * (point[1] + 1))
 
                 def dirichlet_boundary_value(point: np.array):
                     return analytical_solution(point)
 
-    domain = PlainDomain2D(
-        [
-            path.Path([(-3.0, 0.0), (-2.0, -1.0), (2.0, -1.0), (3.0, 0.0), (2.0, 1.0), (-2.0, 1.0)]),
-            path.Path([(-2.0, 1.0), (-3.0, 0.0)]),
-        ],
-        [BoundaryConditionType.DIRICHLET] * 2,
-        [dirichlet_boundary_value] * 2,
-    )
+                domain = PlainDomain2D(
+                    [
+                        path.Path([(-3.0, 0.0), (-2.0, -1.0), (2.0, -1.0), (3.0, 0.0), (2.0, 1.0), (-2.0, 1.0)]),
+                        path.Path([(-2.0, 1.0), (-3.0, 0.0)]),
+                    ],
+                    [BoundaryConditionType.DIRICHLET] * 2,
+                    [dirichlet_boundary_value] * 2,
+                )
 
                 expression = [
                     SingleLayerCoBEMTerm(Pennes2DKernel(K_SQUARE_CONSTANT), domain, 1),
@@ -2722,95 +2722,6 @@ class Samples:
 
                 problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
                 return problem
-
-
-def init_laplace_dirichlet_hexagon_cobem():
-    print("CoBEM for Dirichlet problem for Laplace equation in hexagon...")
-
-    print("Define boundary conditions...")
-
-    def analytical_solution(point: np.array):
-        return (point[0] + 2) * (point[0] + 2) - (point[1] + 1) * (point[1] + 1)
-
-    def dirichlet_boundary_value(point: np.array):
-        return analytical_solution(point)
-
-    domain = PlainDomain2D(
-        [
-            path.Path([(-2.0, 0.0), (-1.0, -1.0), (1.0, -1.0), (2.0, 0.0), (1.0, 1.0), (-1.0, 1.0)]),
-            path.Path([(-1.0, 1.0), (-2.0, 0.0)]),
-        ],
-        [BoundaryConditionType.DIRICHLET] * 2,
-        [dirichlet_boundary_value] * 2,
-    )
-
-    expression = [
-        SingleLayerCoBEMTerm(Laplace2DKernel(), domain, 1),
-    ]
-
-    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
-    return problem
-
-
-def init_laplace_dirichlet_convex_bem():
-    print("BEM for Dirichlet problem for Laplace equation in convex shape...")
-
-    print("Define boundary conditions...")
-
-    def analytical_solution(point: np.array):
-        return point[0] * point[0] - point[1] * point[1]
-
-    def dirichlet_boundary_value(point: np.array):
-        return analytical_solution(point)
-
-    domain = PlainDomain2D(
-        [
-            path.Path([(-0.5, -1.0), (0.5, -1.0)]),
-            path.Path([(0.5, -1.0), (0.5, 1.0)]),
-            path.Path([(0.5, 1.0), (-0.5, 1.0)]),
-            path.Path([(-0.5, 1.0), (-0.5, -1.0)]),
-        ],
-        [BoundaryConditionType.DIRICHLET] * 4,
-        [dirichlet_boundary_value] * 4,
-    )
-
-    expression = [
-        DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
-        SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
-    ]
-
-    problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
-    return problem
-
-
-def init_laplace_dirichlet_convex_cobem():
-    print("CoBEM for Dirichlet problem for Laplace equation in convex shape...")
-
-    print("Define boundary conditions...")
-
-    def analytical_solution(point: np.array):
-        return point[0] * point[0] - point[1] * point[1]
-
-    def dirichlet_boundary_value(point: np.array):
-        return analytical_solution(point)
-
-    domain = PlainDomain2D(
-        [
-            path.Path([(-0.5, -1.0), (0.5, -1.0)]),
-            path.Path([(0.5, -1.0), (0.5, 1.0)]),
-            path.Path([(0.5, 1.0), (-0.5, 1.0)]),
-            path.Path([(-0.5, 1.0), (-0.5, -1.0)]),
-        ],
-        [BoundaryConditionType.DIRICHLET] * 4,
-        [dirichlet_boundary_value] * 4,
-    )
-
-    expression = [
-        SingleLayerCoBEMTerm(Laplace2DKernel(), domain, 1),
-    ]
-
-    problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
-    return problem
 
 
 if "__main__" == __name__:
