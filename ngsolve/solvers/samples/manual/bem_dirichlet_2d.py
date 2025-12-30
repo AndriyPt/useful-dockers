@@ -10,6 +10,7 @@ import csv
 import matplotlib.pyplot as plt
 from matplotlib import cm, path, patches, transforms
 from matplotlib.collections import PolyCollection
+import meshio
 
 
 class GlobalSettings(object):
@@ -395,6 +396,19 @@ class Domain2D(Domain):
         assert polygon is not None
         self.__border_polygon = polygon
 
+    def _init_coborder_polygon(self, center: np.array):
+        assert center is not None
+        assert Constants.TWO_DIM == len(center)
+        assert self.__border_polygon is not None
+        center_transform = transforms.Affine2D().translate(-center[0], -center[1])
+        coboundary_scale = transforms.Affine2D().scale(GlobalSettings.COBORDER_SCALE)
+        coborder_item = (
+            self.__border_polygon.transformed(center_transform)
+            .transformed(coboundary_scale)
+            .transformed(center_transform.inverted())
+        )
+        self._set_coborder_polygon(coborder_item)
+
     def _set_coborder_polygon(self, polygon: path.Path):
         assert polygon is not None
         self.__coborder_polygon = polygon
@@ -755,10 +769,92 @@ class HexagonalDomain2D(Domain2D):
     def get_edge_points(self):
         return self.__edge_points
 
+
 # GUI usage tutorial
 # https://www.youtube.com/watch?v=kk5DHIZa21k&list=PLLaFJ14_gbrM9nlZfYcuXF40QxZb-ygfY
 class GmshDomain2D(Domain2D):
-    pass
+    POINT_LOCATION_EPSILON = 0.001
+    GMSH_CELL_TYPE_LINE = "line"
+
+    def __init__(self, filename: str, conditions: dict, center: np.array = None, subdomains: list = []):
+        super().__init__(subdomains)
+        assert filename is not None
+        assert conditions is not None
+        assert center is None or Constants.TWO_DIM == len(center)
+        self.__border = []
+        if center is None:
+            self.__center = np.zeros(Constants.TWO_DIM)
+        else:
+            self.__center = center
+        mesh = meshio.read(filename)
+        self.__init_border(conditions, mesh)
+        self._init_coborder_polygon(self.__center)
+        self.__process_coborder_points()
+        self.__process_mesh()
+
+    def __init_border(self, conditions, mesh):
+        polygon = []
+        # TODO: Implement ordered list of border points
+        for physical_name, (condition, value_function) in conditions.items():
+            assert physical_name in mesh.field_data, f"Physical group '{physical_name}' not found in mesh."
+            physical_tag, physical_dim = mesh.field_data[physical_name]
+            for cell_block, phys_tags in zip(mesh.cells, mesh.cell_data.get("gmsh:physical", [])):
+                if cell_block.dim != physical_dim or cell_block.type != GmshDomain2D.GMSH_CELL_TYPE_LINE:
+                    continue
+                mask = phys_tags == physical_tag
+                selected = cell_block.data[mask]
+                for item in selected:
+                    start_point = np.resize(mesh.points[item[0]], (Constants.TWO_DIM,))
+                    end_point = np.resize(mesh.points[item[1]], (Constants.TWO_DIM,))
+                    if 0 == len(polygon):
+                        polygon.append(start_point)
+                    polygon.append(end_point)
+                    self.__border = np.append(
+                        self.__border, Domain2D._process_points([start_point, end_point], condition, value_function)
+                    )
+        self.__init_corner_points()
+        self._init_polygon(polygon)
+
+    # TODO: Remove duplicate from PlainDomain2D
+    def __init_corner_points(self):
+        assert len(self.__border) > 0, "Border points should be initialized"
+        for index, element in enumerate(self.__border):
+            if index < len(self.__border) - 1:
+                next_element = self.__border[index + 1]
+            else:
+                next_element = self.__border[0]
+            if not Utils.is_the_same_vector(element.normal, next_element.normal, PlainDomain2D.POINT_LOCATION_EPSILON):
+                element.is_right_corner = True
+
+    # TODO: Remove duplicate from PlainDomain2D
+    def __process_coborder_points(self):
+        assert self.__border is not None
+        self.__coborder = []
+        border_vertices = Domain2D._get_unique_vertices(self.get_matplot_border().vertices)
+        coborder_vertices = Domain2D._get_unique_vertices(self.get_matplot_coborder().vertices)
+        for index in range(len(self.__border)):
+            point_info = self.__border[index]
+            item = Point2DInfo()
+            item.point = point_info.point
+            item.type = point_info.type
+            item.normal = point_info.normal
+            item.value = point_info.value
+            item.robin_coeff = point_info.robin_coeff
+
+            next_index = index + 1
+            if next_index == len(self.__border):
+                next_index = 0
+
+            elements = []
+            elements.append(coborder_vertices[index])
+            elements.append(coborder_vertices[next_index])
+            elements.append(border_vertices[next_index])
+            elements.append(border_vertices[index])
+            item.element = elements
+            self.__coborder.append(item)
+
+        self.__coborder = np.array(self.__coborder)
+
 
 class PlainDomain2D(Domain2D):
     POINT_LOCATION_EPSILON = 0.001
@@ -789,12 +885,7 @@ class PlainDomain2D(Domain2D):
         self.__init_corner_points()
         item = path.Path.make_compound_path(*list)
         self._set_polygon(item)
-        center_transform = transforms.Affine2D().translate(-self.__center[0], -self.__center[1])
-        coboundary_scale = transforms.Affine2D().scale(GlobalSettings.COBORDER_SCALE)
-        coborder_item = (
-            item.transformed(center_transform).transformed(coboundary_scale).transformed(center_transform.inverted())
-        )
-        self._set_coborder_polygon(coborder_item)
+        self._init_coborder_polygon(self.__center)
         self.__process_coborder_points()
         self.__process_mesh()
 
@@ -2088,11 +2179,9 @@ class Samples:
                 def boundary_value(point: np.array):
                     return 2.0 * point[1]
 
-                inclusion_domain = PlainDomain2D(
-                    [path.Path.circle(center=(INCLUSION_CENTER_X, INCLUSION_CENTER_Y), radius=INCLUSION_RADIUS)],
-                    [BoundaryConditionType.INCLUSION],
-                    [Utils.constant_one()],
-                    INCLUSION_CENTER_POINT,
+                inclusion_domain = GmshDomain2D(
+                    "/home/user/workspace/project/ngsolve/solvers/samples/manual/round2.msh",
+                    {"inclusion": (BoundaryConditionType.INCLUSION, Utils.constant_one())},
                 )
 
                 Utils.plot_2d_domain(inclusion_domain)
@@ -2107,7 +2196,6 @@ class Samples:
                     np.array([0.5, 0.5]),
                     [inclusion_domain],
                 )
-
 
                 def thermal_conductivity(point: np.array):
                     result = K_MIN
