@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm, path, patches, transforms
 from matplotlib.collections import PolyCollection
 import meshio
+from pathlib import Path
 
 
 class GlobalSettings(object):
@@ -277,8 +278,9 @@ class Utils:
         plt.show()
 
     @staticmethod
-    def plot_2d_mesh(mesh: list):
-        assert mesh is not None
+    def plot_2d_mesh(mesh_info: list):
+        assert mesh_info is not None
+        mesh = [point_info.element for point_info in mesh_info]
         min_x = min(vertex[0] for quad in mesh for vertex in quad)
         min_y = min(vertex[1] for quad in mesh for vertex in quad)
         max_x = max(vertex[0] for quad in mesh for vertex in quad)
@@ -317,8 +319,26 @@ class Utils:
         return result
 
     @staticmethod
-    def interpolate_circle_to_path(center: np.array, radius: float):
-        pass
+    def order_quad_ccw(points: list):
+        pts = np.asarray(points, dtype=float)
+        assert pts.shape == (Constants.PLANE_SQUARE_DIM, Constants.TWO_DIM), f"Actual shape '{pts.shape}'."
+
+        # Compute centroid
+        cx, cy = pts.mean(axis=0)
+
+        # Compute angle of each point around centroid
+        angles = np.arctan2(pts[:, 1] - cy, pts[:, 0] - cx)
+
+        # Sort points by angle (anticlockwise)
+        order = np.argsort(angles)
+
+        return pts[order]
+
+    @staticmethod
+    def get_file_in_current_directory(relative_path: str):
+        assert path is not None
+        module_dir = Path(__file__).resolve().parent
+        return (module_dir / relative_path).resolve()
 
 
 class Domain:
@@ -775,6 +795,7 @@ class HexagonalDomain2D(Domain2D):
 class GmshDomain2D(Domain2D):
     POINT_LOCATION_EPSILON = 0.001
     GMSH_CELL_TYPE_LINE = "line"
+    GMSH_CELL_TYPE_QUAD = "quad"
 
     def __init__(self, filename: str, conditions: dict, center: np.array = None, subdomains: list = []):
         super().__init__(subdomains)
@@ -782,6 +803,9 @@ class GmshDomain2D(Domain2D):
         assert conditions is not None
         assert center is None or Constants.TWO_DIM == len(center)
         self.__border = []
+        self.__coborder = []
+        self.__mesh = []
+
         if center is None:
             self.__center = np.zeros(Constants.TWO_DIM)
         else:
@@ -790,7 +814,7 @@ class GmshDomain2D(Domain2D):
         self.__init_border(conditions, mesh)
         self._init_coborder_polygon(self.__center)
         self.__process_coborder_points()
-        self.__process_mesh()
+        self.__process_mesh(mesh)
 
     def __init_border(self, conditions, mesh):
         polygon = []
@@ -829,7 +853,6 @@ class GmshDomain2D(Domain2D):
     # TODO: Remove duplicate from PlainDomain2D
     def __process_coborder_points(self):
         assert self.__border is not None
-        self.__coborder = []
         border_vertices = Domain2D._get_unique_vertices(self.get_matplot_border().vertices)
         coborder_vertices = Domain2D._get_unique_vertices(self.get_matplot_coborder().vertices)
         for index in range(len(self.__border)):
@@ -854,6 +877,33 @@ class GmshDomain2D(Domain2D):
             self.__coborder.append(item)
 
         self.__coborder = np.array(self.__coborder)
+
+    def __process_mesh(self, mesh):
+        assert mesh is not None
+        for cell_block in mesh.cells:
+            if GmshDomain2D.GMSH_CELL_TYPE_QUAD == cell_block.type:
+                for cell in cell_block.data:
+                    quad = []
+                    for index in cell:
+                        quad_vertex = np.resize(mesh.points[index], (Constants.TWO_DIM,))
+                        quad.append(quad_vertex)
+                    quad = Utils.order_quad_ccw(quad)
+                    point_info = Point2DInfo()
+                    point_info.point = 0.5 * (quad[0] + quad[2])
+                    point_info.type = BoundaryConditionType.INCLUSION
+                    point_info.value = 0.0
+                    point_info.element = quad
+                    self.__mesh.append(point_info)
+        self.__mesh = np.array(self.__mesh)
+
+    def get_border(self):
+        return self.__border
+
+    def get_mesh(self):
+        return self.__mesh
+
+    def get_coborder(self):
+        return self.__coborder
 
 
 class PlainDomain2D(Domain2D):
@@ -2164,7 +2214,7 @@ class Samples:
 
             @staticmethod
             def init_dirichlet_single_inclusion_circle_in_square():
-                print("BEM for Dirichlet problem for Poisson equation with single circukar inclusion...")
+                print("BEM for Dirichlet problem for Laplace equation with single circular inclusion...")
 
                 print("Define boundary conditions...")
 
@@ -2180,12 +2230,10 @@ class Samples:
                     return 2.0 * point[1]
 
                 inclusion_domain = GmshDomain2D(
-                    "/home/user/workspace/project/ngsolve/solvers/samples/manual/round2.msh",
+                    Utils.get_file_in_current_directory("round2.msh"),
                     {"inclusion": (BoundaryConditionType.INCLUSION, Utils.constant_one())},
+                    INCLUSION_CENTER_POINT,
                 )
-
-                Utils.plot_2d_domain(inclusion_domain)
-                # Utils.plot_2d_mesh(inclusion_domain.get_mesh())
 
                 domain = PlainDomain2D(
                     [

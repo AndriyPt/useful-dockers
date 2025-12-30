@@ -15,3 +15,5 @@ Curve Loop(1) = {2, 1};
 Plane Surface(1) = {1};
 //+
 Physical Curve("inclusion", 3) = {1, 2};
+//+
+Physical Surface("inclusion_domain", 4) = {1};
