@@ -37,8 +37,9 @@ class GlobalSettings(object):
         13 - Pennes Dirichlet Hexagon CoBEM, 14 - Laplace Dirichlet Hexagon CoBEM, 
         15 - Laplace Dirichlet Convex BEM, 16 - Laplace Dirichlet Convex CoBEM,
         17 - Poisson Dirichlet Convex BEM, 18 - Poisson Dirichlet Convex CoBEM,
+        19 - Laplace Dirichlet Single Inclusion Circular Convex BEM
     """
-    EXAMPLE_TYPE = 17
+    EXAMPLE_TYPE = 19
 
 
 class ExpressionTerm:
@@ -313,6 +314,10 @@ class Utils:
 
         result = beginning + (end - beginning) * float(index) / float(count)
         return result
+
+    @staticmethod
+    def interpolate_circle_to_path(center: np.array, radius: float):
+        pass
 
 
 class Domain:
@@ -750,16 +755,26 @@ class HexagonalDomain2D(Domain2D):
     def get_edge_points(self):
         return self.__edge_points
 
+# GUI usage tutorial
+# https://www.youtube.com/watch?v=kk5DHIZa21k&list=PLLaFJ14_gbrM9nlZfYcuXF40QxZb-ygfY
+class GmshDomain2D(Domain2D):
+    pass
 
 class PlainDomain2D(Domain2D):
     POINT_LOCATION_EPSILON = 0.001
 
-    def __init__(self, paths: list[path.Path], conditions: list, functions: list, subdomains: list = []):
+    def __init__(
+        self, paths: list[path.Path], conditions: list, functions: list, center: np.array = None, subdomains: list = []
+    ):
         super().__init__(subdomains)
         assert paths is not None
+        assert center is None or Constants.TWO_DIM == len(center)
         assert len(paths) == len(conditions)
         assert len(paths) == len(functions)
-        self.__center = np.zeros(Constants.TWO_DIM)
+        if center is None:
+            self.__center = np.zeros(Constants.TWO_DIM)
+        else:
+            self.__center = center
         self.__border = []
         list = []
         for index, item in enumerate(paths):
@@ -774,9 +789,11 @@ class PlainDomain2D(Domain2D):
         self.__init_corner_points()
         item = path.Path.make_compound_path(*list)
         self._set_polygon(item)
-        # TODO:  Fix that center of mass should have coordinates (0, 0) for proper scaling
+        center_transform = transforms.Affine2D().translate(-self.__center[0], -self.__center[1])
         coboundary_scale = transforms.Affine2D().scale(GlobalSettings.COBORDER_SCALE)
-        coborder_item = item.transformed(coboundary_scale)
+        coborder_item = (
+            item.transformed(center_transform).transformed(coboundary_scale).transformed(center_transform.inverted())
+        )
         self._set_coborder_polygon(coborder_item)
         self.__process_coborder_points()
         self.__process_mesh()
@@ -1989,6 +2006,138 @@ class Samples:
                 problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
                 return problem
 
+            @staticmethod
+            def init_dirichlet_single_inclusion_square():
+                print("BEM for Dirichlet problem for Poisson equation with single inclusion...")
+
+                print("Define boundary conditions...")
+
+                INCLUSION_SIZE = 0.2
+                INCLUSION_CENTER_X = 0.5
+                INCLUSION_CENTER_Y = 0.5
+                INCLUSION_RADIUS = INCLUSION_SIZE / 2.0 * np.sqrt(2.0)
+                K_MAX = 10
+                K_MIN = 1
+
+                def boundary_value(point: np.array):
+                    return 2.0 * point[1]
+
+                inclusion_domain = SquareDomain2D(
+                    np.array([INCLUSION_CENTER_X - INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y - INCLUSION_SIZE / 2.0]),
+                    np.array([INCLUSION_CENTER_X + INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y + INCLUSION_SIZE / 2.0]),
+                    [BoundaryConditionType.INCLUSION] * 4,
+                    [Utils.constant_one()] * 4,
+                    GlobalSettings.INCLUSION_ELEMENTS_COUNT,
+                )
+
+                domain = SquareDomain2D(
+                    np.array([0.0, 0.0]),
+                    np.array([1.0, 1.0]),
+                    [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
+                    [boundary_value, Utils.constant_value(0.0)] * 2,
+                    GlobalSettings.BORDER_ELEMENTS_COUNT,
+                    [inclusion_domain],
+                )
+
+                def thermal_conductivity(point: np.array):
+                    result = K_MIN
+                    distance_from_center = (
+                        (point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2
+                    ) / INCLUSION_RADIUS**2
+                    if distance_from_center < 1.0:
+                        result += K_MAX * (1 - distance_from_center)
+
+                    return result
+
+                def thermal_conductivity_gradient(point: np.array):
+                    result = np.array([0.0, 0.0])
+                    if inclusion_domain.is_point_inside_domain(point):
+                        result[0] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[0]) / INCLUSION_RADIUS**2
+                        result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_Y - point[1]) / INCLUSION_RADIUS**2
+                    return result
+
+                expression = [
+                    SingleLayerInclusionTerm(
+                        Laplace2DKernel(),
+                        inclusion_domain,
+                        thermal_conductivity,
+                        thermal_conductivity_gradient,
+                        1.0,
+                    ),
+                    DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
+                    SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
+                ]
+
+                problem = Problem(ProblemSolverType.BEM, expression, domain)
+                return problem
+
+            @staticmethod
+            def init_dirichlet_single_inclusion_circle_in_square():
+                print("BEM for Dirichlet problem for Poisson equation with single circukar inclusion...")
+
+                print("Define boundary conditions...")
+
+                INCLUSION_SIZE = 0.2
+                INCLUSION_CENTER_X = 0.5
+                INCLUSION_CENTER_Y = 0.5
+                INCLUSION_CENTER_POINT = np.array([INCLUSION_CENTER_X, INCLUSION_CENTER_Y])
+                INCLUSION_RADIUS = INCLUSION_SIZE / 2.0 * np.sqrt(2.0)
+                K_MAX = 10
+                K_MIN = 1
+
+                def boundary_value(point: np.array):
+                    return 2.0 * point[1]
+
+                inclusion_domain = PlainDomain2D(
+                    [path.Path.circle(center=(INCLUSION_CENTER_X, INCLUSION_CENTER_Y), radius=INCLUSION_RADIUS)],
+                    [BoundaryConditionType.INCLUSION],
+                    [Utils.constant_one()],
+                    INCLUSION_CENTER_POINT,
+                )
+
+                Utils.plot_2d_domain(inclusion_domain)
+                # Utils.plot_2d_mesh(inclusion_domain.get_mesh())
+
+                domain = PlainDomain2D(
+                    [
+                        path.Path.unit_rectangle(),
+                    ],
+                    [BoundaryConditionType.DIRICHLET],
+                    [boundary_value],
+                    np.array([0.5, 0.5]),
+                    [inclusion_domain],
+                )
+
+
+                def thermal_conductivity(point: np.array):
+                    result = K_MIN
+                    distance_from_center = Utils.squared_distance(point, INCLUSION_CENTER_POINT) / INCLUSION_RADIUS**2
+                    if distance_from_center < 1.0:
+                        result += K_MAX * (1 - distance_from_center)
+                    return result
+
+                def thermal_conductivity_gradient(point: np.array):
+                    result = np.array([0.0, 0.0])
+                    if Utils.distance(point, INCLUSION_CENTER_POINT) < INCLUSION_RADIUS:
+                        result[0] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[0]) / INCLUSION_RADIUS**2
+                        result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_Y - point[1]) / INCLUSION_RADIUS**2
+                    return result
+
+                expression = [
+                    SingleLayerInclusionTerm(
+                        Laplace2DKernel(),
+                        inclusion_domain,
+                        thermal_conductivity,
+                        thermal_conductivity_gradient,
+                        1.0,
+                    ),
+                    DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
+                    SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
+                ]
+
+                problem = Problem(ProblemSolverType.BEM, expression, domain)
+                return problem
+
         class CoBEM:
 
             @staticmethod
@@ -2175,73 +2324,6 @@ class Samples:
                 ]
 
                 problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
-                return problem
-
-            @staticmethod
-            def init_dirichlet_single_inclusion_square():
-                print("BEM for Dirichlet problem for Poisson equation with single inclusion...")
-
-                print("Define boundary conditions...")
-
-                INCLUSION_SIZE = 0.2
-                INCLUSION_CENTER_X = 0.5
-                INCLUSION_CENTER_Y = 0.5
-                INCLUSION_RADIUS = INCLUSION_SIZE / 2.0 * np.sqrt(2.0)
-                K_MAX = 10
-                K_MIN = 1
-
-                def boundary_value(point: np.array):
-                    return 2.0 * point[1]
-
-                inclusion_domain = SquareDomain2D(
-                    np.array([INCLUSION_CENTER_X - INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y - INCLUSION_SIZE / 2.0]),
-                    np.array([INCLUSION_CENTER_X + INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y + INCLUSION_SIZE / 2.0]),
-                    [BoundaryConditionType.INCLUSION] * 4,
-                    [Utils.constant_one()] * 4,
-                    GlobalSettings.INCLUSION_ELEMENTS_COUNT,
-                )
-
-                domain = SquareDomain2D(
-                    np.array([0.0, 0.0]),
-                    np.array([1.0, 1.0]),
-                    [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
-                    [boundary_value, Utils.constant_value(0.0)] * 2,
-                    GlobalSettings.BORDER_ELEMENTS_COUNT,
-                    [inclusion_domain],
-                )
-
-                def thermal_conductivity(point: np.array):
-                    result = K_MIN
-                    distance_from_center = (
-                        (point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2
-                    ) / INCLUSION_RADIUS**2
-                    if distance_from_center < 1.0:
-                        result += K_MAX * (1 - distance_from_center)
-
-                    return result
-
-                def thermal_conductivity_gradient(point: np.array):
-                    result = np.array([0.0, 0.0])
-                    if inclusion_domain.is_point_inside_domain(point):
-                        result[0] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[0]) / INCLUSION_RADIUS**2
-                        result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_Y - point[1]) / INCLUSION_RADIUS**2
-                    return result
-
-                print("Define heat source function...")
-
-                expression = [
-                    SingleLayerInclusionTerm(
-                        Laplace2DKernel(),
-                        inclusion_domain,
-                        thermal_conductivity,
-                        thermal_conductivity_gradient,
-                        1.0,
-                    ),
-                    DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
-                    SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
-                ]
-
-                problem = Problem(ProblemSolverType.BEM, expression, domain)
                 return problem
 
             @staticmethod
@@ -2657,7 +2739,7 @@ if "__main__" == __name__:
     elif 3 == GlobalSettings.EXAMPLE_TYPE:
         problem = Samples.Poisson.BEM.init_robin_square()
     elif 4 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Poisson.BEM.init_dirichlet_single_inclusion_square()
+        problem = Samples.Laplace.BEM.init_dirichlet_single_inclusion_square()
     elif 5 == GlobalSettings.EXAMPLE_TYPE:
         problem = Samples.Poisson.CoBEM.init_dirichlet_square()
     elif 6 == GlobalSettings.EXAMPLE_TYPE:
@@ -2687,6 +2769,8 @@ if "__main__" == __name__:
     elif 18 == GlobalSettings.EXAMPLE_TYPE:
         pass
         # problem = Samples.Poisson.CoBEM.init_dirichlet_convex()
+    elif 19 == GlobalSettings.EXAMPLE_TYPE:
+        problem = Samples.Laplace.BEM.init_dirichlet_single_inclusion_circle_in_square()
 
     assert problem is not None
 
