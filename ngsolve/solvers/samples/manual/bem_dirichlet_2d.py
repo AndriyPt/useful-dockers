@@ -269,13 +269,16 @@ class Utils:
         plt.show()
 
     @staticmethod
-    def plot_2d_domain(domain):
+    def plot_2d_domain(domain: Domain2D):
         assert domain is not None
         fig, ax = plt.subplots()
         patch = patches.PathPatch(domain.get_matplot_coborder(), facecolor="lightgreen", edgecolor="green", lw=2)
         ax.add_patch(patch)
         patch = patches.PathPatch(domain.get_matplot_border(), facecolor="lightblue", edgecolor="blue", lw=2)
         ax.add_patch(patch)
+        for subdomain in domain.get_subdomains():
+            patch = patches.PathPatch(subdomain.get_matplot_border(), facecolor="lightyellow", edgecolor="yellow", lw=2)
+            ax.add_patch(patch)
         ax.set_xlim(-5, 5)
         ax.set_ylim(-5, 5)
         plt.show()
@@ -844,7 +847,6 @@ class GmshDomain2D(Domain2D):
         self.__border = []
         self.__coborder = []
         self.__mesh = []
-
         if center is None:
             self.__center = np.zeros(Constants.TWO_DIM)
         else:
@@ -866,8 +868,8 @@ class GmshDomain2D(Domain2D):
                 mask = phys_tags == physical_tag
                 selected = cell_block.data[mask]
                 for item in selected:
-                    start_point = np.resize(mesh.points[item[0]], (Constants.TWO_DIM,))
-                    end_point = np.resize(mesh.points[item[1]], (Constants.TWO_DIM,))
+                    start_point = np.resize(mesh.points[item[0]], (Constants.TWO_DIM,)) + self.__center
+                    end_point = np.resize(mesh.points[item[1]], (Constants.TWO_DIM,)) + self.__center
                     if 0 == len(polygon):
                         polygon.append(start_point)
                     polygon.append(end_point)
@@ -923,7 +925,7 @@ class GmshDomain2D(Domain2D):
                 for cell in cell_block.data:
                     quad = []
                     for index in cell:
-                        quad_vertex = np.resize(mesh.points[index], (Constants.TWO_DIM,))
+                        quad_vertex = np.resize(mesh.points[index], (Constants.TWO_DIM,)) + self.__center
                         quad.append(quad_vertex)
                     quad = Utils.order_quad_ccw(quad)
                     point_info = Point2DInfo()
@@ -2267,10 +2269,9 @@ class Samples:
                 def boundary_value(point: np.array):
                     return 2.0 * point[1]
 
-                # TODO: Added geometry scaling and center point into GmshDomain2D
-                mesh = MeshLoader.generate_mesh_from_file("circular_inclusion.geo")
+                # TODO: Added geometry scaling in MeshLoader
                 inclusion_domain = GmshDomain2D(
-                    mesh,
+                    MeshLoader.generate_mesh_from_file("circular_inclusion.geo"),
                     {"inclusion": (BoundaryConditionType.INCLUSION, Utils.constant_one())},
                     INCLUSION_CENTER_POINT,
                 )
