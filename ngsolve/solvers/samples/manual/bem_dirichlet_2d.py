@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
 from __future__ import annotations
+import os
 from enum import Enum
 import math
 from collections.abc import Callable
 import numpy as np
 import scipy
 import csv
+import subprocess
+import tempfile
 import matplotlib.pyplot as plt
 from matplotlib import cm, path, patches, transforms
 from matplotlib.collections import PolyCollection
@@ -339,6 +342,42 @@ class Utils:
         assert path is not None
         module_dir = Path(__file__).resolve().parent
         return (module_dir / relative_path).resolve()
+
+
+class MeshLoader:
+
+    @staticmethod
+    def generate_mesh_from_file(filename: str):
+        geo_folder = Utils.get_file_in_current_directory("geometries")
+        geo_file = (geo_folder / filename).resolve()
+        assert os.path.isfile(geo_file), f"File '{geo_file}' does not exist"
+        result = None
+        with tempfile.NamedTemporaryFile(suffix=".msh") as tmp:
+            process_result = subprocess.run(
+                [
+                    "gmsh",
+                    geo_file,
+                    "-2",
+                    "-clmax",
+                    str(GlobalSettings.INCLUSION_ELEMENTS_MAX_SIZE),
+                    "-setnumber",
+                    "Mesh.Algorithm",
+                    "6", # TODO: Add check if only quad mesh was generated
+                    "-setnumber",
+                    "Mesh.RecombineAll",
+                    "1",
+                    "-setnumber",
+                    "Mesh.RecombinationAlgorithm",
+                    "1",
+                    "-o",
+                    tmp.name,
+                ],
+                capture_output=True,
+                text=True,
+            )
+            assert 0 == process_result.returncode, f"Mesh generation error: {process_result.stderr}"
+            result = meshio.read(tmp.name)
+        return result
 
 
 class Domain:
@@ -797,9 +836,9 @@ class GmshDomain2D(Domain2D):
     GMSH_CELL_TYPE_LINE = "line"
     GMSH_CELL_TYPE_QUAD = "quad"
 
-    def __init__(self, filename: str, conditions: dict, center: np.array = None, subdomains: list = []):
+    def __init__(self, loaded_mesh, conditions: dict, center: np.array = None, subdomains: list = []):
         super().__init__(subdomains)
-        assert filename is not None
+        assert loaded_mesh is not None
         assert conditions is not None
         assert center is None or Constants.TWO_DIM == len(center)
         self.__border = []
@@ -810,11 +849,10 @@ class GmshDomain2D(Domain2D):
             self.__center = np.zeros(Constants.TWO_DIM)
         else:
             self.__center = center
-        mesh = meshio.read(filename)
-        self.__init_border(conditions, mesh)
+        self.__init_border(conditions, loaded_mesh)
         self._init_coborder_polygon(self.__center)
         self.__process_coborder_points()
-        self.__process_mesh(mesh)
+        self.__process_mesh(loaded_mesh)
 
     def __init_border(self, conditions, mesh):
         polygon = []
@@ -2229,8 +2267,10 @@ class Samples:
                 def boundary_value(point: np.array):
                     return 2.0 * point[1]
 
+                # TODO: Added geometry scaling and center point into GmshDomain2D
+                mesh = MeshLoader.generate_mesh_from_file("circular_inclusion.geo")
                 inclusion_domain = GmshDomain2D(
-                    Utils.get_file_in_current_directory("round2.msh"),
+                    mesh,
                     {"inclusion": (BoundaryConditionType.INCLUSION, Utils.constant_one())},
                     INCLUSION_CENTER_POINT,
                 )
