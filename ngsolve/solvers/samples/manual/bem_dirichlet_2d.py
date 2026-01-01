@@ -45,7 +45,7 @@ class GlobalSettings(object):
         17 - Poisson Dirichlet Convex BEM, 18 - Poisson Dirichlet Convex CoBEM,
         19 - Laplace Dirichlet Single Inclusion Circular Convex BEM
     """
-    EXAMPLE_TYPE = 19
+    EXAMPLE_TYPE = 1
 
 
 class ExpressionTerm:
@@ -351,6 +351,10 @@ class Utils:
 
 
 class MeshLoader:
+    TOP = "top"
+    LEFT = "left"
+    RIGHT = "right"
+    BOTTOM = "bottom"
 
     @staticmethod
     def generate_mesh_from_file(filename: str, scale: float = 1.0):
@@ -2442,13 +2446,18 @@ class Samples:
                 def boundary_value(point: np.array):
                     return analytical_solution(point)
 
-                domain = SquareDomain2D(
-                    np.array([0.0, 0.0]),
-                    np.array([1.0, 1.0]),
-                    [BoundaryConditionType.DIRICHLET] * 4,
-                    [boundary_value] * 4,
-                    GlobalSettings.BORDER_ELEMENTS_COUNT,
+                domain = GmshDomain2D(
+                    MeshLoader.generate_mesh_from_file("unit_square.geo"),
+                    {
+                        MeshLoader.TOP: (BoundaryConditionType.DIRICHLET, boundary_value),
+                        MeshLoader.LEFT: (BoundaryConditionType.DIRICHLET, boundary_value),
+                        MeshLoader.RIGHT: (BoundaryConditionType.DIRICHLET, boundary_value),
+                        MeshLoader.BOTTOM: (BoundaryConditionType.DIRICHLET, boundary_value),
+                    },
+                    np.array([0.5, 0.5]),
                 )
+
+                Utils.plot_2d_domain(domain)
 
                 print("Define heat source function...")
 
