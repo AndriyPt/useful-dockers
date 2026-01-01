@@ -8,6 +8,7 @@ from collections.abc import Callable
 import numpy as np
 import scipy
 import csv
+import statistics
 import subprocess
 import tempfile
 import matplotlib.pyplot as plt
@@ -27,7 +28,7 @@ class GlobalSettings(object):
     # TODO: Remove
     COBORDER_DEPTH = 1.2
     BORDER_ELEMENT_MAX_SIZE = 0.5
-    INCLUSION_ELEMENTS_MAX_SIZE = 0.15
+    INCLUSION_ELEMENTS_MAX_SIZE = 0.1
     COBORDER_SCALE = 2.0
     PLOT_ERROR = False
     PLOT_ISOLINES_COUNT = 10
@@ -417,6 +418,9 @@ class Domain:
 
     def get_subdomains(self):
         return self.__subdomains
+
+    def print_stats(self):
+        raise NotImplementedError("Call to abstract method")
 
 
 class Domain2D(Domain):
@@ -949,6 +953,36 @@ class GmshDomain2D(Domain2D):
     def get_coborder(self):
         return self.__coborder
 
+    # TODO: Remove duplicate from PlainDomain2D
+    def print_stats(self):
+        # TODO: Add max side size and min side size for all meshes and coborder width
+        print("---")
+        print("GmshDomain2D stats:")
+        print("---")
+        border_elements_lengths = [Utils.distance(item.element[0], item.element[1]) for item in self.__border]
+        print(
+            f"""Border elements 
+              count: {len(self.__border)}
+              min length: {min(border_elements_lengths)}
+              median length: {statistics.median(border_elements_lengths)}
+              max length: {max(border_elements_lengths)}"""
+        )
+        mesh_elements_lengths = [
+            Utils.distance(start, end)
+            for item in self.__mesh
+            for start, end in zip(item.element, item.element[1:] + item.element[:1])
+        ]
+        print(
+            f"""Quad elements 
+              count: {len(self.__mesh)}
+              min side length: {min(mesh_elements_lengths)}
+              median side length: {statistics.median(mesh_elements_lengths)}
+              max side length: {max(mesh_elements_lengths)}"""
+        )
+        print("---")
+        for domain in self.get_subdomains():
+            domain.print_stats()
+
 
 class PlainDomain2D(Domain2D):
     POINT_LOCATION_EPSILON = 0.001
@@ -1109,6 +1143,16 @@ class PlainDomain2D(Domain2D):
 
     def get_coborder(self):
         return self.__coborder
+
+    def print_stats(self):
+        # TODO: Add max side size and min side size for all meshes
+        print("PlainDomain2D stats:")
+        print(f"Border elements count: {len(self.__border)}")
+        print(f"Quads count: {len(self.__mesh)}")
+        print("---")
+
+        for domain in self.get_subdomains():
+            domain.print_stats()
 
 
 class KernelValueType(Enum):
@@ -2081,6 +2125,10 @@ class Problem(object):
         for term in self.__expression:
             solution = term.propagate_solution(solution)
 
+    def print_stats(self):
+        print("Domains stats...")
+        self.__domain.print_stats()
+
     def plot(self):
         print("Visualizing data...")
 
@@ -2288,7 +2336,7 @@ class Samples:
                     [inclusion_domain],
                 )
 
-                Utils.plot_2d_domain(domain)
+                # Utils.plot_2d_domain(domain)
 
                 def thermal_conductivity(point: np.array):
                     result = K_MIN
@@ -2955,4 +3003,5 @@ if "__main__" == __name__:
     assert problem is not None
 
     problem.calculate()
+    problem.print_stats()
     problem.plot()
