@@ -28,7 +28,7 @@ class GlobalSettings(object):
     # TODO: Remove
     COBORDER_DEPTH = 1.2
     BORDER_ELEMENT_MAX_SIZE = 0.5
-    INCLUSION_ELEMENTS_MAX_SIZE = 0.1
+    INCLUSION_ELEMENTS_MAX_SIZE = 0.2
     COBORDER_SCALE = 2.0
     PLOT_ERROR = False
     PLOT_ISOLINES_COUNT = 10
@@ -970,7 +970,7 @@ class GmshDomain2D(Domain2D):
         mesh_elements_lengths = [
             Utils.distance(start, end)
             for item in self.__mesh
-            for start, end in zip(item.element, item.element[1:] + item.element[:1])
+            for start, end in zip(item.element, np.vstack([item.element[1:], item.element[:1]]))
         ]
         print(
             f"""Quad elements 
@@ -2324,7 +2324,7 @@ class Samples:
                     INCLUSION_CENTER,
                 )
 
-                Utils.plot_2d_mesh(inclusion_domain.get_mesh())
+                # Utils.plot_2d_mesh(inclusion_domain.get_mesh())
 
                 domain = PlainDomain2D(
                     [
