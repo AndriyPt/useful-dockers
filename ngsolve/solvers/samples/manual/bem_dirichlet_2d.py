@@ -27,7 +27,7 @@ class GlobalSettings(object):
     # TODO: Remove
     COBORDER_DEPTH = 1.2
     BORDER_ELEMENT_MAX_SIZE = 0.5
-    INCLUSION_ELEMENTS_MAX_SIZE = 0.5
+    INCLUSION_ELEMENTS_MAX_SIZE = 0.15
     COBORDER_SCALE = 2.0
     PLOT_ERROR = False
     PLOT_ISOLINES_COUNT = 10
@@ -277,7 +277,9 @@ class Utils:
         patch = patches.PathPatch(domain.get_matplot_border(), facecolor="lightblue", edgecolor="blue", lw=2)
         ax.add_patch(patch)
         for subdomain in domain.get_subdomains():
-            patch = patches.PathPatch(subdomain.get_matplot_border(), facecolor="lightyellow", edgecolor="yellow", lw=2)
+            patch = patches.PathPatch(
+                subdomain.get_matplot_border(), facecolor="lightyellow", edgecolor="yellow", lw=2
+            )
             ax.add_patch(patch)
         ax.set_xlim(-5, 5)
         ax.set_ylim(-5, 5)
@@ -350,7 +352,7 @@ class Utils:
 class MeshLoader:
 
     @staticmethod
-    def generate_mesh_from_file(filename: str):
+    def generate_mesh_from_file(filename: str, scale: float = 1.0):
         geo_folder = Utils.get_file_in_current_directory("geometries")
         geo_file = (geo_folder / filename).resolve()
         assert os.path.isfile(geo_file), f"File '{geo_file}' does not exist"
@@ -363,9 +365,11 @@ class MeshLoader:
                     "-2",
                     "-clmax",
                     str(GlobalSettings.INCLUSION_ELEMENTS_MAX_SIZE),
+                    "-scale",
+                    str(scale),
                     "-setnumber",
                     "Mesh.Algorithm",
-                    "6", # TODO: Add check if only quad mesh was generated
+                    "6",  # TODO: Add check if only quad mesh was generated
                     "-setnumber",
                     "Mesh.RecombineAll",
                     "1",
@@ -2258,23 +2262,21 @@ class Samples:
 
                 print("Define boundary conditions...")
 
-                INCLUSION_SIZE = 0.2
-                INCLUSION_CENTER_X = 0.5
-                INCLUSION_CENTER_Y = 0.5
-                INCLUSION_CENTER_POINT = np.array([INCLUSION_CENTER_X, INCLUSION_CENTER_Y])
-                INCLUSION_RADIUS = INCLUSION_SIZE / 2.0 * np.sqrt(2.0)
+                INCLUSION_CENTER = np.array([0.5, 0.5])
+                INCLUSION_RADIUS = 0.2
                 K_MAX = 10
                 K_MIN = 1
 
                 def boundary_value(point: np.array):
                     return 2.0 * point[1]
 
-                # TODO: Added geometry scaling in MeshLoader
                 inclusion_domain = GmshDomain2D(
-                    MeshLoader.generate_mesh_from_file("circular_inclusion.geo"),
+                    MeshLoader.generate_mesh_from_file("circular_inclusion.geo", INCLUSION_RADIUS),
                     {"inclusion": (BoundaryConditionType.INCLUSION, Utils.constant_one())},
-                    INCLUSION_CENTER_POINT,
+                    INCLUSION_CENTER,
                 )
+
+                Utils.plot_2d_mesh(inclusion_domain.get_mesh())
 
                 domain = PlainDomain2D(
                     [
@@ -2286,18 +2288,19 @@ class Samples:
                     [inclusion_domain],
                 )
 
+                Utils.plot_2d_domain(domain)
+
                 def thermal_conductivity(point: np.array):
                     result = K_MIN
-                    distance_from_center = Utils.squared_distance(point, INCLUSION_CENTER_POINT) / INCLUSION_RADIUS**2
+                    distance_from_center = Utils.squared_distance(point, INCLUSION_CENTER) / INCLUSION_RADIUS**2
                     if distance_from_center < 1.0:
                         result += K_MAX * (1 - distance_from_center)
                     return result
 
                 def thermal_conductivity_gradient(point: np.array):
                     result = np.array([0.0, 0.0])
-                    if Utils.distance(point, INCLUSION_CENTER_POINT) < INCLUSION_RADIUS:
-                        result[0] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[0]) / INCLUSION_RADIUS**2
-                        result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_Y - point[1]) / INCLUSION_RADIUS**2
+                    if Utils.distance(point, INCLUSION_CENTER) < INCLUSION_RADIUS:
+                        result = K_MAX * 2.0 * (INCLUSION_CENTER - point) / INCLUSION_RADIUS**2
                     return result
 
                 expression = [
