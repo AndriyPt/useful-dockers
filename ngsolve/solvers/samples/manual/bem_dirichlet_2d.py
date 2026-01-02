@@ -356,8 +356,10 @@ class MeshLoader:
     RIGHT = "right"
     BOTTOM = "bottom"
 
+    ORDER = [BOTTOM, RIGHT, TOP, LEFT]
+
     @staticmethod
-    def generate_mesh_from_file(filename: str, scale: float = 1.0):
+    def generate_mesh_from_file(filename: str, max_element_size: float, scale: float = 1.0):
         geo_folder = Utils.get_file_in_current_directory("geometries")
         geo_file = (geo_folder / filename).resolve()
         assert os.path.isfile(geo_file), f"File '{geo_file}' does not exist"
@@ -369,7 +371,7 @@ class MeshLoader:
                     geo_file,
                     "-2",
                     "-clmax",
-                    str(GlobalSettings.INCLUSION_ELEMENTS_MAX_SIZE),
+                    str(max_element_size),
                     "-scale",
                     str(scale),
                     "-setnumber",
@@ -389,6 +391,12 @@ class MeshLoader:
             )
             assert 0 == process_result.returncode, f"Mesh generation error: {process_result.stderr}"
             result = meshio.read(tmp.name)
+        return result
+
+    @staticmethod
+    def order_conditions(conditions: dict):
+        assert conditions is not None
+        result = {k: conditions[k] for k in MeshLoader.ORDER if k in conditions}
         return result
 
 
@@ -2447,13 +2455,15 @@ class Samples:
                     return analytical_solution(point)
 
                 domain = GmshDomain2D(
-                    MeshLoader.generate_mesh_from_file("unit_square.geo"),
-                    {
-                        MeshLoader.TOP: (BoundaryConditionType.DIRICHLET, boundary_value),
-                        MeshLoader.LEFT: (BoundaryConditionType.DIRICHLET, boundary_value),
-                        MeshLoader.RIGHT: (BoundaryConditionType.DIRICHLET, boundary_value),
-                        MeshLoader.BOTTOM: (BoundaryConditionType.DIRICHLET, boundary_value),
-                    },
+                    MeshLoader.generate_mesh_from_file("unit_square.geo", GlobalSettings.BORDER_ELEMENT_MAX_SIZE),
+                    MeshLoader.order_conditions(
+                        {
+                            MeshLoader.TOP: (BoundaryConditionType.DIRICHLET, boundary_value),
+                            MeshLoader.LEFT: (BoundaryConditionType.DIRICHLET, boundary_value),
+                            MeshLoader.RIGHT: (BoundaryConditionType.DIRICHLET, boundary_value),
+                            MeshLoader.BOTTOM: (BoundaryConditionType.DIRICHLET, boundary_value),
+                        }
+                    ),
                     np.array([0.5, 0.5]),
                 )
 
