@@ -45,7 +45,7 @@ class GlobalSettings(object):
         17 - Poisson Dirichlet Convex BEM, 18 - Poisson Dirichlet Convex CoBEM,
         19 - Laplace Dirichlet Single Inclusion Circular Convex BEM
     """
-    EXAMPLE_TYPE = 1
+    EXAMPLE_TYPE = 19
 
 
 class ExpressionTerm:
@@ -356,7 +356,12 @@ class MeshLoader:
     RIGHT = "right"
     BOTTOM = "bottom"
 
+    BODY = "body"
+
     ORDER = [BOTTOM, RIGHT, TOP, LEFT]
+
+    UNIT_SQUARE_FILE = "unit_square.geo"
+    UNIT_CIRCLE_FILE = "unit_circle.geo"
 
     @staticmethod
     def generate_mesh_from_file(filename: str, max_element_size: float, scale: float = 1.0):
@@ -878,7 +883,6 @@ class GmshDomain2D(Domain2D):
 
     def __init_border(self, conditions, mesh):
         polygon = []
-        # TODO: Implement ordered list of border points
         for physical_name, (condition, value_function) in conditions.items():
             assert physical_name in mesh.field_data, f"Physical group '{physical_name}' not found in mesh."
             physical_tag, physical_dim = mesh.field_data[physical_name]
@@ -2331,24 +2335,33 @@ class Samples:
                     return 2.0 * point[1]
 
                 inclusion_domain = GmshDomain2D(
-                    MeshLoader.generate_mesh_from_file("circular_inclusion.geo", INCLUSION_RADIUS),
-                    {"inclusion": (BoundaryConditionType.INCLUSION, Utils.constant_one())},
+                    MeshLoader.generate_mesh_from_file(
+                        MeshLoader.UNIT_CIRCLE_FILE, GlobalSettings.INCLUSION_ELEMENTS_MAX_SIZE, INCLUSION_RADIUS
+                    ),
+                    MeshLoader.order_conditions(
+                        {
+                            MeshLoader.LEFT: (BoundaryConditionType.INCLUSION, Utils.constant_one()),
+                            MeshLoader.RIGHT: (BoundaryConditionType.INCLUSION, Utils.constant_one()),
+                        }
+                    ),
                     INCLUSION_CENTER,
                 )
 
-                # Utils.plot_2d_mesh(inclusion_domain.get_mesh())
-
-                domain = PlainDomain2D(
-                    [
-                        path.Path.unit_rectangle(),
-                    ],
-                    [BoundaryConditionType.DIRICHLET],
-                    [boundary_value],
+                domain = GmshDomain2D(
+                    MeshLoader.generate_mesh_from_file(
+                        MeshLoader.UNIT_SQUARE_FILE, GlobalSettings.BORDER_ELEMENT_MAX_SIZE
+                    ),
+                    MeshLoader.order_conditions(
+                        {
+                            MeshLoader.TOP: (BoundaryConditionType.DIRICHLET, boundary_value),
+                            MeshLoader.LEFT: (BoundaryConditionType.DIRICHLET, boundary_value),
+                            MeshLoader.RIGHT: (BoundaryConditionType.DIRICHLET, boundary_value),
+                            MeshLoader.BOTTOM: (BoundaryConditionType.DIRICHLET, boundary_value),
+                        }
+                    ),
                     np.array([0.5, 0.5]),
                     [inclusion_domain],
                 )
-
-                # Utils.plot_2d_domain(domain)
 
                 def thermal_conductivity(point: np.array):
                     result = K_MIN
@@ -2455,7 +2468,9 @@ class Samples:
                     return analytical_solution(point)
 
                 domain = GmshDomain2D(
-                    MeshLoader.generate_mesh_from_file("unit_square.geo", GlobalSettings.BORDER_ELEMENT_MAX_SIZE),
+                    MeshLoader.generate_mesh_from_file(
+                        MeshLoader.UNIT_SQUARE_FILE, GlobalSettings.BORDER_ELEMENT_MAX_SIZE
+                    ),
                     MeshLoader.order_conditions(
                         {
                             MeshLoader.TOP: (BoundaryConditionType.DIRICHLET, boundary_value),
@@ -2466,8 +2481,6 @@ class Samples:
                     ),
                     np.array([0.5, 0.5]),
                 )
-
-                Utils.plot_2d_domain(domain)
 
                 print("Define heat source function...")
 

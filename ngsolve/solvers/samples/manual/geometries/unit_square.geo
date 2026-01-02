@@ -1,6 +1,6 @@
 // Gmsh project created on Thu Jan  1 19:39:42 2026
 //+
-// Order of points in border should be counterclockwise
+// CAUTION: Order of points in border should be counterclockwise
 //+
 Point(1) = {-0.5, -0.5, 0, 1.0};
 //+
