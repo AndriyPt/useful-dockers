@@ -2,11 +2,11 @@
 //+
 // CAUTION: Order of points in border should be counterclockwise
 //+
-Point(1) = {0, 0, 0, 1.0};
+Point(1) = {0, 0, 0};
 //+
-Point(2) = {0, -1.0, 0, 1.0};
+Point(2) = {0, -1.0, 0};
 //+
-Point(3) = {0, 1.0, 0, 1.0};
+Point(3) = {0, 1.0, 0};
 //+
 Circle(1) = {2, 1, 3};
 //+

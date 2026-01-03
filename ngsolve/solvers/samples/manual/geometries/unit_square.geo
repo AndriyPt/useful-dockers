@@ -2,13 +2,13 @@
 //+
 // CAUTION: Order of points in border should be counterclockwise
 //+
-Point(1) = {-0.5, -0.5, 0, 1.0};
+Point(1) = {-0.5, -0.5, 0};
 //+
-Point(2) = {0.5, -0.5, 0, 1.0};
+Point(2) = {0.5, -0.5, 0};
 //+
-Point(3) = {0.5, 0.5, 0, 1.0};
+Point(3) = {0.5, 0.5, 0};
 //+
-Point(4) = {-0.5, 0.5, 0, 1.0};
+Point(4) = {-0.5, 0.5, 0};
 //+
 Line(1) = {3, 4};
 //+

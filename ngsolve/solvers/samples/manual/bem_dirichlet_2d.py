@@ -3034,6 +3034,6 @@ if "__main__" == __name__:
 
     assert problem is not None
 
-    problem.calculate()
     problem.print_stats()
+    problem.calculate()
     problem.plot()
