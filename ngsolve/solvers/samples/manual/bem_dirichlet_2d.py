@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import os
+import sys
 from enum import Enum
 import math
 from collections.abc import Callable
@@ -16,6 +17,7 @@ from matplotlib import cm, path, patches, transforms
 from matplotlib.collections import PolyCollection
 import meshio
 from pathlib import Path
+import functools
 
 
 class GlobalSettings(object):
@@ -36,16 +38,30 @@ class GlobalSettings(object):
     PLOT_DETAILS = False
     ERROR_TO_CSV = False
     ERROR_CSV_STEPS = 5
-    """
-        1 - Dirichlet BEM, 2 - Neumann BEM, 3 - Robin BEM, 4 - Single Inclusion Dirichlet BEM
-        5 - Dirichlet CoBEM, 6 - Neumann CoBEM, 7 - Robin CoBEM, 8 - Single Inclusion Dirichlet CoBEM
-        9 - Pennes Dirichlet BEM, 10 - Pennes Neumann BEM, 11 - Pennes Dirichlet CoBEM, 12 - Pennes Neumann CoBEM  
-        13 - Pennes Dirichlet Hexagon CoBEM, 14 - Laplace Dirichlet Hexagon CoBEM, 
-        15 - Laplace Dirichlet Convex BEM, 16 - Laplace Dirichlet Convex CoBEM,
-        17 - Poisson Dirichlet Convex BEM, 18 - Poisson Dirichlet Convex CoBEM,
-        19 - Laplace Dirichlet Single Inclusion Circular Convex BEM
-    """
-    EXAMPLE_TYPE = 19
+
+    EXAMPLE_FUNCTIONS = {
+        1: "Samples.Laplace.BEM.init_dirichlet_single_inclusion_square",
+        2: "Samples.Laplace.BEM.init_dirichlet_convex",
+        3: "Samples.Laplace.BEM.init_dirichlet_single_inclusion_circle_in_square",
+        4: "Samples.Laplace.CoBEM.init_dirichlet_hexagon",
+        5: "Samples.Laplace.CoBEM.init_dirichlet_convex",
+        6: "Samples.Poisson.BEM.init_dirichlet_square",
+        7: "Samples.Poisson.BEM.init_neumann_square",
+        8: "Samples.Poisson.BEM.init_robin_square",
+        9: "Samples.Poisson.BEM.init_dirichlet_convex",
+        10: "Samples.Poisson.CoBEM.init_dirichlet_square",
+        11: "Samples.Poisson.CoBEM.init_neumann_square",
+        12: "Samples.Poisson.CoBEM.init_robin_square",
+        13: "Samples.Poisson.CoBEM.init_dirichlet_single_inclusion_square",
+        14: "Samples.Pennes.BEM.init_dirichlet_square",
+        15: "Samples.Pennes.BEM.init_neumann_square",
+        16: "Samples.Pennes.CoBEM.init_dirichlet_square",
+        17: "Samples.Pennes.CoBEM.init_neumann_square",
+        18: "Samples.Pennes.CoBEM.init_dirichlet_hexagon",
+        # 19: "Samples.Poisson.CoBEM.init_dirichlet_convex",
+    }
+
+    EXAMPLE_TYPE = 6
 
 
 class ExpressionTerm:
@@ -2990,50 +3006,21 @@ class Samples:
                 return problem
 
 
-if "__main__" == __name__:
-    problem = None
-    if 1 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Poisson.BEM.init_dirichlet_square()
-    elif 2 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Poisson.BEM.init_neumann_square()
-    elif 3 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Poisson.BEM.init_robin_square()
-    elif 4 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Laplace.BEM.init_dirichlet_single_inclusion_square()
-    elif 5 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Poisson.CoBEM.init_dirichlet_square()
-    elif 6 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Poisson.CoBEM.init_neumann_square()
-    elif 7 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Poisson.CoBEM.init_robin_square()
-    elif 8 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Poisson.CoBEM.init_dirichlet_single_inclusion_square()
-    elif 9 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Pennes.BEM.init_dirichlet_square()
-    elif 10 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Pennes.BEM.init_neumann_square()
-    elif 11 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Pennes.CoBEM.init_dirichlet_square()
-    elif 12 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Pennes.CoBEM.init_neumann_square()
-    elif 13 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Pennes.CoBEM.init_dirichlet_hexagon()
-    elif 14 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Laplace.CoBEM.init_dirichlet_hexagon()
-    elif 15 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Laplace.BEM.init_dirichlet_convex()
-    elif 16 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Laplace.CoBEM.init_dirichlet_convex()
-    elif 17 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Poisson.BEM.init_dirichlet_convex()
-    elif 18 == GlobalSettings.EXAMPLE_TYPE:
-        pass
-        # problem = Samples.Poisson.CoBEM.init_dirichlet_convex()
-    elif 19 == GlobalSettings.EXAMPLE_TYPE:
-        problem = Samples.Laplace.BEM.init_dirichlet_single_inclusion_circle_in_square()
+def main():
+    def get_deep_attr(obj, attr):
+        return functools.reduce(getattr, attr.split("."), obj)
 
+    assert GlobalSettings.EXAMPLE_TYPE in GlobalSettings.EXAMPLE_FUNCTIONS.keys()
+
+    this_module = sys.modules[__name__]
+    function_name = GlobalSettings.EXAMPLE_FUNCTIONS[GlobalSettings.EXAMPLE_TYPE]
+    function = get_deep_attr(this_module, function_name)
+    problem = function()
     assert problem is not None
-
     problem.print_stats()
     problem.calculate()
     problem.plot()
+
+
+if "__main__" == __name__:
+    main()
