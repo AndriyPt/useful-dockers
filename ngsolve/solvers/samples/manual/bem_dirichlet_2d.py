@@ -375,6 +375,8 @@ class MeshLoader:
                     "gmsh",
                     geo_file,
                     "-2",
+                    "-clmin",
+                    str(max_element_size),
                     "-clmax",
                     str(max_element_size),
                     "-scale",
@@ -618,6 +620,7 @@ class SquareDomain2D(Domain2D):
         self.__square = np.array([bottom_left_point, bottom_right_point, top_right_point, top_left_point])
         self._init_polygon(self.__square)
         self._fill_coborder_elements()
+        self._init_coborder_polygon(0.5 * (bottom_left_point + top_right_point))
 
     def _fill_coborder_elements(self):
         assert self.__border is not None
@@ -704,6 +707,16 @@ class SquareDomain2D(Domain2D):
                 result = True
                 break
         return result
+
+    def print_stats(self):
+        print("---")
+        print("SquareDomain stats:")
+        print("---")
+        print(f"Border elements count: {len(self.__border)}")
+        print(f"Squares count: {len(self.__mesh)}")
+        print("---")
+        for domain in self.get_subdomains():
+            domain.print_stats()
 
 
 # TODO: Remove not used domain
