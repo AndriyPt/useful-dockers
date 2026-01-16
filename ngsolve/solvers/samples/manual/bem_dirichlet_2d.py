@@ -29,8 +29,8 @@ class GlobalSettings(object):
     INCLUSION_ELEMENTS_COUNT = 5
     # TODO: Remove
     COBORDER_DEPTH = 1.2
-    BORDER_ELEMENT_MAX_SIZE = 0.5
-    INCLUSION_ELEMENTS_MAX_SIZE = 0.2
+    BORDER_ELEMENT_MAX_SIZE = 2.0
+    INCLUSION_ELEMENTS_MAX_SIZE = 1.2
     COBORDER_SCALE = 2.0
     PLOT_ERROR = False
     PLOT_ISOLINES_COUNT = 10
@@ -61,7 +61,7 @@ class GlobalSettings(object):
         # 19: "Samples.Poisson.CoBEM.init_dirichlet_convex",
     }
 
-    EXAMPLE_TYPE = 6
+    EXAMPLE_TYPE = 4
 
 
 class ExpressionTerm:
@@ -378,6 +378,7 @@ class MeshLoader:
 
     UNIT_SQUARE_FILE = "unit_square.geo"
     UNIT_CIRCLE_FILE = "unit_circle.geo"
+    UNIT_HEXAGON_FILE = "unit_hexagon.geo"
 
     @staticmethod
     def generate_mesh_from_file(filename: str, max_element_size: float, scale: float = 1.0):
@@ -902,20 +903,23 @@ class GmshDomain2D(Domain2D):
         for physical_name, (condition, value_function) in conditions.items():
             assert physical_name in mesh.field_data, f"Physical group '{physical_name}' not found in mesh."
             physical_tag, physical_dim = mesh.field_data[physical_name]
+            nodes_to_process = np.empty((0, Constants.TWO_DIM), dtype=np.int64)
             for cell_block, phys_tags in zip(mesh.cells, mesh.cell_data.get("gmsh:physical", [])):
                 if cell_block.dim != physical_dim or cell_block.type != GmshDomain2D.GMSH_CELL_TYPE_LINE:
                     continue
                 mask = phys_tags == physical_tag
                 selected = cell_block.data[mask]
-                for item in selected:
-                    start_point = np.resize(mesh.points[item[0]], (Constants.TWO_DIM,)) + self.__center
-                    end_point = np.resize(mesh.points[item[1]], (Constants.TWO_DIM,)) + self.__center
-                    if 0 == len(polygon):
-                        polygon.append(start_point)
-                    polygon.append(end_point)
-                    self.__border = np.append(
-                        self.__border, Domain2D._process_points([start_point, end_point], condition, value_function)
-                    )
+                nodes_to_process = np.append(nodes_to_process, selected, axis=0)
+            # TODO: Add logic for nodes sorting to guarantee only one end
+            for item in nodes_to_process:
+                start_point = np.resize(mesh.points[item[0]], (Constants.TWO_DIM,)) + self.__center
+                end_point = np.resize(mesh.points[item[1]], (Constants.TWO_DIM,)) + self.__center
+                if 0 == len(polygon):
+                    polygon.append(start_point)
+                polygon.append(end_point)
+                self.__border = np.append(
+                    self.__border, Domain2D._process_points([start_point, end_point], condition, value_function)
+                )
         self.__init_corner_points()
         self._init_polygon(polygon)
 
@@ -2421,14 +2425,22 @@ class Samples:
                 def dirichlet_boundary_value(point: np.array):
                     return analytical_solution(point)
 
-                domain = PlainDomain2D(
-                    [
-                        path.Path([(-2.0, 0.0), (-1.0, -1.0), (1.0, -1.0), (2.0, 0.0), (1.0, 1.0), (-1.0, 1.0)]),
-                        path.Path([(-1.0, 1.0), (-2.0, 0.0)]),
-                    ],
-                    [BoundaryConditionType.DIRICHLET] * 2,
-                    [dirichlet_boundary_value] * 2,
+                domain = GmshDomain2D(
+                    MeshLoader.generate_mesh_from_file(
+                        MeshLoader.UNIT_HEXAGON_FILE, GlobalSettings.BORDER_ELEMENT_MAX_SIZE, 2.0
+                    ),
+                    MeshLoader.order_conditions(
+                        {
+                            MeshLoader.TOP: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                            MeshLoader.LEFT: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                            MeshLoader.RIGHT: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                            MeshLoader.BOTTOM: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                        }
+                    ),
+                    np.array([0.0, 0.0]),
                 )
+
+                Utils.plot_2d_domain(domain)
 
                 expression = [
                     SingleLayerCoBEMTerm(Laplace2DKernel(), domain, 1),
