@@ -48,7 +48,6 @@ class GlobalSettings(object):
         6: "Samples.Poisson.BEM.init_dirichlet_square",
         7: "Samples.Poisson.BEM.init_neumann_square",
         8: "Samples.Poisson.BEM.init_robin_square",
-        9: "Samples.Poisson.BEM.init_dirichlet_convex",
         10: "Samples.Poisson.CoBEM.init_dirichlet_square",
         11: "Samples.Poisson.CoBEM.init_neumann_square",
         12: "Samples.Poisson.CoBEM.init_robin_square",
@@ -61,7 +60,7 @@ class GlobalSettings(object):
         # 19: "Samples.Poisson.CoBEM.init_dirichlet_convex",
     }
 
-    EXAMPLE_TYPE = 4
+    EXAMPLE_TYPE = 8
 
 
 class ExpressionTerm:
@@ -2524,15 +2523,18 @@ class Samples:
                 def dirichlet_boundary_value(point: np.array):
                     return analytical_solution(point)
 
-                domain = PlainDomain2D(
-                    [
-                        path.Path([(-0.5, -1.0), (0.5, -1.0)]),
-                        path.Path([(0.5, -1.0), (0.5, 1.0)]),
-                        path.Path([(0.5, 1.0), (-0.5, 1.0)]),
-                        path.Path([(-0.5, 1.0), (-0.5, -1.0)]),
-                    ],
-                    [BoundaryConditionType.DIRICHLET] * 4,
-                    [dirichlet_boundary_value] * 4,
+                domain = GmshDomain2D(
+                    MeshLoader.generate_mesh_from_file(
+                        MeshLoader.UNIT_SQUARE_FILE, GlobalSettings.BORDER_ELEMENT_MAX_SIZE
+                    ),
+                    MeshLoader.order_conditions(
+                        {
+                            MeshLoader.TOP: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                            MeshLoader.LEFT: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                            MeshLoader.RIGHT: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                            MeshLoader.BOTTOM: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                        }
+                    ),
                 )
 
                 expression = [
@@ -2605,17 +2607,19 @@ class Samples:
                 def neumann_boundary_left_value(point: np.array):
                     return 2 - 4 * point[0]
 
-                domain = SquareDomain2D(
-                    np.array([0.0, 0.0]),
-                    np.array([1.0, 1.0]),
-                    [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
-                    [
-                        dirichlet_boundary_value,
-                        neumann_boundary_right_value,
-                        dirichlet_boundary_value,
-                        neumann_boundary_left_value,
-                    ],
-                    GlobalSettings.BORDER_ELEMENTS_COUNT,
+                domain = GmshDomain2D(
+                    MeshLoader.generate_mesh_from_file(
+                        MeshLoader.UNIT_SQUARE_FILE, GlobalSettings.BORDER_ELEMENT_MAX_SIZE
+                    ),
+                    MeshLoader.order_conditions(
+                        {
+                            MeshLoader.TOP: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                            MeshLoader.LEFT: (BoundaryConditionType.NEUMANN, neumann_boundary_left_value),
+                            MeshLoader.RIGHT: (BoundaryConditionType.NEUMANN, neumann_boundary_right_value),
+                            MeshLoader.BOTTOM: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                        }
+                    ),
+                    np.array([0.5, 0.5]),
                 )
 
                 print("Define heat source function...")
@@ -2650,60 +2654,25 @@ class Samples:
                 def robin_boundary_left_value(point: np.array):
                     return (-1.0 / analytical_solution(point), 0.0)
 
-                domain = SquareDomain2D(
-                    np.array([0.0, 0.0]),
-                    np.array([1.0, 1.0]),
-                    [BoundaryConditionType.DIRICHLET, BoundaryConditionType.ROBIN] * 2,
-                    [
-                        dirichlet_boundary_value,
-                        robin_boundary_right_value,
-                        dirichlet_boundary_value,
-                        robin_boundary_left_value,
-                    ],
-                    GlobalSettings.BORDER_ELEMENTS_COUNT,
+                domain = GmshDomain2D(
+                    MeshLoader.generate_mesh_from_file(
+                        MeshLoader.UNIT_SQUARE_FILE, GlobalSettings.BORDER_ELEMENT_MAX_SIZE
+                    ),
+                    MeshLoader.order_conditions(
+                        {
+                            MeshLoader.TOP: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                            MeshLoader.LEFT: (BoundaryConditionType.ROBIN, robin_boundary_left_value),
+                            MeshLoader.RIGHT: (BoundaryConditionType.ROBIN, robin_boundary_right_value),
+                            MeshLoader.BOTTOM: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                        }
+                    ),
+                    np.array([0.5, 0.5]),
                 )
 
                 print("Define heat source function...")
 
                 def heat_source_function(point: np.array):
                     return 0.0
-
-                expression = [
-                    DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
-                    SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
-                    SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
-                ]
-
-                problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
-                return problem
-
-            @staticmethod
-            def init_dirichlet_convex():
-                print("BEM for Dirichlet problem for Poisson equation in convex...")
-
-                print("Define boundary conditions...")
-
-                def analytical_solution(point: np.array):
-                    return 2 * (point[0] - 0.5) ** 2 + 2 * (point[1] - 0.5) ** 2
-
-                def boundary_value(point: np.array):
-                    return analytical_solution(point)
-
-                domain = PlainDomain2D(
-                    [
-                        path.Path([(-0.5, -1.0), (0.5, -1.0)]),
-                        path.Path([(0.5, -1.0), (0.5, 1.0)]),
-                        path.Path([(0.5, 1.0), (-0.5, 1.0)]),
-                        path.Path([(-0.5, 1.0), (-0.5, -1.0)]),
-                    ],
-                    [BoundaryConditionType.DIRICHLET] * 4,
-                    [boundary_value] * 4,
-                )
-
-                print("Define heat source function...")
-
-                def heat_source_function(point: np.array):
-                    return -8.0
 
                 expression = [
                     DoubleLayerBoundaryTerm(Laplace2DKernel(), domain),
