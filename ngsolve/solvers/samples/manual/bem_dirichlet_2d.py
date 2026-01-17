@@ -2318,15 +2318,18 @@ class Samples:
                 def dirichlet_boundary_value(point: np.array):
                     return analytical_solution(point)
 
-                domain = PlainDomain2D(
-                    [
-                        path.Path([(-0.5, -1.0), (0.5, -1.0)]),
-                        path.Path([(0.5, -1.0), (0.5, 1.0)]),
-                        path.Path([(0.5, 1.0), (-0.5, 1.0)]),
-                        path.Path([(-0.5, 1.0), (-0.5, -1.0)]),
-                    ],
-                    [BoundaryConditionType.DIRICHLET] * 4,
-                    [dirichlet_boundary_value] * 4,
+                domain = GmshDomain2D(
+                    MeshLoader.generate_mesh_from_file(
+                        MeshLoader.UNIT_SQUARE_FILE, GlobalSettings.BORDER_ELEMENT_MAX_SIZE
+                    ),
+                    MeshLoader.order_conditions(
+                        {
+                            MeshLoader.TOP: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                            MeshLoader.LEFT: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                            MeshLoader.RIGHT: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                            MeshLoader.BOTTOM: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                        }
+                    ),
                 )
 
                 expression = [
@@ -2501,8 +2504,6 @@ class Samples:
                     ),
                     np.array([0.0, 0.0]),
                 )
-
-                Utils.plot_2d_domain(domain)
 
                 expression = [
                     SingleLayerCoBEMTerm(Laplace2DKernel(), domain, 1),
