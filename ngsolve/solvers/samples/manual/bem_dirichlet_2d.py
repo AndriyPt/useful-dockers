@@ -365,6 +365,54 @@ class Utils:
         module_dir = Path(__file__).resolve().parent
         return (module_dir / relative_path).resolve()
 
+    def concatenate_ordered_arrays(arrays):
+        """
+        Concatenate internally ordered NumPy arrays of integer pairs by
+        determining the correct array order.
+        """
+
+        if not arrays:
+            return np.empty((0, 2), dtype=int)
+
+        # Extract start and end values of each array
+        starts = [arr[0, 0] for arr in arrays]
+        ends = [arr[-1, 1] for arr in arrays]
+
+        used = [False] * len(arrays)
+        order = []
+
+        # Find a valid starting array (its start is not any other array's end)
+        start_idx = None
+        for i, s in enumerate(starts):
+            if s not in ends:
+                start_idx = i
+                break
+
+        # Fallback: cycle case
+        if start_idx is None:
+            start_idx = 0
+
+        order.append(start_idx)
+        used[start_idx] = True
+
+        # Build the chain
+        while len(order) < len(arrays):
+            last_end = ends[order[-1]]
+            found = False
+
+            for i in range(len(arrays)):
+                if not used[i] and starts[i] == last_end:
+                    order.append(i)
+                    used[i] = True
+                    found = True
+                    break
+
+            if not found:
+                raise ValueError("No valid concatenation order exists.")
+
+        # Concatenate in the determined order
+        return np.vstack([arrays[i] for i in order])
+
 
 class MeshLoader:
     TOP = "top"
@@ -916,15 +964,16 @@ class GmshDomain2D(Domain2D):
         for physical_name, (condition, value_function) in conditions.items():
             assert physical_name in mesh.field_data, f"Physical group '{physical_name}' not found in mesh."
             physical_tag, physical_dim = mesh.field_data[physical_name]
-            nodes_to_process = np.empty((0, Constants.TWO_DIM), dtype=np.int64)
+            nodes_to_process = []
             for cell_block, phys_tags in zip(mesh.cells, mesh.cell_data.get("gmsh:physical", [])):
                 if cell_block.dim != physical_dim or cell_block.type != GmshDomain2D.GMSH_CELL_TYPE_LINE:
                     continue
                 mask = phys_tags == physical_tag
                 selected = cell_block.data[mask]
-                nodes_to_process = np.append(nodes_to_process, selected, axis=0)
-            # TODO: Add logic for nodes sorting to guarantee only one end
-            for item in nodes_to_process:
+                if 0 < len(selected):
+                    nodes_to_process.append(selected)
+            nodes_list = Utils.concatenate_ordered_arrays(nodes_to_process)
+            for item in nodes_list:
                 start_point = np.resize(mesh.points[item[0]], (Constants.TWO_DIM,)) + self.__center
                 end_point = np.resize(mesh.points[item[1]], (Constants.TWO_DIM,)) + self.__center
                 if 0 == len(polygon):
