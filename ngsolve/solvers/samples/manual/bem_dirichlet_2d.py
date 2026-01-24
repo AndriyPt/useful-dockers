@@ -29,8 +29,8 @@ class GlobalSettings(object):
     INCLUSION_ELEMENTS_COUNT = 5
     # TODO: Remove
     COBORDER_DEPTH = 1.2
-    BORDER_ELEMENT_MAX_SIZE = 2.0
-    INCLUSION_ELEMENTS_MAX_SIZE = 1.2
+    BORDER_ELEMENT_MAX_SIZE = 0.3
+    INCLUSION_ELEMENTS_MAX_SIZE = 0.3
     COBORDER_SCALE = 2.0
     PLOT_ERROR = False
     PLOT_ISOLINES_COUNT = 10
@@ -38,6 +38,8 @@ class GlobalSettings(object):
     PLOT_DETAILS = False
     ERROR_TO_CSV = False
     ERROR_CSV_STEPS = 5
+    RIDGE_REGRESSION_LAMBDA = 0.25
+    RIDGE_REGRESSION_DET = 1e-20
 
     EXAMPLE_FUNCTIONS = {
         1: "Samples.Laplace.BEM.init_dirichlet_single_inclusion_square",
@@ -45,13 +47,13 @@ class GlobalSettings(object):
         3: "Samples.Laplace.BEM.init_dirichlet_single_inclusion_circle_in_square",
         4: "Samples.Laplace.CoBEM.init_dirichlet_hexagon",
         5: "Samples.Laplace.CoBEM.init_dirichlet_convex",
-        6: "Samples.Poisson.BEM.init_dirichlet_square",
-        7: "Samples.Poisson.BEM.init_neumann_square",
-        8: "Samples.Poisson.BEM.init_robin_square",
+        6: "Samples.Laplace.CoBEM.init_dirichlet_single_inclusion_square",
+        7: "Samples.Poisson.BEM.init_dirichlet_square",
+        8: "Samples.Poisson.BEM.init_neumann_square",
+        9: "Samples.Poisson.BEM.init_robin_square",
         10: "Samples.Poisson.CoBEM.init_dirichlet_square",
         11: "Samples.Poisson.CoBEM.init_neumann_square",
         12: "Samples.Poisson.CoBEM.init_robin_square",
-        13: "Samples.Poisson.CoBEM.init_dirichlet_single_inclusion_square",
         14: "Samples.Pennes.BEM.init_dirichlet_square",
         15: "Samples.Pennes.BEM.init_neumann_square",
         16: "Samples.Pennes.CoBEM.init_dirichlet_square",
@@ -60,7 +62,7 @@ class GlobalSettings(object):
         # 19: "Samples.Poisson.CoBEM.init_dirichlet_convex",
     }
 
-    EXAMPLE_TYPE = 8
+    EXAMPLE_TYPE = 11
 
 
 class ExpressionTerm:
@@ -313,6 +315,23 @@ class Utils:
         y_border = (max_y - min_y) * 0.5
         fig, ax = plt.subplots()
         col = PolyCollection(mesh, closed=True, facecolors="none")
+        ax.add_collection(col)
+        ax.set_xlim(min_x - x_border, max_x + x_border)
+        ax.set_ylim(min_y - y_border, max_y + y_border)
+        plt.show()
+
+    @staticmethod
+    def plot_2d_coborder(domain: Domain2D):
+        assert domain is not None
+        coborder = [point_info.element for point_info in domain.get_coborder()]
+        min_x = min(vertex[0] for quad in coborder for vertex in quad)
+        min_y = min(vertex[1] for quad in coborder for vertex in quad)
+        max_x = max(vertex[0] for quad in coborder for vertex in quad)
+        max_y = max(vertex[1] for quad in coborder for vertex in quad)
+        x_border = (max_x - min_x) * 0.5
+        y_border = (max_y - min_y) * 0.5
+        fig, ax = plt.subplots()
+        col = PolyCollection(coborder, closed=True, facecolors="none")
         ax.add_collection(col)
         ax.set_xlim(min_x - x_border, max_x + x_border)
         ax.set_ylim(min_y - y_border, max_y + y_border)
@@ -746,7 +765,7 @@ class SquareDomain2D(Domain2D):
             else:
                 elements[3], elements[2], elements[0], elements[1] = elements[0], elements[1], elements[2], elements[3]
 
-            item.element = elements
+            item.element = Utils.order_quad_ccw(elements)
             self.__coborder.append(item)
 
         self.__coborder = np.array(self.__coborder)
@@ -1970,14 +1989,14 @@ class SingleLayerCoBEMTerm(ExpressionTerm):
         for boundary_item in self.domain.get_coborder():
             is_same_point = Utils.is_the_same_point(point_info.point, boundary_item.point, SingleLayerCoBEMTerm.EPS)
             if point_info.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.INCLUSION]:
-                res = self.__integrator.trapezoid_of(
+                res = self.__integrator.convex_quadrilateral_of(
                     KernelValueType.SCALAR, Utils.constant_one(), point_info.point, boundary_item.element
                 )
                 coefficients = np.append(coefficients, [res])
                 if is_same_point:
                     right_side_ret += boundary_item.value
             elif BoundaryConditionType.NEUMANN == point_info.type:
-                res = self.__integrator.trapezoid_of(
+                res = self.__integrator.convex_quadrilateral_of(
                     KernelValueType.GRADIENT,
                     Utils.constant_value(boundary_item.normal),
                     point_info.point,
@@ -1987,13 +2006,13 @@ class SingleLayerCoBEMTerm(ExpressionTerm):
                 if is_same_point:
                     right_side_ret += boundary_item.value
             elif BoundaryConditionType.ROBIN == point_info.type:
-                res = self.__integrator.trapezoid_of(
+                res = self.__integrator.convex_quadrilateral_of(
                     KernelValueType.GRADIENT,
                     Utils.constant_value(point_info.normal),
                     point_info.point,
                     boundary_item.element,
                 )
-                res -= point_info.robin_coeff * self.__integrator.trapezoid_of(
+                res -= point_info.robin_coeff * self.__integrator.convex_quadrilateral_of(
                     KernelValueType.SCALAR, Utils.constant_one(), point_info.point, boundary_item.element
                 )
                 coefficients = np.append(coefficients, [res])
@@ -2018,7 +2037,7 @@ class SingleLayerCoBEMTerm(ExpressionTerm):
         unknown_index = 0
 
         for boundary_item in self.domain.get_coborder():
-            integral_value = self.__integrator.trapezoid_of(
+            integral_value = self.__integrator.convex_quadrilateral_of(
                 KernelValueType.SCALAR, Utils.constant_one(), point, boundary_item.element
             )
             if boundary_item.type in [
@@ -2163,6 +2182,26 @@ class Problem(object):
         self.__domain = domain
         self.__analytical_solution = analytical_solution
 
+    @staticmethod
+    def __ridge_regression_scratch(X, y, alpha):
+        # Add a bias (intercept) term to X by appending a column of ones if data is not centered/standardized
+        # The normal equation derived above assumes X already has an intercept if one is desired to be penalized
+        # To not penalize the intercept, augment X and adjust the identity matrix
+
+        # For a simple implementation where all coefficients including intercept are penalized:
+        # (Note: it's common practice not to penalize the intercept, which requires a slightly different approach)
+
+        # Use the numerically stable np.linalg.solve instead of calculating the inverse directly
+        A = X.T @ X
+        I = np.eye(A.shape[0]) * alpha
+        B = A + I
+        c = X.T @ y
+
+        # Solve the system of equations B * beta = c for beta (coefficients)
+        beta = np.linalg.solve(B, c)
+
+        return beta
+
     def solution_value(self, point: np.array):
         result = -1.0 * sum(term.value(point) for term in self.__expression)
         if ProblemSolverType.BEM == self.__type:
@@ -2215,7 +2254,17 @@ class Problem(object):
 
         print("Solving SLAE...")
 
-        solution = np.linalg.solve(matrix, -1.0 * right_side)
+        determ = np.linalg.det(matrix)
+        print(f"  Matrix determinant: {determ}")
+
+        if math.fabs(determ) < GlobalSettings.RIDGE_REGRESSION_DET:
+            print(f"  Using ridge regression...")
+            solution = Problem.__ridge_regression_scratch(
+                matrix, -1.0 * right_side, GlobalSettings.RIDGE_REGRESSION_LAMBDA
+            )
+        else:
+            print(f"  Using Gauss method...")
+            solution = np.linalg.solve(matrix, -1.0 * right_side)
 
         print("Setting data back...")
 
@@ -2544,6 +2593,72 @@ class Samples:
                 problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
                 return problem
 
+            @staticmethod
+            def init_dirichlet_single_inclusion_square():
+                print("CoBEM for Dirichlet problem for Laplace equation with single inclusion...")
+
+                print("Define boundary conditions...")
+
+                INCLUSION_SIZE = 0.2
+                INCLUSION_CENTER_X = 0.5
+                INCLUSION_CENTER_Y = 0.5
+                INCLUSION_RADIUS = INCLUSION_SIZE / 2.0 * np.sqrt(2.0)
+                K_MAX = 10
+                K_MIN = 1
+
+                def boundary_value(point: np.array):
+                    return 2.0 * point[1]
+
+                inclusion_domain = SquareDomain2D(
+                    np.array([INCLUSION_CENTER_X - INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y - INCLUSION_SIZE / 2.0]),
+                    np.array([INCLUSION_CENTER_X + INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y + INCLUSION_SIZE / 2.0]),
+                    [BoundaryConditionType.INCLUSION] * 4,
+                    [Utils.constant_one()] * 4,
+                    GlobalSettings.INCLUSION_ELEMENTS_COUNT,
+                )
+
+                domain = SquareDomain2D(
+                    np.array([0.0, 0.0]),
+                    np.array([1.0, 1.0]),
+                    [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
+                    [boundary_value, Utils.constant_value(0.0)] * 2,
+                    GlobalSettings.BORDER_ELEMENTS_COUNT,
+                    [inclusion_domain],
+                )
+
+                def thermal_conductivity(point: np.array):
+                    result = K_MIN
+                    distance_from_center = (
+                        (point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2
+                    ) / INCLUSION_RADIUS**2
+                    if distance_from_center < 1.0:
+                        result += K_MAX * (1 - distance_from_center)
+
+                    return result
+
+                def thermal_conductivity_gradient(point: np.array):
+                    result = np.array([0.0, 0.0])
+                    if inclusion_domain.is_point_inside_domain(point):
+                        result[0] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[0]) / INCLUSION_RADIUS**2
+                        result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_Y - point[1]) / INCLUSION_RADIUS**2
+                    return result
+
+                print("Define heat source function...")
+
+                expression = [
+                    SingleLayerInclusionTerm(
+                        Laplace2DKernel(),
+                        inclusion_domain,
+                        thermal_conductivity,
+                        thermal_conductivity_gradient,
+                        1.0,
+                    ),
+                    SingleLayerCoBEMTerm(Laplace2DKernel(), domain),
+                ]
+
+                problem = Problem(ProblemSolverType.COBEM, expression, domain)
+                return problem
+
     class Poisson:
 
         class BEM:
@@ -2697,12 +2812,19 @@ class Samples:
                 def boundary_value(point: np.array):
                     return analytical_solution(point)
 
-                domain = SquareDomain2D(
-                    np.array([0.0, 0.0]),
-                    np.array([1.0, 1.0]),
-                    [BoundaryConditionType.DIRICHLET] * 4,
-                    [boundary_value] * 4,
-                    GlobalSettings.BORDER_ELEMENTS_COUNT,
+                domain = GmshDomain2D(
+                    MeshLoader.generate_mesh_from_file(
+                        MeshLoader.UNIT_SQUARE_FILE, GlobalSettings.BORDER_ELEMENT_MAX_SIZE
+                    ),
+                    MeshLoader.order_conditions(
+                        {
+                            MeshLoader.TOP: (BoundaryConditionType.DIRICHLET, boundary_value),
+                            MeshLoader.LEFT: (BoundaryConditionType.DIRICHLET, boundary_value),
+                            MeshLoader.RIGHT: (BoundaryConditionType.DIRICHLET, boundary_value),
+                            MeshLoader.BOTTOM: (BoundaryConditionType.DIRICHLET, boundary_value),
+                        }
+                    ),
+                    np.array([0.5, 0.5]),
                 )
 
                 print("Define heat source function...")
@@ -2736,17 +2858,19 @@ class Samples:
                 def neumann_boundary_left_value(point: np.array):
                     return 2.0 - 4.0 * point[0]
 
-                domain = SquareDomain2D(
-                    np.array([0.0, 0.0]),
-                    np.array([1.0, 1.0]),
-                    [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
-                    [
-                        dirichlet_boundary_value,
-                        neumann_boundary_right_value,
-                        dirichlet_boundary_value,
-                        neumann_boundary_left_value,
-                    ],
-                    GlobalSettings.BORDER_ELEMENTS_COUNT,
+                domain = GmshDomain2D(
+                    MeshLoader.generate_mesh_from_file(
+                        MeshLoader.UNIT_SQUARE_FILE, GlobalSettings.BORDER_ELEMENT_MAX_SIZE
+                    ),
+                    MeshLoader.order_conditions(
+                        {
+                            MeshLoader.TOP: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                            MeshLoader.LEFT: (BoundaryConditionType.NEUMANN, neumann_boundary_left_value),
+                            MeshLoader.RIGHT: (BoundaryConditionType.NEUMANN, neumann_boundary_right_value),
+                            MeshLoader.BOTTOM: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                        }
+                    ),
+                    np.array([0.5, 0.5]),
                 )
 
                 print("Define heat source function...")
@@ -2804,72 +2928,6 @@ class Samples:
                 ]
 
                 problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
-                return problem
-
-            @staticmethod
-            def init_dirichlet_single_inclusion_square():
-                print("CoBEM for Dirichlet problem for Poisson equation with single inclusion...")
-
-                print("Define boundary conditions...")
-
-                INCLUSION_SIZE = 0.2
-                INCLUSION_CENTER_X = 0.5
-                INCLUSION_CENTER_Y = 0.5
-                INCLUSION_RADIUS = INCLUSION_SIZE / 2.0 * np.sqrt(2.0)
-                K_MAX = 10
-                K_MIN = 1
-
-                def boundary_value(point: np.array):
-                    return 2.0 * point[1]
-
-                inclusion_domain = SquareDomain2D(
-                    np.array([INCLUSION_CENTER_X - INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y - INCLUSION_SIZE / 2.0]),
-                    np.array([INCLUSION_CENTER_X + INCLUSION_SIZE / 2.0, INCLUSION_CENTER_Y + INCLUSION_SIZE / 2.0]),
-                    [BoundaryConditionType.INCLUSION] * 4,
-                    [Utils.constant_one()] * 4,
-                    GlobalSettings.INCLUSION_ELEMENTS_COUNT,
-                )
-
-                domain = SquareDomain2D(
-                    np.array([0.0, 0.0]),
-                    np.array([1.0, 1.0]),
-                    [BoundaryConditionType.DIRICHLET, BoundaryConditionType.NEUMANN] * 2,
-                    [boundary_value, Utils.constant_value(0.0)] * 2,
-                    GlobalSettings.BORDER_ELEMENTS_COUNT,
-                    [inclusion_domain],
-                )
-
-                def thermal_conductivity(point: np.array):
-                    result = K_MIN
-                    distance_from_center = (
-                        (point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2
-                    ) / INCLUSION_RADIUS**2
-                    if distance_from_center < 1.0:
-                        result += K_MAX * (1 - distance_from_center)
-
-                    return result
-
-                def thermal_conductivity_gradient(point: np.array):
-                    result = np.array([0.0, 0.0])
-                    if inclusion_domain.is_point_inside_domain(point):
-                        result[0] = K_MAX * 2.0 * (INCLUSION_CENTER_X - point[0]) / INCLUSION_RADIUS**2
-                        result[1] = K_MAX * 2.0 * (INCLUSION_CENTER_Y - point[1]) / INCLUSION_RADIUS**2
-                    return result
-
-                print("Define heat source function...")
-
-                expression = [
-                    SingleLayerInclusionTerm(
-                        Laplace2DKernel(),
-                        inclusion_domain,
-                        thermal_conductivity,
-                        thermal_conductivity_gradient,
-                        1.0,
-                    ),
-                    SingleLayerCoBEMTerm(Laplace2DKernel(), domain),
-                ]
-
-                problem = Problem(ProblemSolverType.COBEM, expression, domain)
                 return problem
 
     class Pennes:
