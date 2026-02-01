@@ -24,8 +24,6 @@ class GlobalSettings(object):
     BORDER_ELEMENT_MAX_SIZE = 0.1
     INCLUSION_ELEMENTS_MAX_SIZE = 0.3
     COBORDER_SCALE = 2.0
-    RIDGE_REGRESSION_LAMBDA = 1.0
-    RIDGE_REGRESSION_DET = 1e-20
 
     PLOT_ERROR = False
     PLOT_ISOLINES_COUNT = 10
@@ -1761,17 +1759,21 @@ class Problem(object):
 
         print("Solving SLAE...")
 
-        determ = np.linalg.det(matrix)
-        print(f"  Matrix determinant: {determ}")
+        U, S, Vt = np.linalg.svd(matrix)
 
-        if math.fabs(determ) < GlobalSettings.RIDGE_REGRESSION_DET:
-            print(f"  Using ridge regression...")
-            solution = Problem.__ridge_regression_scratch(
-                matrix, -1.0 * right_side, GlobalSettings.RIDGE_REGRESSION_LAMBDA
-            )
-        else:
-            print(f"  Using Gauss method...")
-            solution = np.linalg.solve(matrix, -1.0 * right_side)
+        print("  Maximum Singular values:", np.max(S))
+        print("  Minimum Singular values:", np.min(S))
+        print("  Solver instability:", np.max(S) / np.min(S))
+
+        # Nullspace vector v_min
+        v_min = Vt[-1, :]  # right singular vector
+
+        rank = np.linalg.matrix_rank(matrix)
+        print(f"  Rank of matrix: {rank}")
+        print(f"  Matrix dimensions: {matrix.shape}")
+
+        print(f"  Using Gauss method...")
+        solution = np.linalg.solve(matrix, -1.0 * right_side)
 
         print("Setting data back...")
 
