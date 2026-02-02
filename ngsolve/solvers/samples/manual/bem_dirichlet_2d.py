@@ -839,6 +839,12 @@ class Kernel:
             assert "Unknown kernel value type"
         return result
 
+    def analytical_value(self, a: np.array, b: np.array):
+        raise NotImplementedError("Call to abstract method")
+
+    def analytical_grad(self, normal: np.array, a: np.array, b: np.array):
+        raise NotImplementedError("Call to abstract method")
+
 
 class Laplace2DKernel(Kernel):
     def value(self, point_x: np.array, point_y: np.array):
@@ -865,6 +871,15 @@ class Laplace2DKernel(Kernel):
     def dyy(self, point_x: np.array, point_y: np.array):
         result = -1.0 * self.dxx(point_x, point_y)
         return result
+
+    def analytical_value(self, a: np.array, b: np.array):
+        L = Utils.distance(a, b)
+        res = L / (2 * np.pi) * (np.log(2.0 / L) + 1.0)
+        return res
+
+    def analytical_grad(self, normal: np.array, a: np.array, b: np.array):
+        res = 0.0
+        return res
 
 
 # https://en.wikipedia.org/wiki/Green%27s_function#Table_of_Green's_functions
@@ -1001,6 +1016,18 @@ class Integrator2D(Integrator):
         nodes, weights = np.polynomial.legendre.leggauss(count)
         real_nodes, real_weights = self._convert_leggauss_to_segment(nodes, weights, min_limit, max_limit)
         return (real_nodes, real_weights)
+
+    def analytical_segment_of(
+        self, type: KernelValueType, point: np.array, normal: np.array, min_limit: np.array, max_limit: np.array
+    ):
+        result = 0.0
+        if type in [KernelValueType.GRADIENT]:
+            result = self.kernel.analytical_grad(normal, min_limit, max_limit)
+        elif type in [KernelValueType.SCALAR]:
+            result = self.kernel.analytical_value(min_limit, max_limit)
+        else:
+            raise NotImplementedError("Not supported kernel type")
+        return result
 
     def segment_of(
         self, type: KernelValueType, function: Callable, point: np.array, min_limit: np.array, max_limit: np.array
@@ -1214,23 +1241,28 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
         coefficients = np.empty(0)
         right_side_ret = 0.0
         for boundary_item in self.domain.get_border():
+            integral_value = 0.0
+            if Utils.distance(point_info.point, boundary_item.point) < SingleLayerBoundaryTerm.EPS:
+                integral_value = self.__integrator.analytical_segment_of(
+                    KernelValueType.SCALAR,
+                    point_info.point,
+                    point_info.normal,
+                    boundary_item.element[0],
+                    boundary_item.element[1],
+                )
+            else:
+                integral_value = self.__integrator.segment_of(
+                    KernelValueType.SCALAR,
+                    Utils.constant_one(),
+                    point_info.point,
+                    boundary_item.element[0],
+                    boundary_item.element[1],
+                )
+
             if boundary_item.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.ROBIN]:
-                res = self.__integrator.segment_of(
-                    KernelValueType.SCALAR,
-                    Utils.constant_one(),
-                    point_info.point,
-                    boundary_item.element[0],
-                    boundary_item.element[1],
-                )
-                coefficients = np.append(coefficients, [res])
+                coefficients = np.append(coefficients, [integral_value])
             elif BoundaryConditionType.NEUMANN == boundary_item.type:
-                right_side_ret += boundary_item.value * self.__integrator.segment_of(
-                    KernelValueType.SCALAR,
-                    Utils.constant_one(),
-                    point_info.point,
-                    boundary_item.element[0],
-                    boundary_item.element[1],
-                )
+                right_side_ret += boundary_item.value * integral_value
             else:
                 raise AttributeError("Not supported boundary element type")
 
@@ -1242,9 +1274,7 @@ class SingleLayerBoundaryTerm(ExpressionTerm):
         assert point_info is not None
         coefficients = np.empty(0)
         for boundary_item in self.domain.get_border():
-            mid_point = 0.5 * (boundary_item.element[1] + boundary_item.element[0])
-            is_same_point = Utils.distance(point_info.point, mid_point) < SingleLayerBoundaryTerm.EPS
-
+            is_same_point = Utils.distance(point_info.point, boundary_item.point) < SingleLayerBoundaryTerm.EPS
             if BoundaryConditionType.DIRICHLET == boundary_item.type:
                 coefficients = np.append(coefficients, [0.0])
             elif BoundaryConditionType.NEUMANN == boundary_item.type:
@@ -1309,24 +1339,30 @@ class DoubleLayerBoundaryTerm(ExpressionTerm):
         right_side_ret = 0.0
         for boundary_item in self.domain.get_border():
             is_same_point = Utils.is_the_same_point(point_info.point, boundary_item.point, DoubleLayerBoundaryTerm.EPS)
-            if BoundaryConditionType.DIRICHLET == boundary_item.type:
-                right_side_ret += boundary_item.value * self.__integrator.segment_of(
+            integral_value = 0.0
+            if is_same_point:
+                integral_value = self.__integrator.analytical_segment_of(
+                    KernelValueType.GRADIENT,
+                    point_info.point,
+                    boundary_item.normal,
+                    boundary_item.element[0],
+                    boundary_item.element[1],
+                )
+            else:
+                integral_value = self.__integrator.segment_of(
                     KernelValueType.GRADIENT,
                     Utils.constant_value(boundary_item.normal),
                     point_info.point,
                     boundary_item.element[0],
                     boundary_item.element[1],
                 )
+
+            if BoundaryConditionType.DIRICHLET == boundary_item.type:
+                right_side_ret += boundary_item.value * integral_value
                 if is_same_point:
                     right_side_ret += 0.5 * boundary_item.value
             elif boundary_item.type in [BoundaryConditionType.NEUMANN, BoundaryConditionType.ROBIN]:
-                res = self.__integrator.segment_of(
-                    KernelValueType.GRADIENT,
-                    Utils.constant_value(boundary_item.normal),
-                    point_info.point,
-                    boundary_item.element[0],
-                    boundary_item.element[1],
-                )
+                res = integral_value
                 if is_same_point:
                     res += 0.5
                 coefficients = np.append(coefficients, [res])
@@ -2681,6 +2717,8 @@ class Samples:
 
 
 def main():
+    np.set_printoptions(linewidth=120)
+
     def get_deep_attr(obj, attr):
         return functools.reduce(getattr, attr.split("."), obj)
 
