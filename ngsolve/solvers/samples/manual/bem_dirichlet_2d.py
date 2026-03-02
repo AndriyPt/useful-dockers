@@ -34,6 +34,9 @@ class GlobalSettings(object):
     ERROR_TO_CSV = False
     ERROR_CSV_STEPS = 5
 
+    # 1 - Collocation, 2 - Variational
+    CALC_METHOD = 1
+
     EXAMPLE_FUNCTIONS = {
         1: "Samples.Laplace.BEM.init_dirichlet_square",
         2: "Samples.Laplace.BEM.init_dirichlet_single_inclusion_square",
@@ -1724,24 +1727,17 @@ class Problem(object):
         self.__analytical_solution = analytical_solution
 
     @staticmethod
-    def __ridge_regression_scratch(X, y, alpha):
-        # Add a bias (intercept) term to X by appending a column of ones if data is not centered/standardized
-        # The normal equation derived above assumes X already has an intercept if one is desired to be penalized
-        # To not penalize the intercept, augment X and adjust the identity matrix
-
-        # For a simple implementation where all coefficients including intercept are penalized:
-        # (Note: it's common practice not to penalize the intercept, which requires a slightly different approach)
-
-        # Use the numerically stable np.linalg.solve instead of calculating the inverse directly
-        A = X.T @ X
-        I = np.eye(A.shape[0]) * alpha
-        B = A + I
-        c = X.T @ y
-
-        # Solve the system of equations B * beta = c for beta (coefficients)
-        beta = np.linalg.solve(B, c)
-
-        return beta
+    def create(
+        type: ProblemSolverType, expression: list[ExpressionTerm], domain: Domain, analytical_solution: Callable = None
+    ):
+        result = None
+        if 1 == GlobalSettings.CALC_METHOD:
+            result = CollocationProblem(type, expression, domain, analytical_solution)
+        elif 2 == GlobalSettings.CALC_METHOD:
+            result = VariationalProblem(type, expression, domain, analytical_solution)
+        else:
+            raise AttributeError("Unsupported CALC_METHOD type")
+        return result
 
     def solution_value(self, point: np.array):
         result = -1.0 * sum(term.value(point) for term in self.__expression)
@@ -1754,67 +1750,7 @@ class Problem(object):
         return result
 
     def calculate(self):
-        print("Create SLAE...")
-
-        matrix = None
-        right_side = None
-
-        point_list = self.__domain.get_border()
-        for subdomain in self.__domain.get_subdomains():
-            point_list = np.hstack((point_list, subdomain.get_mesh()))
-
-        for point_info in point_list:
-            if isinstance(point_info.type, list):
-                conditions = point_info.type
-            else:
-                conditions = [point_info.type]
-            for condition in conditions:
-                right_side_value = 0.0
-                matrix_row = np.empty(0)
-                for term in self.__expression:
-                    coefficients, value = term.calculate_coefficients(point_info, condition)
-                    right_side_value += value
-                    matrix_row = np.hstack((matrix_row, coefficients))
-                if matrix is None:
-                    matrix = matrix_row
-                else:
-                    matrix = np.vstack((matrix, matrix_row))
-                if right_side is None:
-                    right_side = np.array([right_side_value])
-                else:
-                    right_side = np.append(right_side, [right_side_value])
-                if BoundaryConditionType.ROBIN == point_info.type and ProblemSolverType.BEM == self.__type:
-                    right_side_value = 0.0
-                    matrix_row = np.empty(0)
-                    for term in self.__expression:
-                        coefficients, value = term.calculate_for_robin(point_info)
-                        right_side_value += value
-                        matrix_row = np.hstack((matrix_row, coefficients))
-                    matrix = np.vstack((matrix, matrix_row))
-                    right_side = np.append(right_side, [right_side_value])
-
-        print("Solving SLAE...")
-
-        U, S, Vt = np.linalg.svd(matrix)
-
-        print("  Maximum Singular values:", np.max(S))
-        print("  Minimum Singular values:", np.min(S))
-        print("  Solver instability:", np.max(S) / np.min(S))
-
-        # Nullspace vector v_min
-        v_min = Vt[-1, :]  # right singular vector
-
-        rank = np.linalg.matrix_rank(matrix)
-        print(f"  Rank of matrix: {rank}")
-        print(f"  Matrix dimensions: {matrix.shape}")
-
-        print(f"  Using Gauss method...")
-        solution = np.linalg.solve(matrix, -1.0 * right_side)
-
-        print("Setting data back...")
-
-        for term in self.__expression:
-            solution = term.propagate_solution(solution)
+        raise NotImplementedError("Call to abstract method")
 
     def print_stats(self):
         print("Domains stats...")
@@ -1894,6 +1830,96 @@ class Problem(object):
         print("Done!")
 
 
+class CollocationProblem(Problem):
+    def __init__(
+        self,
+        type: ProblemSolverType,
+        expression: list[ExpressionTerm],
+        domain: Domain,
+        analytical_solution: Callable = None,
+    ):
+        super().__init__(type, expression, domain, analytical_solution)
+        self.__type = type
+        self.__expression = expression
+        self.__domain = domain
+        self.__analytical_solution = analytical_solution
+
+    def calculate(self):
+        print("Create SLAE...")
+
+        matrix = None
+        right_side = None
+
+        point_list = self.__domain.get_border()
+        for subdomain in self.__domain.get_subdomains():
+            point_list = np.hstack((point_list, subdomain.get_mesh()))
+
+        for point_info in point_list:
+            if isinstance(point_info.type, list):
+                conditions = point_info.type
+            else:
+                conditions = [point_info.type]
+            for condition in conditions:
+                right_side_value = 0.0
+                matrix_row = np.empty(0)
+                for term in self.__expression:
+                    coefficients, value = term.calculate_coefficients(point_info, condition)
+                    right_side_value += value
+                    matrix_row = np.hstack((matrix_row, coefficients))
+                if matrix is None:
+                    matrix = matrix_row
+                else:
+                    matrix = np.vstack((matrix, matrix_row))
+                if right_side is None:
+                    right_side = np.array([right_side_value])
+                else:
+                    right_side = np.append(right_side, [right_side_value])
+                if BoundaryConditionType.ROBIN == point_info.type and ProblemSolverType.BEM == self.__type:
+                    right_side_value = 0.0
+                    matrix_row = np.empty(0)
+                    for term in self.__expression:
+                        coefficients, value = term.calculate_for_robin(point_info)
+                        right_side_value += value
+                        matrix_row = np.hstack((matrix_row, coefficients))
+                    matrix = np.vstack((matrix, matrix_row))
+                    right_side = np.append(right_side, [right_side_value])
+
+        print("Solving SLAE...")
+
+        U, S, Vt = np.linalg.svd(matrix)
+
+        print("  Maximum Singular values:", np.max(S))
+        print("  Minimum Singular values:", np.min(S))
+        print("  Solver instability:", np.max(S) / np.min(S))
+
+        # Nullspace vector v_min
+        v_min = Vt[-1, :]  # right singular vector
+
+        rank = np.linalg.matrix_rank(matrix)
+        print(f"  Rank of matrix: {rank}")
+        print(f"  Matrix dimensions: {matrix.shape}")
+
+        print(f"  Using Gauss method...")
+        solution = np.linalg.solve(matrix, -1.0 * right_side)
+
+        print("Setting data back...")
+
+        for term in self.__expression:
+            solution = term.propagate_solution(solution)
+
+
+class VariationalProblem(Problem):
+
+    def __init__(
+        self,
+        type: ProblemSolverType,
+        expression: list[ExpressionTerm],
+        domain: Domain,
+        analytical_solution: Callable = None,
+    ):
+        super().__init__(type, expression, domain, analytical_solution)
+
+
 class Samples:
     class Laplace:
 
@@ -1930,7 +1956,7 @@ class Samples:
                     SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
                 ]
 
-                problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
+                problem = Problem.create(ProblemSolverType.BEM, expression, domain, analytical_solution)
                 return problem
 
             @staticmethod
@@ -2012,7 +2038,7 @@ class Samples:
                     SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
                 ]
 
-                problem = Problem(ProblemSolverType.BEM, expression, domain)
+                problem = Problem.create(ProblemSolverType.BEM, expression, domain)
                 return problem
 
             @staticmethod
@@ -2086,7 +2112,7 @@ class Samples:
                     SingleLayerBoundaryTerm(Laplace2DKernel(), domain, -1),
                 ]
 
-                problem = Problem(ProblemSolverType.BEM, expression, domain)
+                problem = Problem.create(ProblemSolverType.BEM, expression, domain)
                 return problem
 
         class CoBEM:
@@ -2122,7 +2148,7 @@ class Samples:
                     SingleLayerCoBEMTerm(Laplace2DKernel(), domain, 1),
                 ]
 
-                problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+                problem = Problem.create(ProblemSolverType.COBEM, expression, domain, analytical_solution)
                 return problem
 
             @staticmethod
@@ -2155,7 +2181,7 @@ class Samples:
                     SingleLayerCoBEMTerm(Laplace2DKernel(), domain, 1),
                 ]
 
-                problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+                problem = Problem.create(ProblemSolverType.COBEM, expression, domain, analytical_solution)
                 return problem
 
             @staticmethod
@@ -2238,7 +2264,7 @@ class Samples:
                     SingleLayerCoBEMTerm(Laplace2DKernel(), domain),
                 ]
 
-                problem = Problem(ProblemSolverType.COBEM, expression, domain)
+                problem = Problem.create(ProblemSolverType.COBEM, expression, domain)
                 return problem
 
     class Poisson:
@@ -2283,7 +2309,7 @@ class Samples:
                     SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
                 ]
 
-                problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
+                problem = Problem.create(ProblemSolverType.BEM, expression, domain, analytical_solution)
                 return problem
 
             @staticmethod
@@ -2330,7 +2356,7 @@ class Samples:
                     SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
                 ]
 
-                problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
+                problem = Problem.create(ProblemSolverType.BEM, expression, domain, analytical_solution)
                 return problem
 
             @staticmethod
@@ -2377,7 +2403,7 @@ class Samples:
                     SingleLayerVolumeTerm(Laplace2DKernel(), domain, heat_source_function, -1),
                 ]
 
-                problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
+                problem = Problem.create(ProblemSolverType.BEM, expression, domain, analytical_solution)
                 return problem
 
         class CoBEM:
@@ -2419,7 +2445,7 @@ class Samples:
                     SingleLayerVolumeCoBEMTerm(Laplace2DKernel(), domain, heat_source_function, -1),
                 ]
 
-                problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+                problem = Problem.create(ProblemSolverType.COBEM, expression, domain, analytical_solution)
                 return problem
 
             @staticmethod
@@ -2465,7 +2491,7 @@ class Samples:
                     SingleLayerVolumeCoBEMTerm(Laplace2DKernel(), domain, heat_source_function, -1),
                 ]
 
-                problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+                problem = Problem.create(ProblemSolverType.COBEM, expression, domain, analytical_solution)
                 return problem
 
             @staticmethod
@@ -2511,7 +2537,7 @@ class Samples:
                     SingleLayerVolumeCoBEMTerm(Laplace2DKernel(), domain, heat_source_function, -1),
                 ]
 
-                problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+                problem = Problem.create(ProblemSolverType.COBEM, expression, domain, analytical_solution)
                 return problem
 
     class Pennes:
@@ -2553,7 +2579,7 @@ class Samples:
                     SingleLayerBoundaryTerm(Pennes2DKernel(K_SQUARE_CONSTANT), domain, -1),
                 ]
 
-                problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
+                problem = Problem.create(ProblemSolverType.BEM, expression, domain, analytical_solution)
                 return problem
 
             @staticmethod
@@ -2596,7 +2622,7 @@ class Samples:
                     SingleLayerBoundaryTerm(Pennes2DKernel(K_SQUARE_CONSTANT), domain, -1),
                 ]
 
-                problem = Problem(ProblemSolverType.BEM, expression, domain, analytical_solution)
+                problem = Problem.create(ProblemSolverType.BEM, expression, domain, analytical_solution)
                 return problem
 
         class CoBEM:
@@ -2634,7 +2660,7 @@ class Samples:
                     SingleLayerCoBEMTerm(Pennes2DKernel(K_SQUARE_CONSTANT), domain, 1),
                 ]
 
-                problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+                problem = Problem.create(ProblemSolverType.COBEM, expression, domain, analytical_solution)
                 return problem
 
             @staticmethod
@@ -2676,7 +2702,7 @@ class Samples:
                     SingleLayerCoBEMTerm(Pennes2DKernel(K_SQUARE_CONSTANT), domain, 1),
                 ]
 
-                problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+                problem = Problem.create(ProblemSolverType.COBEM, expression, domain, analytical_solution)
                 return problem
 
             @staticmethod
@@ -2712,7 +2738,7 @@ class Samples:
                     SingleLayerCoBEMTerm(Pennes2DKernel(K_SQUARE_CONSTANT), domain, 1),
                 ]
 
-                problem = Problem(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+                problem = Problem.create(ProblemSolverType.COBEM, expression, domain, analytical_solution)
                 return problem
 
 
