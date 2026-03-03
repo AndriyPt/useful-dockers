@@ -57,11 +57,7 @@ class GlobalSettings(object):
         18: "Samples.Pennes.CoBEM.init_dirichlet_hexagon",
     }
 
-    EXAMPLE_TYPE = 6
-
-
-class ExpressionTerm:
-    pass
+    EXAMPLE_TYPE = 1
 
 
 class BoundaryConditionType(Enum):
@@ -1219,6 +1215,12 @@ class ExpressionTerm:
     def calculate_for_robin(self, point_info: Point2DInfo):
         raise NotImplementedError("Call to abstract method")
 
+    def calculate_variational_coefficients(self, point_info: Point2DInfo, condition: BoundaryConditionType):
+        raise NotImplementedError("Call to abstract method")
+
+    def calculate_variational_for_robin(self, point_info: Point2DInfo):
+        raise NotImplementedError("Call to abstract method")
+
     def propagate_solution(self, solution: np.array):
         raise NotImplementedError("Call to abstract method")
 
@@ -1726,6 +1728,14 @@ class Problem(object):
         self.__domain = domain
         self.__analytical_solution = analytical_solution
 
+    @property
+    def _domain(self):
+        return self.__domain
+
+    @property
+    def _expression(self):
+        return self.__expression
+
     @staticmethod
     def create(
         type: ProblemSolverType, expression: list[ExpressionTerm], domain: Domain, analytical_solution: Callable = None
@@ -1839,10 +1849,6 @@ class CollocationProblem(Problem):
         analytical_solution: Callable = None,
     ):
         super().__init__(type, expression, domain, analytical_solution)
-        self.__type = type
-        self.__expression = expression
-        self.__domain = domain
-        self.__analytical_solution = analytical_solution
 
     def calculate(self):
         print("Create SLAE...")
@@ -1850,8 +1856,8 @@ class CollocationProblem(Problem):
         matrix = None
         right_side = None
 
-        point_list = self.__domain.get_border()
-        for subdomain in self.__domain.get_subdomains():
+        point_list = self._domain.get_border()
+        for subdomain in self._domain.get_subdomains():
             point_list = np.hstack((point_list, subdomain.get_mesh()))
 
         for point_info in point_list:
@@ -1862,7 +1868,7 @@ class CollocationProblem(Problem):
             for condition in conditions:
                 right_side_value = 0.0
                 matrix_row = np.empty(0)
-                for term in self.__expression:
+                for term in self._expression:
                     coefficients, value = term.calculate_coefficients(point_info, condition)
                     right_side_value += value
                     matrix_row = np.hstack((matrix_row, coefficients))
@@ -1877,7 +1883,7 @@ class CollocationProblem(Problem):
                 if BoundaryConditionType.ROBIN == point_info.type and ProblemSolverType.BEM == self.__type:
                     right_side_value = 0.0
                     matrix_row = np.empty(0)
-                    for term in self.__expression:
+                    for term in self._expression:
                         coefficients, value = term.calculate_for_robin(point_info)
                         right_side_value += value
                         matrix_row = np.hstack((matrix_row, coefficients))
@@ -1904,7 +1910,7 @@ class CollocationProblem(Problem):
 
         print("Setting data back...")
 
-        for term in self.__expression:
+        for term in self._expression:
             solution = term.propagate_solution(solution)
 
 
@@ -1918,6 +1924,69 @@ class VariationalProblem(Problem):
         analytical_solution: Callable = None,
     ):
         super().__init__(type, expression, domain, analytical_solution)
+
+    def calculate(self):
+        print("Create SLAE...")
+
+        matrix = None
+        right_side = None
+
+        point_list = self._domain.get_border()
+        for subdomain in self._domain.get_subdomains():
+            point_list = np.hstack((point_list, subdomain.get_mesh()))
+
+        for point_info in point_list:
+            if isinstance(point_info.type, list):
+                conditions = point_info.type
+            else:
+                conditions = [point_info.type]
+            for condition in conditions:
+                right_side_value = 0.0
+                matrix_row = np.empty(0)
+                for term in self._expression:
+                    coefficients, value = term.calculate_variational_coefficients(point_info, condition)
+                    right_side_value += value
+                    matrix_row = np.hstack((matrix_row, coefficients))
+                if matrix is None:
+                    matrix = matrix_row
+                else:
+                    matrix = np.vstack((matrix, matrix_row))
+                if right_side is None:
+                    right_side = np.array([right_side_value])
+                else:
+                    right_side = np.append(right_side, [right_side_value])
+                if BoundaryConditionType.ROBIN == point_info.type and ProblemSolverType.BEM == self.__type:
+                    right_side_value = 0.0
+                    matrix_row = np.empty(0)
+                    for term in self._expression:
+                        coefficients, value = term.calculate_variational_for_robin(point_info)
+                        right_side_value += value
+                        matrix_row = np.hstack((matrix_row, coefficients))
+                    matrix = np.vstack((matrix, matrix_row))
+                    right_side = np.append(right_side, [right_side_value])
+
+        print("Solving SLAE...")
+
+        U, S, Vt = np.linalg.svd(matrix)
+
+        print("  Maximum Singular values:", np.max(S))
+        print("  Minimum Singular values:", np.min(S))
+        print("  Solver instability:", np.max(S) / np.min(S))
+
+        # Nullspace vector v_min
+        v_min = Vt[-1, :]  # right singular vector
+
+        rank = np.linalg.matrix_rank(matrix)
+        print(f"  Rank of matrix: {rank}")
+        print(f"  Matrix dimensions: {matrix.shape}")
+
+        print(f"  Using Gauss method...")
+        solution = np.linalg.solve(matrix, -1.0 * right_side)
+
+        print("Setting data back...")
+
+        for term in self._expression:
+            solution = term.propagate_solution(solution)
 
 
 class Samples:
