@@ -1529,6 +1529,25 @@ class SingleLayerVolumeCoBEMTerm(SingleLayerVolumeTerm):
             right_side_ret = super().value_of(KernelValueType.SCALAR, point_info.point)
         return (coefficients, right_side_ret)
 
+    def calculate_variational_coefficients(self, point_info, condition):
+        assert point_info is not None
+        coefficients = np.empty(0)
+
+        def single_layer_volume_integral(point):
+            result = 0.0
+            # TODO: Add Robin condition
+            if BoundaryConditionType.NEUMANN == point_info.type:
+                result = self.value_grad_of(KernelValueType.GRADIENT, point, point_info.normal)
+            else:
+                result = self.value_of(KernelValueType.SCALAR, point)
+            return result
+
+        right_side_ret = self._get_integrator().definitive_scalar_convex_quadrilateral(
+            single_layer_volume_integral, point_info.element
+        )
+
+        return (coefficients, right_side_ret)
+
     def value_grad_of(self, type: KernelValueType, point: np.array, norm: np.array):
         assert point is not None
         assert type in [KernelValueType.GRADIENT, KernelValueType.GRADIENT_DX, KernelValueType.DY]
@@ -1621,18 +1640,27 @@ class SingleLayerCoBEMTerm(ExpressionTerm):
                 coefficients = np.append(coefficients, [res])
                 if is_same_point:
                     right_side_ret += boundary_item.value * self.__integrator.definitive_scalar_convex_quadrilateral(
-                        Utils.constant_one(), point_info.element)
+                        Utils.constant_one(), point_info.element
+                    )
             elif BoundaryConditionType.NEUMANN == point_info.type:
-                raise AttributeError("Not supported boundary element type")
-                # res = self.__integrator.convex_quadrilateral_of(
-                #     KernelValueType.GRADIENT,
-                #     Utils.constant_value(boundary_item.normal),
-                #     point_info.point,
-                #     boundary_item.element,
-                # )
-                # coefficients = np.append(coefficients, [res])
-                # if is_same_point:
-                #     right_side_ret += boundary_item.value
+
+                def double_layer_integral(point):
+                    result = self.__integrator.convex_quadrilateral_of(
+                        KernelValueType.GRADIENT,
+                        Utils.constant_value(boundary_item.normal),
+                        point,
+                        boundary_item.element,
+                    )
+                    return result
+
+                res = self.__integrator.definitive_scalar_convex_quadrilateral(
+                    double_layer_integral, point_info.element
+                )
+                coefficients = np.append(coefficients, [res])
+                if is_same_point:
+                    right_side_ret += boundary_item.value * self.__integrator.definitive_scalar_convex_quadrilateral(
+                        Utils.constant_one(), point_info.element
+                    )
             elif BoundaryConditionType.ROBIN == point_info.type:
                 raise AttributeError("Not supported boundary element type")
                 # res = self.__integrator.convex_quadrilateral_of(
