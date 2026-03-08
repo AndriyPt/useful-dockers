@@ -21,7 +21,7 @@ import functools
 
 
 class GlobalSettings(object):
-    BORDER_ELEMENT_MAX_SIZE = 0.1
+    BORDER_ELEMENT_MAX_SIZE = 0.3
     INCLUSION_ELEMENTS_MAX_SIZE = 0.3
     COBORDER_SCALE = 2.0
 
@@ -35,7 +35,7 @@ class GlobalSettings(object):
     ERROR_CSV_STEPS = 5
 
     # 1 - Collocation, 2 - Variational
-    CALC_METHOD = 1
+    CALC_METHOD = 2
 
     EXAMPLE_FUNCTIONS = {
         1: "Samples.Laplace.BEM.init_dirichlet_square",
@@ -57,7 +57,7 @@ class GlobalSettings(object):
         18: "Samples.Pennes.CoBEM.init_dirichlet_hexagon",
     }
 
-    EXAMPLE_TYPE = 1
+    EXAMPLE_TYPE = 4
 
 
 class BoundaryConditionType(Enum):
@@ -1183,6 +1183,37 @@ class Integrator2D(Integrator):
                     result += wx * wy * self.kernel.value_of(type, point, node) * function(node) * jacobian
         return result
 
+    def definitive_scalar_convex_quadrilateral(self, function: Callable, vertices: np.array):
+        assert Constants.PLANE_SQUARE_DIM == len(vertices)
+        result = 0.0
+        unit_square = np.array(
+            [np.array([-1.0, -1.0]), np.array([1.0, -1.0]), np.array([1.0, 1.0]), np.array([-1.0, 1.0])]
+        )
+        matrix = None
+        right_side = np.empty(0)
+        for unit, actual in zip(unit_square, vertices):
+            matrix_row = np.array([1.0, unit[0], unit[1], unit[0] * unit[1], 0.0, 0.0, 0.0, 0.0])
+            if matrix is None:
+                matrix = matrix_row
+            else:
+                matrix = np.vstack((matrix, matrix_row))
+            matrix_row = np.array([0.0, 0.0, 0.0, 0.0, 1.0, unit[0], unit[1], unit[0] * unit[1]])
+            matrix = np.vstack((matrix, matrix_row))
+            right_side = np.append(right_side, [actual[0], actual[1]])
+        coeff = np.linalg.solve(matrix, right_side)
+        a, b, c, d, e, f = (coeff[1], coeff[2], coeff[3], coeff[5], coeff[6], coeff[7])
+        const_x, const_y = (coeff[0], coeff[4])
+
+        interpolation_order = self.__nominal_number_of_points
+        nodes, weights = np.polynomial.legendre.leggauss(interpolation_order)
+
+        for x1, wx in zip(nodes, weights):
+            for y1, wy in zip(nodes, weights):
+                node = np.array([const_x + a * x1 + b * y1 + c * x1 * y1, const_y + d * x1 + e * y1 + f * x1 * y1])
+                jacobian = (a * e - b * d) + (a * f - c * d) * x1 + (c * e - b * f) * y1
+                result += wx * wy * function(node) * jacobian
+        return result
+
 
 class ExpressionTerm:
     def __init__(self, kernel: Kernel, domain: Domain, sign: int):
@@ -1570,8 +1601,63 @@ class SingleLayerCoBEMTerm(ExpressionTerm):
 
         return (self.sign * coefficients, self.sign * right_side_ret)
 
+    def calculate_variational_coefficients(self, point_info, condition):
+        assert point_info is not None
+        coefficients = np.empty(0)
+        right_side_ret = 0.0
+        for boundary_item in self.domain.get_coborder():
+            is_same_point = Utils.is_the_same_point(point_info.point, boundary_item.point, SingleLayerCoBEMTerm.EPS)
+            if point_info.type in [BoundaryConditionType.DIRICHLET, BoundaryConditionType.INCLUSION]:
+
+                def single_layer_integral(point):
+                    result = self.__integrator.convex_quadrilateral_of(
+                        KernelValueType.SCALAR, Utils.constant_one(), point, boundary_item.element
+                    )
+                    return result
+
+                res = self.__integrator.definitive_scalar_convex_quadrilateral(
+                    single_layer_integral, point_info.element
+                )
+                coefficients = np.append(coefficients, [res])
+                if is_same_point:
+                    right_side_ret += boundary_item.value * self.__integrator.definitive_scalar_convex_quadrilateral(
+                        Utils.constant_one(), point_info.element)
+            elif BoundaryConditionType.NEUMANN == point_info.type:
+                raise AttributeError("Not supported boundary element type")
+                # res = self.__integrator.convex_quadrilateral_of(
+                #     KernelValueType.GRADIENT,
+                #     Utils.constant_value(boundary_item.normal),
+                #     point_info.point,
+                #     boundary_item.element,
+                # )
+                # coefficients = np.append(coefficients, [res])
+                # if is_same_point:
+                #     right_side_ret += boundary_item.value
+            elif BoundaryConditionType.ROBIN == point_info.type:
+                raise AttributeError("Not supported boundary element type")
+                # res = self.__integrator.convex_quadrilateral_of(
+                #     KernelValueType.GRADIENT,
+                #     Utils.constant_value(point_info.normal),
+                #     point_info.point,
+                #     boundary_item.element,
+                # )
+                # res -= point_info.robin_coeff * self.__integrator.convex_quadrilateral_of(
+                #     KernelValueType.SCALAR, Utils.constant_one(), point_info.point, boundary_item.element
+                # )
+                # coefficients = np.append(coefficients, [res])
+                # if is_same_point:
+                #     right_side_ret += boundary_item.value
+            else:
+                raise AttributeError("Not supported boundary element type")
+        self.__unknown_count = len(coefficients)
+
+        return (self.sign * coefficients, self.sign * right_side_ret)
+
+    def calculate_variational_for_robin(self, point_info):
+        return super().calculate_variational_for_robin(point_info)
+
     def calculate_for_robin(self, point_info: Point2DInfo):
-        raise NotImplementedError("Should not be called")
+        raise NotImplementedError("Not implemented yet")
 
     def propagate_solution(self, solution: np.array):
         self.__unknown_values = solution[: self.__unknown_count]
@@ -1735,6 +1821,10 @@ class Problem(object):
     @property
     def _expression(self):
         return self.__expression
+
+    @property
+    def _type(self):
+        return self.__type
 
     @staticmethod
     def create(
@@ -1931,7 +2021,13 @@ class VariationalProblem(Problem):
         matrix = None
         right_side = None
 
-        point_list = self._domain.get_border()
+        if ProblemSolverType.BEM == self._type:
+            point_list = self._domain.get_border()
+        elif ProblemSolverType.COBEM == self._type:
+            point_list = self._domain.get_coborder()
+        else:
+            raise AttributeError("Not supported problem solver type")
+
         for subdomain in self._domain.get_subdomains():
             point_list = np.hstack((point_list, subdomain.get_mesh()))
 
