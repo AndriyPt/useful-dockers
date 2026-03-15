@@ -42,14 +42,15 @@ class GlobalSettings(object):
         2: "Samples.Laplace.BEM.init_dirichlet_single_inclusion_square",
         3: "Samples.Laplace.BEM.init_dirichlet_single_inclusion_circle_in_square",
         4: "Samples.Laplace.CoBEM.init_dirichlet_square",
-        5: "Samples.Laplace.CoBEM.init_dirichlet_hexagon",
-        6: "Samples.Laplace.CoBEM.init_dirichlet_single_inclusion_square",
-        7: "Samples.Poisson.BEM.init_dirichlet_square",
-        8: "Samples.Poisson.BEM.init_neumann_square",
-        9: "Samples.Poisson.BEM.init_robin_square",
-        10: "Samples.Poisson.CoBEM.init_dirichlet_square",
-        11: "Samples.Poisson.CoBEM.init_neumann_square",
-        12: "Samples.Poisson.CoBEM.init_robin_square",
+        5: "Samples.Laplace.CoBEM.init_neumann_square",
+        6: "Samples.Laplace.CoBEM.init_dirichlet_hexagon",
+        7: "Samples.Laplace.CoBEM.init_dirichlet_single_inclusion_square",
+        8: "Samples.Poisson.BEM.init_dirichlet_square",
+        9: "Samples.Poisson.BEM.init_neumann_square",
+        10: "Samples.Poisson.BEM.init_robin_square",
+        11: "Samples.Poisson.CoBEM.init_dirichlet_square",
+        12: "Samples.Poisson.CoBEM.init_neumann_square",
+        13: "Samples.Poisson.CoBEM.init_robin_square",
         14: "Samples.Pennes.BEM.init_dirichlet_square",
         15: "Samples.Pennes.BEM.init_neumann_square",
         16: "Samples.Pennes.CoBEM.init_dirichlet_square",
@@ -850,13 +851,14 @@ class Laplace2DKernel(Kernel):
         return -0.25 / np.pi * np.log(Utils.squared_distance(point_x, point_y))
 
     def dx(self, point_x: np.array, point_y: np.array):
-        result = -0.25 / np.pi / Utils.squared_distance(point_x, point_y) * -2.0 * (point_x[0] - point_y[0])
+        result = -0.25 / np.pi / Utils.squared_distance(point_x, point_y) * 2.0 * (point_x[0] - point_y[0])
         return result
 
     def dy(self, point_x: np.array, point_y: np.array):
-        result = -0.25 / np.pi / Utils.squared_distance(point_x, point_y) * -2.0 * (point_x[1] - point_y[1])
+        result = -0.25 / np.pi / Utils.squared_distance(point_x, point_y) * 2.0 * (point_x[1] - point_y[1])
         return result
 
+    # TODO: Check sign of this derivatives
     def dxx(self, point_x: np.array, point_y: np.array):
         distance_forth = Utils.squared_distance(point_x, point_y) ** 2
         result = -0.5 / np.pi / distance_forth * ((point_x[0] - point_y[0]) ** 2 - (point_x[1] - point_y[1]) ** 2)
@@ -2376,6 +2378,47 @@ class Samples:
 
                 problem = Problem.create(ProblemSolverType.COBEM, expression, domain, analytical_solution)
                 return problem
+
+            @staticmethod
+            def init_neumann_square():
+                print("CoBEM for Neumann and Dirichlet mixed problem for Laplace equation...")
+
+                print("Define boundary conditions...")
+
+                def analytical_solution(point: np.array):
+                    return 2.0 * (point[0] - 0.5) ** 2 - 2.0 * (point[1] - 0.5) ** 2
+
+                def dirichlet_boundary_value(point: np.array):
+                    return analytical_solution(point)
+
+                def neumann_boundary_right_value(point: np.array):
+                    return 4.0 * point[0] - 2.0
+
+                def neumann_boundary_left_value(point: np.array):
+                    return 2.0 - 4.0 * point[0]
+
+                domain = GmshDomain2D(
+                    MeshLoader.generate_mesh_from_file(
+                        MeshLoader.UNIT_SQUARE_FILE, GlobalSettings.BORDER_ELEMENT_MAX_SIZE
+                    ),
+                    MeshLoader.order_conditions(
+                        {
+                            MeshLoader.TOP: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                            MeshLoader.LEFT: (BoundaryConditionType.NEUMANN, neumann_boundary_left_value),
+                            MeshLoader.RIGHT: (BoundaryConditionType.NEUMANN, neumann_boundary_right_value),
+                            MeshLoader.BOTTOM: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                        }
+                    ),
+                    np.array([0.5, 0.5]),
+                )
+
+                expression = [
+                    SingleLayerCoBEMTerm(Laplace2DKernel(), domain),
+                ]
+
+                problem = Problem.create(ProblemSolverType.COBEM, expression, domain, analytical_solution)
+                return problem
+
 
             @staticmethod
             def init_dirichlet_single_inclusion_square():
