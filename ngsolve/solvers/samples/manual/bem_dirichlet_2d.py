@@ -35,7 +35,7 @@ class GlobalSettings(object):
     ERROR_CSV_STEPS = 5
 
     # 1 - Collocation, 2 - Variational
-    CALC_METHOD = 2
+    CALC_METHOD = 1
 
     EXAMPLE_FUNCTIONS = {
         1: "Samples.Laplace.BEM.init_dirichlet_square",
@@ -58,7 +58,7 @@ class GlobalSettings(object):
         18: "Samples.Pennes.CoBEM.init_dirichlet_hexagon",
     }
 
-    EXAMPLE_TYPE = 4
+    EXAMPLE_TYPE = 7
 
 
 class BoundaryConditionType(Enum):
@@ -67,6 +67,8 @@ class BoundaryConditionType(Enum):
     NEUMANN = 3
     ROBIN = 4
     INCLUSION = 5
+    INCLUSION_DX = 6
+    INCLUSION_DY = 7
 
 
 class ProblemSolverType(Enum):
@@ -444,6 +446,7 @@ class MeshLoader:
         geo_file = (geo_folder / filename).resolve()
         assert os.path.isfile(geo_file), f"File '{geo_file}' does not exist"
         assert scale_x > 0 and scale_y > 0
+        adjusted_max_element_size = max_element_size / min(scale_x, scale_y)
         result = None
         with tempfile.NamedTemporaryFile(suffix=".msh") as tmp:
             process_result = subprocess.run(
@@ -452,9 +455,9 @@ class MeshLoader:
                     geo_file,
                     "-2",
                     "-clmin",
-                    str(max_element_size),
+                    str(adjusted_max_element_size),
                     "-clmax",
-                    str(max_element_size),
+                    str(adjusted_max_element_size),
                     "-setnumber",
                     "Mesh.Algorithm",
                     "6",  # TODO: Add check if only quad mesh was generated
@@ -654,7 +657,7 @@ class GmshDomain2D(Domain2D):
         self.__init_border(conditions, loaded_mesh)
         self._init_coborder_polygon(self.__center)
         self.__process_coborder_points()
-        self.__process_mesh(loaded_mesh)
+        self.__process_mesh(loaded_mesh, conditions[MeshLoader.TOP][0])
 
     def __init_border(self, conditions, mesh):
         polygon = []
@@ -719,7 +722,7 @@ class GmshDomain2D(Domain2D):
 
         self.__coborder = np.array(self.__coborder)
 
-    def __process_mesh(self, mesh):
+    def __process_mesh(self, mesh, type):
         assert mesh is not None
         for cell_block in mesh.cells:
             if GmshDomain2D.GMSH_CELL_TYPE_QUAD == cell_block.type:
@@ -731,7 +734,7 @@ class GmshDomain2D(Domain2D):
                     quad = Utils.order_quad_ccw(quad)
                     point_info = Point2DInfo()
                     point_info.point = 0.5 * (quad[0] + quad[2])
-                    point_info.type = BoundaryConditionType.INCLUSION
+                    point_info.type = type
                     point_info.value = 0.0
                     point_info.element = quad
                     self.__mesh.append(point_info)
@@ -1150,7 +1153,9 @@ class Integrator2D(Integrator):
         return result
 
     def convex_quadrilateral_of(self, type: KernelValueType, function: Callable, point: np.array, vertices: np.array):
-        assert Constants.PLANE_SQUARE_DIM == len(vertices)
+        assert Constants.PLANE_SQUARE_DIM == len(
+            vertices
+        ), f"Expected {Constants.PLANE_SQUARE_DIM} got {len(vertices)}"
         result = 0.0
         unit_square = np.array(
             [np.array([-1.0, -1.0]), np.array([1.0, -1.0]), np.array([1.0, 1.0]), np.array([-1.0, 1.0])]
@@ -1616,8 +1621,18 @@ class SingleLayerCoBEMTerm(ExpressionTerm):
                 coefficients = np.append(coefficients, [res])
                 if is_same_point:
                     right_side_ret += boundary_item.value
+            elif BoundaryConditionType.INCLUSION_DX in point_info.type:
+                res = self.__integrator.convex_quadrilateral_of(
+                    KernelValueType.DX, Utils.constant_one(), point_info.point, boundary_item.element
+                )
+                coefficients = np.append(coefficients, [res])
+            elif BoundaryConditionType.INCLUSION_DY in point_info.type:
+                res = self.__integrator.convex_quadrilateral_of(
+                    KernelValueType.DX, Utils.constant_one(), point_info.point, boundary_item.element
+                )
+                coefficients = np.append(coefficients, [res])
             else:
-                raise AttributeError("Not supported boundary element type")
+                raise AttributeError(f"Not supported boundary element type {point_info.type}")
         self.__unknown_count = len(coefficients)
 
         return (self.sign * coefficients, self.sign * right_side_ret)
@@ -1821,6 +1836,130 @@ class SingleLayerInclusionTerm(ExpressionTerm):
             face_value *= self.__unknown_values[unknown_index]
             unknown_index += 1
             result += face_value
+        assert self.__unknown_count == unknown_index, "Unknown could should match {} and {}".format(
+            self.__unknown_count, unknown_index
+        )
+        result *= self.sign
+        return result
+
+
+class SingleLayerInclusionCoBEMTerm(ExpressionTerm):
+
+    NOMINAL_INTEGRATION_POINTS_PER_AXIS = 2
+    SINGULARITY_INTEGRATION_POINTS_PER_AXIS = 4
+    EPS = 0.001
+
+    def __init__(
+        self,
+        kernel: Kernel,
+        domain: Domain,
+        coeff_function: Callable,
+        grad_function: Callable,
+        sign: int = 1,
+    ):
+        super().__init__(kernel, domain, sign)
+        assert coeff_function is not None
+        assert grad_function is not None
+
+        def adjusted_dx(point: np.array):
+            result = grad_function(point) / coeff_function(point)
+            return result[0]
+
+        def adjusted_dy(point: np.array):
+            result = grad_function(point) / coeff_function(point)
+            return result[1]
+
+        self.__dx_function = adjusted_dx
+        self.__dy_function = adjusted_dy
+        self.__unknown_count = 0
+        self.__unknown_values = np.empty(0)
+        self.__integrator = Integrator2D(
+            kernel,
+            SingleLayerInclusionCoBEMTerm.NOMINAL_INTEGRATION_POINTS_PER_AXIS,
+            SingleLayerInclusionCoBEMTerm.SINGULARITY_INTEGRATION_POINTS_PER_AXIS,
+        )
+
+    def calculate_coefficients(self, point_info: Point2DInfo, condition: BoundaryConditionType):
+        assert point_info is not None
+        coefficients = np.empty(0)
+        # TODO: Add Robin condition
+        for face in self.domain.get_mesh():
+            is_same_point = Utils.is_the_same_point(point_info.point, face.point, SingleLayerInclusionCoBEMTerm.EPS)
+            if BoundaryConditionType.DIRICHLET == condition:
+                res = self.__integrator.convex_quadrilateral_of(
+                    KernelValueType.SCALAR, self.__dx_function, point_info.point, face.element
+                )
+                coefficients = np.append(coefficients, [res])
+                res = self.__integrator.convex_quadrilateral_of(
+                    KernelValueType.SCALAR, self.__dy_function, point_info.point, face.element
+                )
+                coefficients = np.append(coefficients, [res])
+            elif BoundaryConditionType.NEUMANN == condition:
+                external_normal = point_info.normal
+
+                def dx_and_normal(point):
+                    return external_normal * self.__dx_function(point)
+
+                def dy_and_normal(point):
+                    return external_normal * self.__dy_function(point)
+
+                res = self.__integrator.convex_quadrilateral_of(
+                    KernelValueType.GRADIENT, dx_and_normal, point_info.point, face.element
+                )
+                coefficients = np.append(coefficients, [res])
+                res = self.__integrator.convex_quadrilateral_of(
+                    KernelValueType.GRADIENT, dy_and_normal, point_info.point, face.element
+                )
+                coefficients = np.append(coefficients, [res])
+            elif BoundaryConditionType.INCLUSION_DX == condition:
+                res = self.__integrator.convex_quadrilateral_of(
+                    KernelValueType.DX, self.__dx_function, point_info.point, face.element
+                )
+                coefficients = np.append(coefficients, [res])
+                res = self.__integrator.convex_quadrilateral_of(
+                    KernelValueType.DX, self.__dy_function, point_info.point, face.element
+                )
+                coefficients = np.append(coefficients, [res])
+            elif BoundaryConditionType.INCLUSION_DY == condition:
+                res = self.__integrator.convex_quadrilateral_of(
+                    KernelValueType.DY, self.__dx_function, point_info.point, face.element
+                )
+                coefficients = np.append(coefficients, [res])
+                res = self.__integrator.convex_quadrilateral_of(
+                    KernelValueType.DY, self.__dy_function, point_info.point, face.element
+                )
+                coefficients = np.append(coefficients, [res])
+            else:
+                raise AttributeError(f"Not supported boundary element type {condition}")
+        self.__unknown_count = len(coefficients)
+        return (self.sign * coefficients, 0.0)
+
+    def calculate_for_robin(self, point_info: Point2DInfo):
+        raise NotImplementedError("Implement")
+
+    def propagate_solution(self, solution: np.array):
+        self.__unknown_values = solution[: self.__unknown_count]
+        return solution[self.__unknown_count :]
+
+    def value(self, point: np.array):
+        assert point is not None
+        result = 0.0
+        unknown_index = 0
+        for face in self.domain.get_mesh():
+            result += (
+                self.__integrator.convex_quadrilateral_of(
+                    KernelValueType.SCALAR, self.__dx_function, point, face.element
+                )
+                * self.__unknown_values[unknown_index]
+            )
+            unknown_index += 1
+            result += (
+                self.__integrator.convex_quadrilateral_of(
+                    KernelValueType.SCALAR, self.__dy_function, point, face.element
+                )
+                * self.__unknown_values[unknown_index]
+            )
+            unknown_index += 1
         assert self.__unknown_count == unknown_index, "Unknown could should match {} and {}".format(
             self.__unknown_count, unknown_index
         )
@@ -2419,7 +2558,6 @@ class Samples:
                 problem = Problem.create(ProblemSolverType.COBEM, expression, domain, analytical_solution)
                 return problem
 
-
             @staticmethod
             def init_dirichlet_single_inclusion_square():
                 print("CoBEM for Dirichlet problem for Laplace equation with single inclusion...")
@@ -2445,10 +2583,22 @@ class Samples:
                     ),
                     MeshLoader.order_conditions(
                         {
-                            MeshLoader.TOP: (BoundaryConditionType.INCLUSION, Utils.constant_one()),
-                            MeshLoader.LEFT: (BoundaryConditionType.INCLUSION, Utils.constant_one()),
-                            MeshLoader.RIGHT: (BoundaryConditionType.INCLUSION, Utils.constant_one()),
-                            MeshLoader.BOTTOM: (BoundaryConditionType.INCLUSION, Utils.constant_one()),
+                            MeshLoader.TOP: (
+                                [BoundaryConditionType.INCLUSION_DX, BoundaryConditionType.INCLUSION_DY],
+                                Utils.constant_one(),
+                            ),
+                            MeshLoader.LEFT: (
+                                [BoundaryConditionType.INCLUSION_DX, BoundaryConditionType.INCLUSION_DY],
+                                Utils.constant_one(),
+                            ),
+                            MeshLoader.RIGHT: (
+                                [BoundaryConditionType.INCLUSION_DX, BoundaryConditionType.INCLUSION_DY],
+                                Utils.constant_one(),
+                            ),
+                            MeshLoader.BOTTOM: (
+                                [BoundaryConditionType.INCLUSION_DX, BoundaryConditionType.INCLUSION_DY],
+                                Utils.constant_one(),
+                            ),
                         }
                     ),
                     np.array([INCLUSION_CENTER_X, INCLUSION_CENTER_Y]),
@@ -2490,7 +2640,7 @@ class Samples:
                 print("Define heat source function...")
 
                 expression = [
-                    SingleLayerInclusionTerm(
+                    SingleLayerInclusionCoBEMTerm(
                         Laplace2DKernel(),
                         inclusion_domain,
                         thermal_conductivity,
