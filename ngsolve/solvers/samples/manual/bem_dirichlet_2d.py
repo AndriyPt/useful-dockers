@@ -21,9 +21,9 @@ import functools
 
 
 class GlobalSettings(object):
-    BORDER_ELEMENT_MAX_SIZE = 0.3
-    INCLUSION_ELEMENTS_MAX_SIZE = 0.3
-    COBORDER_SCALE = 2.0
+    BORDER_ELEMENT_MAX_SIZE = 0.05
+    INCLUSION_ELEMENTS_MAX_SIZE = 0.05
+    COBORDER_SCALE = 5.0
 
     PLOT_ERROR = False
     PLOT_ISOLINES_COUNT = 10
@@ -45,20 +45,21 @@ class GlobalSettings(object):
         5: "Samples.Laplace.CoBEM.init_neumann_square",
         6: "Samples.Laplace.CoBEM.init_dirichlet_hexagon",
         7: "Samples.Laplace.CoBEM.init_dirichlet_single_inclusion_square",
-        8: "Samples.Poisson.BEM.init_dirichlet_square",
-        9: "Samples.Poisson.BEM.init_neumann_square",
-        10: "Samples.Poisson.BEM.init_robin_square",
-        11: "Samples.Poisson.CoBEM.init_dirichlet_square",
-        12: "Samples.Poisson.CoBEM.init_neumann_square",
-        13: "Samples.Poisson.CoBEM.init_robin_square",
-        14: "Samples.Pennes.BEM.init_dirichlet_square",
-        15: "Samples.Pennes.BEM.init_neumann_square",
-        16: "Samples.Pennes.CoBEM.init_dirichlet_square",
-        17: "Samples.Pennes.CoBEM.init_neumann_square",
-        18: "Samples.Pennes.CoBEM.init_dirichlet_hexagon",
+        8: "Samples.Laplace.CoBEM.init_dirichlet_single_inclusion_circle_in_square",
+        9: "Samples.Poisson.BEM.init_dirichlet_square",
+        10: "Samples.Poisson.BEM.init_neumann_square",
+        11: "Samples.Poisson.BEM.init_robin_square",
+        12: "Samples.Poisson.CoBEM.init_dirichlet_square",
+        13: "Samples.Poisson.CoBEM.init_neumann_square",
+        14: "Samples.Poisson.CoBEM.init_robin_square",
+        15: "Samples.Pennes.BEM.init_dirichlet_square",
+        16: "Samples.Pennes.BEM.init_neumann_square",
+        17: "Samples.Pennes.CoBEM.init_dirichlet_square",
+        18: "Samples.Pennes.CoBEM.init_neumann_square",
+        19: "Samples.Pennes.CoBEM.init_dirichlet_hexagon",
     }
 
-    EXAMPLE_TYPE = 7
+    EXAMPLE_TYPE = 8
 
 
 class BoundaryConditionType(Enum):
@@ -657,7 +658,7 @@ class GmshDomain2D(Domain2D):
         self.__init_border(conditions, loaded_mesh)
         self._init_coborder_polygon(self.__center)
         self.__process_coborder_points()
-        self.__process_mesh(loaded_mesh, conditions[MeshLoader.TOP][0])
+        self.__process_mesh(loaded_mesh, list(conditions.values())[0][0])
 
     def __init_border(self, conditions, mesh):
         polygon = []
@@ -2638,6 +2639,104 @@ class Samples:
                     return result
 
                 print("Define heat source function...")
+
+                expression = [
+                    SingleLayerInclusionCoBEMTerm(
+                        Laplace2DKernel(),
+                        inclusion_domain,
+                        thermal_conductivity,
+                        thermal_conductivity_gradient,
+                        1.0,
+                    ),
+                    SingleLayerCoBEMTerm(Laplace2DKernel(), domain),
+                ]
+
+                problem = Problem.create(ProblemSolverType.COBEM, expression, domain)
+                return problem
+
+            @staticmethod
+            def init_dirichlet_single_inclusion_circle_in_square():
+                print("CoBEM for Dirichlet problem for Laplace equation with single circular inclusion...")
+
+                print("Define boundary conditions...")
+
+                INCLUSION_CENTER_X = 0.5
+                INCLUSION_CENTER_Y = 0.5
+                INCLUSION_RADIUS = 0.2
+                K_MAX = 10
+                K_MIN = 1
+
+                def dirichlet_boundary_value(point: np.array):
+                    return 2.0 * point[1]
+
+                inclusion_domain = GmshDomain2D(
+                    MeshLoader.generate_mesh_from_file(
+                        MeshLoader.UNIT_CIRCLE_FILE,
+                        GlobalSettings.INCLUSION_ELEMENTS_MAX_SIZE,
+                        scale_x=INCLUSION_RADIUS,
+                        scale_y=INCLUSION_RADIUS,
+                    ),
+                    MeshLoader.order_conditions(
+                        {
+                            MeshLoader.LEFT: (
+                                [BoundaryConditionType.INCLUSION_DX, BoundaryConditionType.INCLUSION_DY],
+                                Utils.constant_one(),
+                            ),
+                            MeshLoader.RIGHT: (
+                                [BoundaryConditionType.INCLUSION_DX, BoundaryConditionType.INCLUSION_DY],
+                                Utils.constant_one(),
+                            ),
+                        }
+                    ),
+                    np.array([INCLUSION_CENTER_X, INCLUSION_CENTER_Y]),
+                )
+
+                domain = GmshDomain2D(
+                    MeshLoader.generate_mesh_from_file(
+                        MeshLoader.UNIT_SQUARE_FILE, GlobalSettings.BORDER_ELEMENT_MAX_SIZE
+                    ),
+                    MeshLoader.order_conditions(
+                        {
+                            MeshLoader.TOP: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                            MeshLoader.LEFT: (BoundaryConditionType.NEUMANN, Utils.constant_value(0.0)),
+                            MeshLoader.RIGHT: (BoundaryConditionType.NEUMANN, Utils.constant_value(0.0)),
+                            MeshLoader.BOTTOM: (BoundaryConditionType.DIRICHLET, dirichlet_boundary_value),
+                        }
+                    ),
+                    np.array([0.5, 0.5]),
+                    [inclusion_domain],
+                )
+
+                def thermal_conductivity(point: np.array):
+                    result = K_MIN
+                    distance_from_center = (
+                        (point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2
+                    ) / INCLUSION_RADIUS**2
+                    if distance_from_center < 1.0:
+                        result += K_MAX * math.cos(0.5 * math.pi * distance_from_center)
+                    return result
+
+                def thermal_conductivity_gradient(point: np.array):
+                    result = np.array([0.0, 0.0])
+                    distance_from_center = (
+                        (point[0] - INCLUSION_CENTER_X) ** 2 + (point[1] - INCLUSION_CENTER_Y) ** 2
+                    ) / INCLUSION_RADIUS**2
+                    if inclusion_domain.is_point_inside_domain(point):
+                        result[0] = (
+                            K_MAX
+                            * math.pi
+                            * math.sin(0.5 * math.pi * distance_from_center)
+                            * (INCLUSION_CENTER_X - point[0])
+                            / INCLUSION_RADIUS**2
+                        )
+                        result[1] = (
+                            K_MAX
+                            * math.pi
+                            * math.sin(0.5 * math.pi * distance_from_center)
+                            * (INCLUSION_CENTER_Y - point[1])
+                            / INCLUSION_RADIUS**2
+                        )
+                    return result
 
                 expression = [
                     SingleLayerInclusionCoBEMTerm(
