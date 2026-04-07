@@ -9,14 +9,14 @@ LABEL org.opencontainers.image.authors="Andriy.Petlovanyy@noemail.com"
 
 LABEL Description="This image allows to run Terminator in Docker container" Vendor="Andriy Petlovanyy" Version="1.0"
 
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
-ENV LANG C.UTF-8
-ENV LC_ALL C.UTF-8
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
 
-ENV PULSE_SERVER /run/pulse/native
-ENV GOSU_VERSION 1.17
-ENV MY_USERNAME user
+ENV PULSE_SERVER=/run/pulse/native
+ENV GOSU_VERSION=1.17
+ENV MY_USERNAME=user
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY install_gosu.sh /tmp/install_gosu.sh
@@ -25,6 +25,8 @@ COPY install_vscode.sh /tmp/install_vscode.sh
 
 COPY terminator_config /tmp/terminator_config
 COPY additional_bashrc_cmds /tmp/additional_bashrc_cmds
+
+SHELL ["/bin/bash", "-c"]
 
 RUN set -x && \
     \
