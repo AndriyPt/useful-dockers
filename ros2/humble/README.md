@@ -5,7 +5,7 @@
 ### Ubuntu Jammy
 
 ```bash
-docker build --no-cache --progress=plain --build-arg BASE_IMAGE="osrf/ros" VERSION=humble-desktop-full-jammy -t useful-dockers/terminator:jammy .
+docker build --no-cache --progress=plain --build-arg BASE_IMAGE="osrf/ros" --build-arg VERSION=humble-desktop-full-jammy -t useful-dockers/terminator:jammy .
 ```
 
 <!-- ### The Latest Ubuntu
