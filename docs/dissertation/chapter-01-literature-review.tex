@@ -3,83 +3,256 @@
 %Hidden cite for correct bibliography ordering
 \nocite{bahvalov-et-al,tumor-thermal-model,lung-tumor-thermal-conductivity,database-tissue-properties} 
 
-% https://nauka.gov.ua/information/osnovni-etapy-v-napysanni-ohliadu-literatury-dlia-dysertatsiinoi-roboty/
 
 \section{Аналіз дослідження}
 
-Нормативи оформлення:
+Композитні матеріали використовуються людством із древніх часів. Вони є важливими джерелом інноваційних матеріал для
+різних промисловостей: медицини, автомобілебудування, ракетобудування тощо. Композитний матеріал володіє властивостями,
+які не притаманні жодному із його складових матеріалів. Як вказано у підручнику \cite{lubin-2013-handbook}. Композити
+складаються із матриці і армуючого елемента. Композити класифікують за матрицею (полімер, метал, кераміка), армуванням
+(волокна, частинки, шари), орієнтацією (однонапрямлені, двонапрямлені, випадкова), масштабом (макрокомпозити,
+мікрокомпозити, нанокомпозити) і призначенням.
 
-1) Кожен абзац літературного огляду подається у формі порівняльного аналізу або резюме того, чи іншого висновку із
-першоджерела з припущеннями чи висновками інших авторів (особливо важливо виявити протиріччя у висновках різних авторів
-на вирішення однієї і тієї ж проблеми; "посваривши" таким чином двох чи більше авторів і, на цій підставі, зробити свій
-висновок; доцільно підтвердити існування невирішеної проблеми та актуальність її вирішення).
+Для моделювання фізичних процесів у композитах використовують різні методи. Класичними є методи на основі МСЕ, але є і 
+багато підходів на основі МГЕ.
 
-2)Кожен абзац літературного огляду, якщо він не відображає власну думку, а надає інформацію з інших першоджерел, повинен
-завершуватися посиланням на конкретне першоджерело, яке повинно бути у розділі «Список використаних джерел»
+Сімейство методів МСЕ використовує різні удосконалення для того щоб пришвидшити обчислення або зменшити кількість
+обчислювальних ресурсів необхідних для моделювання композитних матеріалів різних типів. У випадку із волокнистим
+армуючим елементом потрібна доволі дрібна сітка для покриття включень. Для цього були розроблені РМСЕ
+\cite{grappein-2024-article-review} і МСС. Наступною віхою у розвитку методів для задач у композитах пов'язана із МФО і
+МСЕФО \cite{benoit-2017-article-review}. Ці методи дозволяють мати дві незалежні сітки для матриці і армуючих елементів.
 
-Повнота цієї частини дослідження досягається шляхом пошуку і завантаження тематичного матеріалу, який у свою чергу вже
-має власний список літератури та огляд. Кожна позиція повинна бути вивчена і проаналізована.
+Оглядова стаття \cite{banhart-2024-article-review} узагальнює експериментальні та чисельні підходи до аналізу ударних
+пошкоджень, підкреслюючи, що експерименти та методи неруйнівного контролю (ультразвук, рентгенівська томографія,
+термографія), забезпечують достовірні дані щодо енергопоглинання та внутрішніх дефектів, таких як деламінація і
+мікротріщини. Водночас чисельне моделювання, зокрема МСЕ із використанням критеріїв руйнування та моделей деламінації,
+дозволяє прогнозувати напружено-деформований стан і розвиток пошкоджень. Показано, що найбільш ефективним є комбінований
+підхід, який поєднує експериментальну валідацію з чисельним аналізом, оскільки на характер руйнування істотно впливають
+енергія та кут удару, а також структура ламінату; особливу небезпеку становлять приховані пошкодження, що знижують
+залишкову міцність без видимих ознак.
 
-Пошук нових джерел припиняється, якщо після опрацювання та аналізу безлічі статей в наступних матеріалах не
-зустрічаються нові публікації та прізвища. Наступним етапом стає побудова змістовної частини, розподіл за авторськими
-концепціями та школами.
+У роботі \cite{chichane-2023-article-review} досліджено ефективні пружні властивості поліпропіленових композитів і
+гібридних систем із використанням як аналітичних, так і чисельних підходів. Чисельне моделювання реалізовано на основі
+МСЕ, що дозволяє враховувати мікроструктурні особливості матеріалу та оцінювати анізотропні характеристики через
+визначення компонент тензора пружності. Зокрема, проведено аналіз впливу щільності скінченних елементів на точність
+розрахунків, де використання більш детальної дискретизації забезпечує кращу точність результатів. Отримані чисельні
+оцінки демонструють високу узгодженість з експериментальними даними та перевищують за точністю класичні мікромеханічні
+моделі (зокрема Ґальпіна-Цаї та Ґірша), особливо для гібридних композитів. Таким чином, чисельний підхід виступає
+ефективним інструментом прогнозування механічних властивостей композитів, проте потребує подальшого вдосконалення з
+точки зору опису реальної мікроструктури та міжфазних ефектів.
 
-Статті, де розглядаються неоднорідні задачі, розв'язані методом граничних елементів:
+У статті \cite{boulakia-2024-article-review} автори досліджують математичні та чисельні аспекти моделювання систем типу
+рідина-тверде тіло і тверде тіло-тверде тіло. Розглядається плоска задача Пуассона із неоднорідними умовами Діріхле на
+невеликих включеннях. Робота фокусується на розробці узагальнених МСЕ і редукованих моделей, які дозволяють ефективно
+описувати взаємодію різних компонентів матеріалу через інтерфейси, зменшуючи обчислювальну складність без втрати
+точності. Значну увагу приділено строгому математичному аналізу коректності моделей, збіжності та стійкості чисельних
+схем, що є критично важливим для достовірного прогнозування механічної поведінки композитів. Проте поведінка МСЕ при 
+певних розмірах включень призводить до повільної збіжності методу і автори пропонують удосконалений підхід. Проте вони 
+також наголошують, що МГЕ немає таких вад і може бути застосований без модифікацій.
 
-\begin{itemize}
-
-\item "Метод граничних елементів в задачах з нестійкими розв'язками": Автори В.Ф. Оробей, А.Ф. Дащенко та А.М. Лимаренко
-з Одеського національного політехнічного університету показують застосування алгоритму чисельно-аналітичного варіанта
-методу граничних елементів для збільшення стійкості розв'язання задач з великими коефіцієнтами фундаментальних функцій.
-
-\item "Метод граничних елементів в задачах стійкості плоскої форми вигину балок прямокутного перерізу": У цій статті
-В.Ф. Оробей, А.Ф. Дащенко та Л.В. Коломієць розглядають алгоритм розв'язання задач стійкості плоскої форми вигину балок
-прямокутного перерізу за допомогою чисельно-аналітичного варіанта методу граничних елементів.
-
-\item "Метод граничних елементів в задачах визначення напружено-деформованого стану в неоднорідному масиві": У цій
-статті розроблено чисельний алгоритм визначення напружено-деформованого стану в неоднорідному масиві, що складається з
-двох лінійно-пружних підобластей.
-
-\item "Boundary Element Methods for Engineers and Scientists": Ця стаття розглядає основні принципи та застосування МГЕ
-в інженерії та науці, включаючи задачі для неоднорідних тіл.
-
-\item "The Boundary Element Method in Acoustics": У цій статті розглядається застосування МГЕ для вирішення задач
-акустики, зокрема для неоднорідних середовищ.
-
-\item "Boundary Element Analysis of Plates and Shells": Ця стаття присвячена застосуванню МГЕ для аналізу пластин та
-оболонок, включаючи неоднорідні матеріали.
-
-\item "Numerical analysis of stress distribution in back-filled stopes considering interfaces between the backfill and
-rock walls": У цій статті розглядається чисельний аналіз розподілу напружень у заповнених виробках з урахуванням
-інтерфейсів між заповнювачем та стінками породи.
-
-\end{itemize}
+Праця \cite{benoit-2017-article-review} розглядається чисельний підхід до аналізу армованих конструкцій, який поєднує
+скінчені елементи різних розмірів у МСЕ. Автори пропонують моделювати бетон як тривимірне середовище, тоді як арматура
+описується одновимірними елементами. Особлива увага приділяється коректному формулюванню умов взаємодії між компонентами
+різної розмірності, що забезпечує адекватну передачу напружень і деформацій між арматурою та матрицею. Отже,
+запропонований підхід полягає у зменшенні розмірності задачі як перспективний компроміс між обчислювальною ефективністю
+та точністю, що є невід'ємною перевагою МГЕ.
 
 
-\section{Ситуація з науковими школами}
+% Phantom Domain Finite Element Method: A novel approach for heterogeneous materials
+% https://arxiv.org/abs/2505.02268?utm_source=chatgpt.com
 
-Наукові школи, які активно використовують метод граничних елементів (МГЕ):
+% typically require a conforming mesh for Finite Element based Methods (Debordes, 1986) or a high-resolution image for
+% iterative FFT-based methods (Moulinec and Suquet, 1994, 1995). Finite Element Method (FEM) requires accurate calculation
+% of integrals that define the energy bilinear form involved in the weak formulation of the model (Debordes, 1986;
+% Bensoussan et al., 1978; Sanchez-Palencia and Sanchez-Hubert, 1992). This generally necessitates a conforming mesh.
+% However, constructing such meshes for complex geometries is nontrivial (Schneider et al., 2016), and thin-shaped
+% inclusions such as fibers can lead to very fine meshes, significantly increasing computational complexity.
+% To address these meshing challenges, several advanced approaches have been proposed, including the eXtended Finite
+% Element Method (XFEM) (Legrain et al., 2016; Moës et al., 1999; Sukumar et al., 2001) and the Finite Cell Method (FCM)
+% (Düster et al., 2008; Parvizian et al., 2007; Duczek and Gabbert, 2016; Kudela et al., 2020). The XFEM integrates the
+% Level Set Method to define inclusions while incorporating enriched shape functions, thereby enhancing its capability to
+% model complex geometries (Yvonnet et al., 2008). The FCM employs a single structured mesh, where the elements are
+% referred to as cells, and improves the accuracy of integral approximations through cell subdivisions (Parvizian et al.,
+% 2007; Düster et al., 2008, 2012; Legrain et al., 2016). The core concept of the Phantom Domain Finite Element Method
+% (PDFEM), introduced in this paper, is similarly to approximate the integrals that define the energy bilinear form using
+% independent meshes for the inclusions, while establishing a relationship with the structured mesh of the overall domain.
+% PDFEM is inspired by Fictitious Domain Methods (FDM); however, unlike traditional FDM, it does not employ Lagrange
+% multipliers to enforce coupling between the 
 
-\begin{itemize}
 
-\item Національний технічний університет "Дніпровська політехніка": Вчені цього університету використовують МГЕ для
-моделювання напружено-деформованого стану в неоднорідних масивах.
+% Special inclusion elements for thermal analysis of composite materials
+% https://www.sciencedirect.com/science/article/abs/pii/S0955799724004909?utm_source=chatgpt.com
 
-\item Вінницький національний технічний університет: Дослідники застосовують МГЕ для розрахунків кільцевих фундаментів.
 
-\item Одеський національний політехнічний університет: Вчені цього університету, зокрема В.Ф. Оробей, А.Ф. Дащенко та
-А.М. Лимаренко, застосовують МГЕ для вирішення задач з нестійкими розв'язками.
+% Mathematical modeling, analysis and numerical approximation of second-order elliptic problems with inclusions
+% https://www.worldscientific.com/doi/10.1142/S0218202518500252
 
-\item Тернопільський національний технічний університет імені Івана Пулюя: Дослідники, такі як Д. Биків під керівництвом
-С.І. Федака, використовують МГЕ для визначення частот та форм власних коливань стержневих систем.
 
-\item Національна академія наук України: Вчені цієї установи також працюють над застосуванням МГЕ до різних задач теорії
-пружності та згину платівок.
-\end{itemize}
+% A composite material is two or more materials bonded together (Kelly, 1994). This definition distinguishes composite
+% materials (composites) from materials like alloys. The most important composites consist of matrices reinforced with
+% various types of fibers, whiskers or particles.
 
-Ці приклади демонструють широке застосування методу граничних елементів у різних наукових установах України.
+% Yes, cancer cells and healthy tissue can be considered a biological composite material. A composite material consists of
+% two or more constituent materials with significantly different physical or chemical properties that, when combined,
+% produce a material with characteristics different from the individual components. Wikipedia Wikipedia +2 In the context
+% of cancer biology, this is typically referred to as the Tumor Microenvironment (TME), where malignant cells (the
+% "filler" or "reinforcement") are embedded within a surrounding "matrix" of healthy tissue, such as stroma, extracellular
+% matrix (ECM), immune cells, and blood vessels. MDPI MDPI +1 Why Tumor Tissue is a Composite Material Heterogeneous
+% Components: A solid tumor is not just cancer cells. It consists of a heterogeneous mix of cancer cells, stromal cells
+% (fibroblasts), endothelial cells (vessels), and immune cells (macrophages) embedded in an extracellular matrix. Distinct
+% Interfaces: Chemically dissimilar phases—cancer cells vs. healthy stroma—are separated by distinct interfaces. Modified
+% Mechanical Properties: The cancer cells alter their surroundings by forcing normal fibroblasts to become
+% Cancer-Associated Fibroblasts (CAFs). These CAFs overproduce collagen and other proteins, resulting in a stiffer,
+% higher-density matrix that differs significantly from adjacent healthy tissue. Synergistic Behavior: The interaction
+% between the cancer cells and the surrounding healthy tissue is dynamic. The stroma supports the growth, metastasis, and
+% therapy resistance of the tumor, while the tumor cells remodel the stroma to make it more supportive. PubMed Central
+% (PMC) (.gov) PubMed Central (PMC) (.gov) +4 Examples of Tumor-Healthy Tissue Composites Tumor-Associated Stroma: CAFs
+% act as the "matrix," providing structural support and secreting factors that encourage tumor growth. Tumor-Adipose
+% Composite: Researchers have developed 3D models treating breast cancer spheroids within a "supporting bath" of adipose
+% (fat) tissue, demonstrating the interaction between the two types. Metastatic Niche: When cancer cells metastasize to
+% bone, they utilize the bone ECM as a scaffold to attach and grow, effectively forming a metastatic composite. Wiley
+% Online Library Wiley Online Library +3 Mechanical Disparity A key reason this fits the "composite" definition is the
+% mechanical difference between components. While individual cancer cells are often softer than normal cells, the overall
+% solid tumor tissue is usually much more rigid than the surrounding healthy tissue due to the remodeling of the ECM.
+% PubMed Central (PMC) (.gov) PubMed Central (PMC) (.gov) +1 This composite nature makes cancer treatment difficult, as
+% the remodeled, dense "matrix" can create a barrier against immune cells and chemotherapy drugs
 
-\section{Значущі результати використаних джерел}
+% Heat conduction in composite media: a boundary integral approach
+% https://www.sciencedirect.com/science/article/abs/pii/S0098135402001436?utm_source=chatgpt.com
 
-\section{Висновок}
+% Transient heat transfer in particulate composites with the dual-reciprocity inclusion-based boundary element method
+% https://www.sciencedirect.com/science/article/abs/pii/S0955799725003248?utm_source=chatgpt.com
+
+% Large-scale thermal analysis of fiber composites using a line-inclusion model by the fast boundary element method
+% https://www.sciencedirect.com/science/article/abs/pii/S0955799712002196?utm_source=chatgpt.com
+
+% The problem of thermal conduction for two ellipsoidal inhomogeneities in an anisotropic medium and its relevance to composite materials
+% https://link.springer.com/article/10.1007/BF01187726?utm_source=chatgpt.com
+
+% Singularities at the vertex of connected angular inhomogeneities under thermal and elastic loading
+% https://arxiv.org/abs/2509.26609?utm_source=chatgpt.com
+
+% Special inclusion elements for thermal analysis of composite materials
+% https://www.sciencedirect.com/science/article/abs/pii/S0955799724004909?utm_source=chatgpt.com
+
+% Suggested “reading path” (efficient)
+
+% If you want to build deep understanding:
+
+% Start with:
+% Boundary integral approach (2002 paper)
+% Then:
+% Ellipsoidal inclusion interaction (1995)
+% Then modern:
+% Inclusion-based BEM (2025)
+% Special FEM inclusion elements (2024)
+% Finally:
+% Asymptotic boundary-condition papers (2020+)
+
+
+% Recommended Core Reading Set (Prioritized)
+
+% If you want a tight, high-impact list, focus on:
+
+% Must-read analytical foundation
+% Hatta & Taya (1995) — multi-ellipsoidal inclusions
+% Core numerical methods
+% Bonnet — BEM for multi-inclusion systems
+% Divo & Kassab — BEM heat conduction
+% Modern computational tools
+% Belytschko — XFEM
+% Moulinec & Suquet — FFT methods
+% Advanced theory
+% Bonnetier & Vogelius — gradient concentration
+% 🔹 Practical Guidance (What to Use)
+% If your case is:
+% Few (2–10) large inclusions
+% → BEM or FEM (high accuracy)
+% Many large inclusions (10–100)
+% → BEM or domain decomposition
+% Closely spaced inclusions
+% → Asymptotic + FEM hybrid
+% Irregular shapes
+% → FEM / XFEM
+
+
+% % https://nauka.gov.ua/information/osnovni-etapy-v-napysanni-ohliadu-literatury-dlia-dysertatsiinoi-roboty/
+
+% \section{Аналіз дослідження}
+
+% Нормативи оформлення:
+
+% 1) Кожен абзац літературного огляду подається у формі порівняльного аналізу або резюме того, чи іншого висновку із
+% першоджерела з припущеннями чи висновками інших авторів (особливо важливо виявити протиріччя у висновках різних авторів
+% на вирішення однієї і тієї ж проблеми; "посваривши" таким чином двох чи більше авторів і, на цій підставі, зробити свій
+% висновок; доцільно підтвердити існування невирішеної проблеми та актуальність її вирішення).
+
+% 2)Кожен абзац літературного огляду, якщо він не відображає власну думку, а надає інформацію з інших першоджерел, повинен
+% завершуватися посиланням на конкретне першоджерело, яке повинно бути у розділі «Список використаних джерел»
+
+% Повнота цієї частини дослідження досягається шляхом пошуку і завантаження тематичного матеріалу, який у свою чергу вже
+% має власний список літератури та огляд. Кожна позиція повинна бути вивчена і проаналізована.
+
+% Пошук нових джерел припиняється, якщо після опрацювання та аналізу безлічі статей в наступних матеріалах не
+% зустрічаються нові публікації та прізвища. Наступним етапом стає побудова змістовної частини, розподіл за авторськими
+% концепціями та школами.
+
+% Статті, де розглядаються неоднорідні задачі, розв'язані методом граничних елементів:
+
+% \begin{itemize}
+
+% \item "Метод граничних елементів в задачах з нестійкими розв'язками": Автори В.Ф. Оробей, А.Ф. Дащенко та А.М. Лимаренко
+% з Одеського національного політехнічного університету показують застосування алгоритму чисельно-аналітичного варіанта
+% методу граничних елементів для збільшення стійкості розв'язання задач з великими коефіцієнтами фундаментальних функцій.
+
+% \item "Метод граничних елементів в задачах стійкості плоскої форми вигину балок прямокутного перерізу": У цій статті
+% В.Ф. Оробей, А.Ф. Дащенко та Л.В. Коломієць розглядають алгоритм розв'язання задач стійкості плоскої форми вигину балок
+% прямокутного перерізу за допомогою чисельно-аналітичного варіанта методу граничних елементів.
+
+% \item "Метод граничних елементів в задачах визначення напружено-деформованого стану в неоднорідному масиві": У цій
+% статті розроблено чисельний алгоритм визначення напружено-деформованого стану в неоднорідному масиві, що складається з
+% двох лінійно-пружних підобластей.
+
+% \item "Boundary Element Methods for Engineers and Scientists": Ця стаття розглядає основні принципи та застосування МГЕ
+% в інженерії та науці, включаючи задачі для неоднорідних тіл.
+
+% \item "The Boundary Element Method in Acoustics": У цій статті розглядається застосування МГЕ для вирішення задач
+% акустики, зокрема для неоднорідних середовищ.
+
+% \item "Boundary Element Analysis of Plates and Shells": Ця стаття присвячена застосуванню МГЕ для аналізу пластин та
+% оболонок, включаючи неоднорідні матеріали.
+
+% \item "Numerical analysis of stress distribution in back-filled stopes considering interfaces between the backfill and
+% rock walls": У цій статті розглядається чисельний аналіз розподілу напружень у заповнених виробках з урахуванням
+% інтерфейсів між заповнювачем та стінками породи.
+
+% \end{itemize}
+
+
+% \section{Ситуація з науковими школами}
+
+% Наукові школи, які активно використовують метод граничних елементів (МГЕ):
+
+% \begin{itemize}
+
+% \item Національний технічний університет "Дніпровська політехніка": Вчені цього університету використовують МГЕ для
+% моделювання напружено-деформованого стану в неоднорідних масивах.
+
+% \item Вінницький національний технічний університет: Дослідники застосовують МГЕ для розрахунків кільцевих фундаментів.
+
+% \item Одеський національний політехнічний університет: Вчені цього університету, зокрема В.Ф. Оробей, А.Ф. Дащенко та
+% А.М. Лимаренко, застосовують МГЕ для вирішення задач з нестійкими розв'язками.
+
+% \item Тернопільський національний технічний університет імені Івана Пулюя: Дослідники, такі як Д. Биків під керівництвом
+% С.І. Федака, використовують МГЕ для визначення частот та форм власних коливань стержневих систем.
+
+% \item Національна академія наук України: Вчені цієї установи також працюють над застосуванням МГЕ до різних задач теорії
+% пружності та згину платівок.
+% \end{itemize}
+
+% Ці приклади демонструють широке застосування методу граничних елементів у різних наукових установах України.
+
+% \section{Значущі результати використаних джерел}
+
+% \section{Висновок}
 
