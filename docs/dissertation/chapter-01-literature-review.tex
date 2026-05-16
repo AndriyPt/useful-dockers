@@ -20,7 +20,7 @@
 обчислювальних ресурсів необхідних для моделювання композитних матеріалів різних типів. У випадку із волокнистим
 армуючим елементом потрібна доволі дрібна сітка для покриття включень. Для цього були розроблені РМСЕ
 \cite{grappein-2024-article-review} і МСС. Наступною віхою у розвитку методів для задач у композитах пов'язана із МФО і
-МСЕФО \cite{benoit-2017-article-review}. Ці методи дозволяють мати дві незалежні сітки для матриці і армуючих елементів.
+МСЕФО \cite{he-2025-article-review}. Ці методи дозволяють мати дві незалежні сітки для матриці і армуючих елементів.
 
 Оглядова стаття \cite{banhart-2024-article-review} узагальнює експериментальні та чисельні підходи до аналізу ударних
 пошкоджень, підкреслюючи, що експерименти та методи неруйнівного контролю (ультразвук, рентгенівська томографія,
@@ -57,31 +57,31 @@
 запропонований підхід полягає у зменшенні розмірності задачі як перспективний компроміс між обчислювальною ефективністю
 та точністю, що є невід'ємною перевагою МГЕ.
 
+У праці \cite{he-2025-article-review} запропоновано новий підхід МСЕФО для чисельного моделювання гетерогенних та
+композиційних матеріалів. Метод базується на використанні сітки для всієї області матеріалу та незалежних сіток для
+включень, які зв'язуються через матрицю підстановки без застосування множників Лагранжа. У статті показано, що такий
+підхід дозволяє ефективно працювати зі складними геометріями включень, зокрема довгими природними волокнами, для яких
+побудова сіток у класичному МСЕ вимагає більших обчислювальних ресурсів. Проведені чисельні експерименти для задач
+теплопровідності та лінійної пружності продемонстрували високу точність і обчислювальну ефективність МСЕФО порівняно з
+традиційним МСЕ.
 
-% Phantom Domain Finite Element Method: A novel approach for heterogeneous materials
-% https://arxiv.org/abs/2505.02268?utm_source=chatgpt.com
-
-% typically require a conforming mesh for Finite Element based Methods (Debordes, 1986) or a high-resolution image for
-% iterative FFT-based methods (Moulinec and Suquet, 1994, 1995). Finite Element Method (FEM) requires accurate calculation
-% of integrals that define the energy bilinear form involved in the weak formulation of the model (Debordes, 1986;
-% Bensoussan et al., 1978; Sanchez-Palencia and Sanchez-Hubert, 1992). This generally necessitates a conforming mesh.
-% However, constructing such meshes for complex geometries is nontrivial (Schneider et al., 2016), and thin-shaped
-% inclusions such as fibers can lead to very fine meshes, significantly increasing computational complexity.
-% To address these meshing challenges, several advanced approaches have been proposed, including the eXtended Finite
-% Element Method (XFEM) (Legrain et al., 2016; Moës et al., 1999; Sukumar et al., 2001) and the Finite Cell Method (FCM)
-% (Düster et al., 2008; Parvizian et al., 2007; Duczek and Gabbert, 2016; Kudela et al., 2020). The XFEM integrates the
-% Level Set Method to define inclusions while incorporating enriched shape functions, thereby enhancing its capability to
-% model complex geometries (Yvonnet et al., 2008). The FCM employs a single structured mesh, where the elements are
-% referred to as cells, and improves the accuracy of integral approximations through cell subdivisions (Parvizian et al.,
-% 2007; Düster et al., 2008, 2012; Legrain et al., 2016). The core concept of the Phantom Domain Finite Element Method
-% (PDFEM), introduced in this paper, is similarly to approximate the integrals that define the energy bilinear form using
-% independent meshes for the inclusions, while establishing a relationship with the structured mesh of the overall domain.
-% PDFEM is inspired by Fictitious Domain Methods (FDM); however, unlike traditional FDM, it does not employ Lagrange
-% multipliers to enforce coupling between the 
+У статті \cite{wang-2024-article-review} розробили спеціальні
+Trefftz-елементи для моделювання теплопровідності композитних матеріалів із включеннями довільної форми. Запропонований
+підхід базується на ГМТСЕ, у якому незалежні температурні поля задаються окремо для
+матриці та включення із використанням фундаментальних розв'язків рівнянь теплопровідності. Для опису складної геометрії
+включень застосовано метод конформного відображення та charge simulation method, що дозволило забезпечити високу
+точність аналізу локальних теплових ефектів без необхідності складного ремешингу. Чисельні приклади продемонстрували, що
+запропоновані inclusion elements забезпечують хорошу збіжність результатів і суттєво знижують обчислювальні витрати
+порівняно з традиційними FEM-підходами. Отримані результати підтверджують ефективність методу для мікроструктурного
+моделювання композитів та прогнозування їхніх ефективних теплових характеристик, що є важливим для задач теплового
+аналізу багатофазних матеріалів.
 
 
 % Special inclusion elements for thermal analysis of composite materials
 % https://www.sciencedirect.com/science/article/abs/pii/S0955799724004909?utm_source=chatgpt.com
+
+% Highly efficient hybrid Trefftz finite elements for elastic analysis of multilayer coated composites
+% https://www.sciencedirect.com/science/article/abs/pii/S0045782526002318
 
 
 % Mathematical modeling, analysis and numerical approximation of second-order elliptic problems with inclusions
